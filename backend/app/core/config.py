@@ -5,7 +5,8 @@ class Settings:
     VERSION: str = "2.0.0"
     API_V1_STR: str = "/api"
     
-    BASE_DIR: str = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    # backend/app/core/config.py -> core -> app -> backend -> project_root
+    BASE_DIR: str = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     DATA_DIR: str = os.path.join(BASE_DIR, "data")
     UPLOAD_DIR: str = os.path.join(DATA_DIR, "uploads")
     PROCESSED_DIR: str = os.path.join(DATA_DIR, "processed")

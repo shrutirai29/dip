@@ -237,9 +237,12 @@ class DIPProcessor:
         """
         DIP: Alpha blending weighted overlay: Output = Frame*(1-alpha) + Heatmap*alpha.
         """
-        if heatmap is None:
+        if heatmap is None or frame is None:
             return frame
-        mask = cv2.cvtColor(heatmap, cv2.COLOR_BGR2GRAY) > 0
-        output = frame.copy()
-        output[mask] = cv2.addWeighted(frame[mask], 1.0 - alpha, heatmap[mask], alpha, 0)
-        return output
+        mask = cv2.cvtColor(heatmap, cv2.COLOR_BGR2GRAY) > 10
+        if not np.any(mask):
+            return frame
+        output = frame.copy().astype(np.float32)
+        h_f = heatmap.astype(np.float32)
+        output[mask] = output[mask] * (1.0 - alpha) + h_f[mask] * alpha
+        return np.clip(output, 0, 255).astype(np.uint8)

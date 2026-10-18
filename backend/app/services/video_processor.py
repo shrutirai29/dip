@@ -1,5 +1,6 @@
 import os
 import time
+import datetime
 import cv2
 import numpy as np
 import threading
@@ -90,10 +91,11 @@ class VideoProcessor:
 
         stride = max(1, analysis.frame_stride)
         out_fps = max(1.0, orig_fps / stride)
-        fourcc = cv2.VideoWriter_fourcc(*'avc1') if os.name == 'nt' else cv2.VideoWriter_fourcc(*'mp4v')
+        # Universal MP4 encoding
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         writer = cv2.VideoWriter(output_path, fourcc, out_fps, (width, height))
         if not writer.isOpened():
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            fourcc = cv2.VideoWriter_fourcc(*'XVID')
             writer = cv2.VideoWriter(output_path, fourcc, out_fps, (width, height))
 
         prev_gray = None
@@ -348,6 +350,8 @@ class VideoProcessor:
             self.db.commit()
 
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             analysis.status = "failed"
             analysis.error_message = str(e)
             self.db.commit()

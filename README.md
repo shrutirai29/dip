@@ -66,8 +66,7 @@ graph TD
 source venv/bin/activate
 
 # Run automated test suite:
-$env:PYTHONPATH="backend"
-pytest backend/tests
+pytest
 
 # Start FastAPI server on port 8000:
 uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000 --reload

@@ -16,3 +16,5 @@ data/reports/*
 data/models/*
 !data/models/.gitkeep
 *.db
+*.pt
+
