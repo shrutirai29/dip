@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   UploadCloud, 
   FileVideo, 
@@ -6,98 +6,138 @@ import {
   Pause, 
   XOctagon, 
   RefreshCw,
-  Sparkles,
-  Sliders
+  Sliders,
+  CheckCircle2,
+  AlertTriangle,
+  ExternalLink,
+  ChevronRight
 } from 'lucide-react';
 import { videoApi, analysisApi } from '../services/api';
 import { Video, Analysis } from '../types';
 import { useNavigate } from 'react-router-dom';
+import { 
+  StatusPill, 
+  ErrorState, 
+  LoadingBlock 
+} from '../components/UIComponents';
+import { useSystem } from '../context/SystemContext';
 
 export const VideoAnalysis: React.FC = () => {
   const navigate = useNavigate();
+  const { setSelectedAnalysis, triggerGlobalRefresh } = useSystem();
+
+  // Video catalog state
   const [videos, setVideos] = useState<Video[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [videosLoading, setVideosLoading] = useState<boolean>(true);
+  const [videosError, setVideosError] = useState<string | null>(null);
 
-  // Hyperparameters
+  // Uploading state
+  const [uploading, setUploading] = useState<boolean>(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
+
+  // Preset sample scenarios
+  const [samples, setSamples] = useState<{ filename: string; size_bytes: number; url: string }[]>([]);
+  const [loadingSample, setLoadingSample] = useState<string | null>(null);
+  const [sampleError, setSampleError] = useState<string | null>(null);
+
+  // Analysis Hyperparameters (All connected to API schema)
   const [confThreshold, setConfThreshold] = useState<number>(0.25);
   const [frameStride, setFrameStride] = useState<number>(2);
-  const [inferenceSize, setInferenceSize] = useState<number>(640);
-  const [perspectiveWeight, setPerspectiveWeight] = useState<number>(1.0);
+  const inferenceSize = 640;
+  const [perspectiveWeight, setPerspectiveWeight] = useState<number>(1.2);
   const [privacyMode, setPrivacyMode] = useState<string>('none');
 
-  // Weights
-  const [weightDensity, setWeightDensity] = useState<number>(0.35);
-  const [weightGrowth, setWeightGrowth] = useState<number>(0.20);
-  const [weightMotion, setWeightMotion] = useState<number>(0.25);
-  const [weightCongestion, setWeightCongestion] = useState<number>(0.20);
+  // Risk heuristic weights
+  const weightDensity = 0.35;
+  const weightGrowth = 0.20;
+  const weightMotion = 0.25;
+  const weightCongestion = 0.20;
 
   // Active Job State
   const [activeAnalysis, setActiveAnalysis] = useState<Analysis | null>(null);
-  const [jobPolling, setJobPolling] = useState(false);
+  const [jobPolling, setJobPolling] = useState<boolean>(false);
+  const [jobError, setJobError] = useState<string | null>(null);
+  const [jobActionLoading, setJobActionLoading] = useState<boolean>(false);
 
-  const [samples, setSamples] = useState<{ filename: string; size_bytes: number; url: string }[]>([]);
-  const [loadingSample, setLoadingSample] = useState(false);
-
-  useEffect(() => {
-    loadVideos();
-    loadSamples();
-  }, []);
-
-  const loadVideos = async () => {
+  const loadVideos = useCallback(async () => {
+    setVideosLoading(true);
+    setVideosError(null);
     try {
       const data = await videoApi.getAll();
       setVideos(data);
-      if (data.length > 0 && !selectedVideo) {
-        setSelectedVideo(data[0]);
+      if (data.length > 0) {
+        setSelectedVideo((prev) => (prev ? (data.find(v => v.id === prev.id) || data[0]) : data[0]));
+      } else {
+        setSelectedVideo(null);
       }
     } catch (err) {
-      console.error(err);
+      const msg = err instanceof Error ? err.message : 'Failed to retrieve video catalog';
+      setVideosError(msg);
+    } finally {
+      setVideosLoading(false);
     }
-  };
+  }, []);
 
-  const loadSamples = async () => {
+  const loadSamples = useCallback(async () => {
     try {
       const data = await videoApi.getSamples();
       setSamples(data);
     } catch (err) {
-      console.error('Failed to load sample list', err);
+      console.warn('Sample scenarios list unavailable:', err);
     }
-  };
+  }, []);
 
+  useEffect(() => {
+    loadVideos();
+    loadSamples();
+  }, [loadVideos, loadSamples]);
+
+  // Handle preset scenario 1-click ingestion
   const handleSelectSample = async (sampleName: string) => {
-    setLoadingSample(true);
+    setLoadingSample(sampleName);
+    setSampleError(null);
     try {
       const ingested = await videoApi.ingestSample(sampleName);
-      setVideos((prev) => [ingested, ...prev.filter(v => v.id !== ingested.id)]);
+      setVideos((prev) => [ingested, ...prev.filter((v) => v.id !== ingested.id)]);
       setSelectedVideo(ingested);
-    } catch (err: any) {
-      alert(err.response?.data?.detail || 'Failed to load sample scenario');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to load demonstration scenario';
+      setSampleError(msg);
     } finally {
-      setLoadingSample(false);
+      setLoadingSample(null);
     }
   };
 
+  // Handle local video file upload
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setUploading(true);
     setUploadError(null);
+    setUploadSuccess(null);
     try {
       const uploaded = await videoApi.upload(file);
       setVideos((prev) => [uploaded, ...prev]);
       setSelectedVideo(uploaded);
-    } catch (err: any) {
-      setUploadError(err.response?.data?.detail || 'Failed to upload video');
+      setUploadSuccess(`Successfully ingested "${uploaded.original_filename}" (${(uploaded.file_size_bytes / (1024 * 1024)).toFixed(1)} MB)`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Video upload failed. Check format and size limits.';
+      setUploadError(msg);
     } finally {
       setUploading(false);
+      // Reset input value
+      e.target.value = '';
     }
   };
 
+  // Start analysis job
   const handleStartAnalysis = async () => {
     if (!selectedVideo) return;
+    setJobError(null);
+    setJobActionLoading(true);
     try {
       const analysis = await analysisApi.create({
         video_id: selectedVideo.id,
@@ -112,74 +152,127 @@ export const VideoAnalysis: React.FC = () => {
         privacy_mode: privacyMode,
       });
       setActiveAnalysis(analysis);
+      setSelectedAnalysis(analysis);
       setJobPolling(true);
-    } catch (err: any) {
-      alert(err.response?.data?.detail || 'Failed to start analysis');
+      triggerGlobalRefresh();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to initiate video analysis job.';
+      setJobError(msg);
+    } finally {
+      setJobActionLoading(false);
     }
   };
 
+  // Poll analysis job status
   useEffect(() => {
-    let interval: any;
-    if (jobPolling && activeAnalysis) {
-      interval = setInterval(async () => {
-        try {
-          const updated = await analysisApi.getById(activeAnalysis.id);
-          setActiveAnalysis(updated);
-          if (updated.status === 'completed' || updated.status === 'failed' || updated.status === 'cancelled') {
-            setJobPolling(false);
-            if (updated.status === 'completed') {
-              navigate(`/monitoring?analysisId=${updated.id}`);
-            }
-          }
-        } catch (e) {
-          console.error(e);
+    if (!jobPolling || !activeAnalysis) return;
+
+    const intervalId = window.setInterval(async () => {
+      try {
+        const updated = await analysisApi.getById(activeAnalysis.id);
+        setActiveAnalysis(updated);
+        setSelectedAnalysis(updated);
+
+        if (updated.status === 'completed' || updated.status === 'failed' || updated.status === 'cancelled') {
+          setJobPolling(false);
+          triggerGlobalRefresh();
         }
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [jobPolling, activeAnalysis, navigate]);
+      } catch (err) {
+        console.warn('Analysis polling error:', err);
+      }
+    }, 1000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [jobPolling, activeAnalysis, setSelectedAnalysis, triggerGlobalRefresh]);
 
   const handlePause = async () => {
-    if (activeAnalysis) {
+    if (!activeAnalysis) return;
+    setJobActionLoading(true);
+    try {
       await analysisApi.pause(activeAnalysis.id);
-      setActiveAnalysis((prev) => prev ? { ...prev, status: 'paused' } : null);
+      setActiveAnalysis((prev) => (prev ? { ...prev, status: 'paused' } : null));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to pause analysis.';
+      setJobError(msg);
+    } finally {
+      setJobActionLoading(false);
     }
   };
 
   const handleResume = async () => {
-    if (activeAnalysis) {
+    if (!activeAnalysis) return;
+    setJobActionLoading(true);
+    try {
       await analysisApi.resume(activeAnalysis.id);
-      setActiveAnalysis((prev) => prev ? { ...prev, status: 'processing' } : null);
+      setActiveAnalysis((prev) => (prev ? { ...prev, status: 'processing' } : null));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to resume analysis.';
+      setJobError(msg);
+    } finally {
+      setJobActionLoading(false);
     }
   };
 
   const handleCancel = async () => {
-    if (activeAnalysis) {
+    if (!activeAnalysis) return;
+    setJobActionLoading(true);
+    try {
       await analysisApi.cancel(activeAnalysis.id);
-      setActiveAnalysis((prev) => prev ? { ...prev, status: 'cancelled' } : null);
+      setActiveAnalysis((prev) => (prev ? { ...prev, status: 'cancelled' } : null));
       setJobPolling(false);
+      triggerGlobalRefresh();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to cancel analysis.';
+      setJobError(msg);
+    } finally {
+      setJobActionLoading(false);
     }
   };
 
   return (
-    <div className="space-y-6 max-w-7xl">
-      <div className="pb-4 border-b border-[#1D2935]">
-        <h1 className="text-xl font-bold text-white tracking-tight">VIDEO INGESTION & PIPELINE CONFIGURATION</h1>
-        <p className="text-xs text-[#8C9AAA] mt-0.5">
-          Configure YOLO detection resolution, perspective scaling, privacy masking, and launch asynchronous processing
+    <div className="space-y-6">
+      {/* -------------------------------------------------------------------------
+          HEADER
+          ------------------------------------------------------------------------- */}
+      <div className="pb-4 border-b border-[#192638]">
+        <div className="flex items-center space-x-2.5">
+          <h2 className="text-xl font-bold tracking-tight text-white">
+            VIDEO INGESTION & PIPELINE STUDIO
+          </h2>
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/10 text-cyan-300 border border-cyan-500/25">
+            ASYNC ENGINE
+          </span>
+        </div>
+        <p className="text-xs text-slate-400 mt-1 max-w-3xl leading-relaxed">
+          Upload surveillance footage, select preset academic crowd scenarios, calibrate monocular perspective weights,
+          and execute the computer vision pipeline with real-time progress tracking.
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Upload & Video Sources */}
-        <div className="space-y-6">
-          {/* Upload Box */}
-          <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-5">
-            <h3 className="text-xs font-semibold text-white uppercase tracking-wider mb-3">Upload Video Footage</h3>
-            <label className="border-2 border-dashed border-[#1D2935] hover:border-cyan-500 rounded-lg p-5 flex flex-col items-center justify-center cursor-pointer transition bg-[#070B12]/50">
-              <UploadCloud className="w-9 h-9 text-cyan-400 mb-2" />
-              <span className="text-xs font-medium text-white">Click or drag MP4 / AVI / MKV</span>
-              <span className="text-[10px] text-[#8C9AAA] mt-1">Maximum upload size: 150MB</span>
+        {/* =========================================================================
+            LEFT COLUMN: VIDEO SOURCES & UPLOAD
+            ========================================================================= */}
+        <div className="space-y-5">
+          {/* Upload Panel */}
+          <div className="rounded-xl border border-[#192638] bg-[#0A1018] p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-white uppercase tracking-wider">
+                Upload Surveillance Video
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono">Max 150MB</span>
+            </div>
+
+            <label className="border-2 border-dashed border-[#1E2D40] hover:border-cyan-500/60 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-colors bg-[#0E1622]/50 hover:bg-[#121C2B]/60 text-center">
+              <UploadCloud className="w-10 h-10 text-cyan-400 mb-2" />
+              <span className="text-xs font-medium text-slate-200">
+                Click to browse or drop video file
+              </span>
+              <span className="text-[10px] text-slate-400 mt-1 font-mono">
+                Supports MP4, AVI, MOV, MKV
+              </span>
               <input
                 type="file"
                 accept="video/mp4,video/avi,video/x-msvideo,video/quicktime,video/x-matroska"
@@ -188,126 +281,208 @@ export const VideoAnalysis: React.FC = () => {
                 className="hidden"
               />
             </label>
+
             {uploading && (
-              <div className="mt-3 flex items-center space-x-2 text-xs text-cyan-400">
-                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              <div className="p-3 rounded-lg bg-cyan-950/30 border border-cyan-500/30 flex items-center space-x-2 text-xs text-cyan-300">
+                <RefreshCw className="w-4 h-4 animate-spin text-cyan-400 shrink-0" />
                 <span>Uploading and extracting video properties...</span>
               </div>
             )}
+
             {uploadError && (
-              <div className="mt-3 p-2 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded">
-                {uploadError}
+              <div className="p-3 rounded-lg bg-rose-950/30 border border-rose-500/30 flex items-start space-x-2 text-xs text-rose-300">
+                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                <span>{uploadError}</span>
+              </div>
+            )}
+
+            {uploadSuccess && (
+              <div className="p-3 rounded-lg bg-emerald-950/30 border border-emerald-500/30 flex items-start space-x-2 text-xs text-emerald-300">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <span>{uploadSuccess}</span>
               </div>
             )}
           </div>
 
-          {/* Preset Sample Scenarios */}
-          {samples.length > 0 && (
-            <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-5">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-xs font-semibold text-white uppercase tracking-wider">Demo Video Scenarios</h3>
-                <span className="text-[10px] text-cyan-400 font-mono">1-Click Load</span>
+          {/* Preset Academic Scenarios */}
+          <div className="rounded-xl border border-[#192638] bg-[#0A1018] p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-white uppercase tracking-wider">
+                Preset Academic Scenarios
+              </span>
+              <span className="text-[10px] font-mono text-cyan-300 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/25">
+                Deterministic
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              Synthesized CCTV scenarios designed for reproducible testing of bottleneck clustering, opposing counterflow, and sudden dispersion:
+            </p>
+
+            {sampleError && (
+              <div className="p-2.5 rounded bg-rose-950/20 border border-rose-500/30 text-rose-300 text-[11px]">
+                {sampleError}
               </div>
-              <p className="text-[11px] text-[#8C9AAA] mb-3">
-                Load preset synthetic test scenarios directly from server storage without uploading.
-              </p>
-              <div className="space-y-1.5">
-                {samples.map((s) => (
+            )}
+
+            <div className="space-y-2">
+              {samples.map((s) => {
+                const isLoadingThis = loadingSample === s.filename;
+                const isSelected = selectedVideo?.original_filename === s.filename || selectedVideo?.filename === s.filename;
+                return (
                   <button
                     key={s.filename}
                     onClick={() => handleSelectSample(s.filename)}
-                    disabled={loadingSample}
-                    className="w-full text-left p-2.5 rounded bg-[#111923] hover:bg-cyan-500/10 border border-[#1D2935] hover:border-cyan-500/40 text-xs text-white transition flex items-center justify-between group"
-                  >
-                    <div className="flex items-center space-x-2 truncate">
-                      <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0 group-hover:rotate-12 transition-transform" />
-                      <span className="truncate font-medium">{s.filename}</span>
-                    </div>
-                    <span className="text-[10px] text-[#8C9AAA] shrink-0 font-mono">
-                      {(s.size_bytes / (1024 * 1024)).toFixed(1)}MB
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Videos List */}
-          <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-5">
-            <h3 className="text-xs font-semibold text-white uppercase tracking-wider mb-3">Available Video Library</h3>
-            {videos.length === 0 ? (
-              <p className="text-xs text-[#8C9AAA]">No video files found. Upload a video to start.</p>
-            ) : (
-              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                {videos.map((vid) => (
-                  <div
-                    key={vid.id}
-                    onClick={() => setSelectedVideo(vid)}
-                    className={`p-3 rounded-lg cursor-pointer border text-xs transition flex items-center justify-between ${
-                      selectedVideo?.id === vid.id
-                        ? 'bg-cyan-500/10 border-cyan-500/50 text-white'
-                        : 'bg-[#111923] border-[#1D2935] text-[#8C9AAA] hover:border-gray-700'
+                    disabled={isLoadingThis}
+                    className={`w-full text-left p-3 rounded-lg border text-xs transition-colors flex items-center justify-between cursor-pointer ${
+                      isSelected
+                        ? 'border-cyan-500/40 bg-cyan-500/10 text-cyan-200'
+                        : 'border-[#192638] bg-[#0E1622] hover:bg-[#121C2B] text-slate-300 hover:text-white'
                     }`}
                   >
-                    <div className="flex items-center space-x-2.5 truncate">
-                      <FileVideo className="w-4 h-4 text-cyan-400 shrink-0" />
-                      <span className="truncate font-medium">{vid.original_filename}</span>
+                    <div className="space-y-0.5 truncate pr-2">
+                      <div className="font-medium truncate font-mono text-[11px]">
+                        {s.filename}
+                      </div>
+                      <div className="text-[10px] text-slate-400">
+                        Size: {(s.size_bytes / (1024 * 1024)).toFixed(1)} MB
+                      </div>
                     </div>
-                    <span className="text-[10px] text-[#8C9AAA] font-mono shrink-0 ml-2">
-                      {vid.duration_seconds}s
-                    </span>
-                  </div>
-                ))}
+
+                    <div className="shrink-0">
+                      {isLoadingThis ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+                      ) : (
+                        <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Video Catalog Browser */}
+          <div className="rounded-xl border border-[#192638] bg-[#0A1018] p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-white uppercase tracking-wider">
+                Catalog Video Library
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono">
+                {videos.length} clips
+              </span>
+            </div>
+
+            {videosLoading ? (
+              <LoadingBlock text="Loading catalog videos..." height="h-32" />
+            ) : videosError ? (
+              <ErrorState message={videosError} onRetry={loadVideos} />
+            ) : videos.length === 0 ? (
+              <p className="text-xs text-slate-400 py-4 text-center">
+                No videos in catalog. Upload a file above or click a preset scenario.
+              </p>
+            ) : (
+              <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                {videos.map((v) => {
+                  const isSelected = selectedVideo?.id === v.id;
+                  return (
+                    <button
+                      key={v.id}
+                      onClick={() => setSelectedVideo(v)}
+                      className={`w-full text-left p-2.5 rounded-lg border text-xs transition-colors cursor-pointer flex items-center justify-between ${
+                        isSelected
+                          ? 'border-cyan-500/40 bg-cyan-500/10 text-cyan-200'
+                          : 'border-[#192638] bg-[#0E1622] hover:bg-[#121C2B] text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      <div className="truncate pr-2">
+                        <div className="font-medium truncate font-mono text-[11px]">
+                          {v.original_filename || v.filename}
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-mono">
+                          {v.duration_seconds.toFixed(1)}s • {v.fps.toFixed(0)} FPS • {v.frame_count} frames
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                        {(v.file_size_bytes / (1024 * 1024)).toFixed(1)}MB
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
         </div>
 
-        {/* Right Column: Preview & Configuration */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Video Preview */}
-          <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-5">
-            <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#1D2935]">
-              <div>
-                <h3 className="text-sm font-semibold text-white">Source Video Stream Preview</h3>
-                <p className="text-xs text-[#8C9AAA]">
-                  {selectedVideo ? `${selectedVideo.original_filename} (${selectedVideo.width}x${selectedVideo.height} @ ${selectedVideo.fps} FPS)` : 'Select a video'}
-                </p>
+        {/* =========================================================================
+            CENTER & RIGHT: PIPELINE CONFIGURATION & RUNTIME EXECUTION
+            ========================================================================= */}
+        <div className="lg:col-span-2 space-y-5">
+          {/* Selected Video Overview */}
+          <div className="rounded-xl border border-[#192638] bg-[#0A1018] p-5">
+            <div className="flex items-center justify-between pb-3 border-b border-[#192638] mb-4">
+              <div className="flex items-center space-x-2">
+                <FileVideo className="w-4 h-4 text-cyan-400" />
+                <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
+                  Target Surveillance Footage
+                </h3>
               </div>
               {selectedVideo && (
-                <span className="text-xs bg-[#111923] border border-[#1D2935] text-[#F4F7FA] px-2.5 py-1 rounded font-mono">
-                  {(selectedVideo.file_size_bytes / (1024 * 1024)).toFixed(1)} MB
+                <span className="text-[11px] font-mono text-cyan-300">
+                  ID: {selectedVideo.id}
                 </span>
               )}
             </div>
 
             {selectedVideo ? (
-              <div className="aspect-video bg-black rounded-lg overflow-hidden border border-[#1D2935]">
-                <video
-                  src={`/data/uploads/${selectedVideo.filename}`}
-                  controls
-                  className="w-full h-full object-contain"
-                />
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div className="p-3 bg-[#0E1622] rounded-lg border border-[#192638]">
+                  <span className="text-[10px] text-slate-400 uppercase block mb-1">Duration</span>
+                  <span className="font-mono font-bold text-white text-sm">
+                    {selectedVideo.duration_seconds.toFixed(1)}s
+                  </span>
+                </div>
+                <div className="p-3 bg-[#0E1622] rounded-lg border border-[#192638]">
+                  <span className="text-[10px] text-slate-400 uppercase block mb-1">Framerate</span>
+                  <span className="font-mono font-bold text-white text-sm">
+                    {selectedVideo.fps.toFixed(1)} FPS
+                  </span>
+                </div>
+                <div className="p-3 bg-[#0E1622] rounded-lg border border-[#192638]">
+                  <span className="text-[10px] text-slate-400 uppercase block mb-1">Resolution</span>
+                  <span className="font-mono font-bold text-white text-sm">
+                    {selectedVideo.width} × {selectedVideo.height}
+                  </span>
+                </div>
+                <div className="p-3 bg-[#0E1622] rounded-lg border border-[#192638]">
+                  <span className="text-[10px] text-slate-400 uppercase block mb-1">Total Frames</span>
+                  <span className="font-mono font-bold text-white text-sm">
+                    {selectedVideo.frame_count}
+                  </span>
+                </div>
               </div>
             ) : (
-              <div className="aspect-video bg-[#070B12]/50 rounded-lg border border-dashed border-[#1D2935] flex items-center justify-center text-[#8C9AAA] text-xs">
-                No video selected
-              </div>
+              <p className="text-xs text-slate-400 py-3">
+                No video selected. Select or upload a clip from the library on the left.
+              </p>
             )}
           </div>
 
-          {/* Hyperparameters Card */}
-          <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-5 space-y-5">
-            <div className="flex items-center space-x-2 pb-2 border-b border-[#1D2935] text-white font-semibold text-xs uppercase tracking-wider">
+          {/* Hyperparameters & Vision Configuration */}
+          <div className="rounded-xl border border-[#192638] bg-[#0A1018] p-5 space-y-4">
+            <div className="flex items-center space-x-2 pb-3 border-b border-[#192638]">
               <Sliders className="w-4 h-4 text-cyan-400" />
-              <span>Inference & DIP Hyperparameters</span>
+              <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
+                Vision Engine Parameters & DIP Calibration
+              </h3>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-              <div>
-                <label className="text-[#8C9AAA] block mb-1">
-                  YOLO Confidence ({confThreshold})
-                </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              {/* Detection Confidence */}
+              <div className="p-3.5 bg-[#0E1622] rounded-lg border border-[#192638] space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="font-medium text-slate-200">YOLO Person Confidence Threshold</label>
+                  <span className="font-mono font-bold text-cyan-300">{confThreshold.toFixed(2)}</span>
+                </div>
                 <input
                   type="range"
                   min="0.10"
@@ -317,12 +492,17 @@ export const VideoAnalysis: React.FC = () => {
                   onChange={(e) => setConfThreshold(parseFloat(e.target.value))}
                   className="w-full accent-cyan-500"
                 />
+                <p className="text-[10px] text-slate-400">
+                  Minimum confidence score to accept Class 0 person bounding box (default: 0.25).
+                </p>
               </div>
 
-              <div>
-                <label className="text-[#8C9AAA] block mb-1">
-                  Frame Stride ({frameStride}x)
-                </label>
+              {/* Frame Stride */}
+              <div className="p-3.5 bg-[#0E1622] rounded-lg border border-[#192638] space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="font-medium text-slate-200">Temporal Frame Sampling Stride</label>
+                  <span className="font-mono font-bold text-cyan-300">{frameStride}</span>
+                </div>
                 <input
                   type="range"
                   min="1"
@@ -332,124 +512,223 @@ export const VideoAnalysis: React.FC = () => {
                   onChange={(e) => setFrameStride(parseInt(e.target.value))}
                   className="w-full accent-cyan-500"
                 />
-                <span className="text-[10px] text-[#8C9AAA]">Stride 2 = balance CPU throughput</span>
+                <p className="text-[10px] text-slate-400">
+                  Process every Nth frame. Stride 2 balances CPU Farneback flow with near real-time throughput.
+                </p>
               </div>
 
-              <div>
-                <label className="text-[#8C9AAA] block mb-1">
-                  Inference Size ({inferenceSize}px)
-                </label>
-                <select
-                  value={inferenceSize}
-                  onChange={(e) => setInferenceSize(parseInt(e.target.value))}
-                  className="w-full bg-[#111923] border border-[#1D2935] rounded px-2.5 py-1.5 text-xs text-white"
-                >
-                  <option value="384">384 px (Fast CPU)</option>
-                  <option value="640">640 px (Standard Precision)</option>
-                  <option value="960">960 px (High Detail)</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Perspective Scaling & Privacy Filter */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-1 border-t border-[#1D2935]">
-              <div>
-                <label className="text-[#8C9AAA] block mb-1">
-                  Perspective Normalization Weight ({perspectiveWeight.toFixed(1)}x)
-                </label>
+              {/* Monocular Perspective Weight */}
+              <div className="p-3.5 bg-[#0E1622] rounded-lg border border-[#192638] space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="font-medium text-slate-200">Monocular Perspective Weight</label>
+                  <span className="font-mono font-bold text-cyan-300">{perspectiveWeight.toFixed(1)}×</span>
+                </div>
                 <input
                   type="range"
-                  min="0.0"
+                  min="0.5"
                   max="2.5"
-                  step="0.2"
+                  step="0.1"
                   value={perspectiveWeight}
                   onChange={(e) => setPerspectiveWeight(parseFloat(e.target.value))}
                   className="w-full accent-cyan-500"
                 />
-                <span className="text-[10px] text-[#8C9AAA]">Compensates for monocular camera horizon foreshortening</span>
+                <p className="text-[10px] text-slate-400">
+                  Compensates for optical camera shrinkage of distant individuals near the top horizon.
+                </p>
               </div>
 
-              <div>
-                <label className="text-[#8C9AAA] block mb-1">
-                  Privacy Preservation Mode
-                </label>
+              {/* Privacy Masking Mode */}
+              <div className="p-3.5 bg-[#0E1622] rounded-lg border border-[#192638] space-y-2">
+                <label className="font-medium text-slate-200 block">Privacy Anonymization Mode</label>
                 <select
                   value={privacyMode}
                   onChange={(e) => setPrivacyMode(e.target.value)}
-                  className="w-full bg-[#111923] border border-[#1D2935] rounded px-2.5 py-1.5 text-xs text-white"
+                  className="w-full bg-[#121C2B] border border-[#1E2D40] text-slate-200 rounded px-3 py-1.5 text-xs focus:border-cyan-500"
                 >
-                  <option value="none">Raw Analytical Overlay (No Blur)</option>
-                  <option value="face_blur">Face Blur (Upper 28% ROI)</option>
-                  <option value="full_anonymize">Full Silhouette Anonymization</option>
+                  <option value="none">None (Standard Surveillance Annotations)</option>
+                  <option value="face_blur">Face Blur (Gaussian head region blurring)</option>
+                  <option value="full_anonymize">Full Anonymize (Silhouette bounding overlay)</option>
                 </select>
+                <p className="text-[10px] text-slate-400">
+                  Ethical surveillance compliance filter applied before frame encoding.
+                </p>
               </div>
             </div>
 
-            {/* Progress Bar (when running) */}
-            {activeAnalysis && (
-              <div className="p-4 bg-[#111923] rounded-lg border border-[#1D2935] space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-medium text-white">
-                    Status: <span className="uppercase text-cyan-400 font-bold">{activeAnalysis.status}</span>
-                  </span>
-                  <span className="text-[#8C9AAA] font-mono">{activeAnalysis.progress_percent}%</span>
+            {/* Risk Heuristic Weights Accordion/Grid */}
+            <div className="pt-2">
+              <span className="text-[11px] font-semibold text-slate-300 block mb-2">
+                Risk Heuristic Weight Distribution (Normalized Composite Formula):
+              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                <div className="p-2.5 bg-[#0E1622] rounded border border-[#192638]">
+                  <span className="text-[10px] text-slate-400 block">Density (wd)</span>
+                  <span className="font-mono font-bold text-cyan-300">{(weightDensity * 100).toFixed(0)}%</span>
                 </div>
-                <div className="w-full bg-[#1D2935] rounded-full h-2 overflow-hidden">
-                  <div
-                    className="bg-cyan-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${activeAnalysis.progress_percent}%` }}
-                  />
+                <div className="p-2.5 bg-[#0E1622] rounded border border-[#192638]">
+                  <span className="text-[10px] text-slate-400 block">Growth Influx (wg)</span>
+                  <span className="font-mono font-bold text-amber-300">{(weightGrowth * 100).toFixed(0)}%</span>
                 </div>
-                <div className="flex items-center justify-between text-[11px] text-[#8C9AAA] pt-1">
-                  <span>Throughput: {activeAnalysis.processing_fps} FPS</span>
-                  <span>Frame: {activeAnalysis.current_frame} / {activeAnalysis.total_frames}</span>
+                <div className="p-2.5 bg-[#0E1622] rounded border border-[#192638]">
+                  <span className="text-[10px] text-slate-400 block">Disorder/Flow (wm)</span>
+                  <span className="font-mono font-bold text-rose-300">{(weightMotion * 100).toFixed(0)}%</span>
                 </div>
+                <div className="p-2.5 bg-[#0E1622] rounded border border-[#192638]">
+                  <span className="text-[10px] text-slate-400 block">Congestion (wc)</span>
+                  <span className="font-mono font-bold text-purple-300">{(weightCongestion * 100).toFixed(0)}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Job Launch & Progress Terminal */}
+          <div className="rounded-xl border border-[#192638] bg-[#0A1018] p-5 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#192638]">
+              <div className="flex items-center space-x-2">
+                <Play className="w-4 h-4 text-cyan-400" />
+                <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
+                  Analysis Job Execution
+                </h3>
+              </div>
+
+              {activeAnalysis && (
+                <StatusPill status={activeAnalysis.status} />
+              )}
+            </div>
+
+            {jobError && (
+              <div className="p-3 rounded-lg bg-rose-950/30 border border-rose-500/30 text-xs text-rose-300 flex items-start space-x-2">
+                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                <span>{jobError}</span>
               </div>
             )}
 
-            {/* Launch Controls */}
-            <div className="flex items-center space-x-3 pt-2">
-              {!activeAnalysis || activeAnalysis.status === 'completed' || activeAnalysis.status === 'cancelled' || activeAnalysis.status === 'failed' ? (
+            {!activeAnalysis ? (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-2">
+                <div className="space-y-0.5 text-xs text-slate-400">
+                  <p className="text-slate-200 font-medium">Ready to launch inference</p>
+                  <p className="text-[11px]">
+                    The backend will spawn an asynchronous background thread processing frames sequentially.
+                  </p>
+                </div>
+
                 <button
                   onClick={handleStartAnalysis}
-                  disabled={!selectedVideo}
-                  className="px-5 py-2.5 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold transition flex items-center space-x-2 shadow-sm"
+                  disabled={!selectedVideo || jobActionLoading}
+                  className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-5 py-2.5 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow-xs shrink-0"
                 >
-                  <Play className="w-4 h-4 fill-white" />
+                  <Play className="w-4 h-4 fill-current" />
                   <span>Launch Computer Vision Pipeline</span>
                 </button>
-              ) : (
-                <>
-                  {activeAnalysis.status === 'processing' ? (
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Progress bar */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-medium text-slate-200">
+                      Processing: Frame {activeAnalysis.current_frame} of {activeAnalysis.total_frames || '—'}
+                    </span>
+                    <span className="font-mono font-bold text-cyan-300">
+                      {activeAnalysis.progress_percent.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-[#0E1622] rounded-full h-2 border border-[#192638] overflow-hidden">
+                    <div
+                      className="bg-cyan-500 h-2 transition-all duration-300"
+                      style={{ width: `${Math.min(100, Math.max(0, activeAnalysis.progress_percent))}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Processing metrics */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                  <div className="p-2.5 bg-[#0E1622] rounded border border-[#192638]">
+                    <span className="text-[10px] text-slate-400 block">Processing Speed</span>
+                    <span className="font-mono font-bold text-white text-xs">
+                      {activeAnalysis.processing_fps.toFixed(1)} FPS
+                    </span>
+                  </div>
+                  <div className="p-2.5 bg-[#0E1622] rounded border border-[#192638]">
+                    <span className="text-[10px] text-slate-400 block">Peak Detected</span>
+                    <span className="font-mono font-bold text-white text-xs">
+                      {activeAnalysis.peak_count} persons
+                    </span>
+                  </div>
+                  <div className="p-2.5 bg-[#0E1622] rounded border border-[#192638]">
+                    <span className="text-[10px] text-slate-400 block">Max Risk Score</span>
+                    <span className="font-mono font-bold text-rose-400 text-xs">
+                      {activeAnalysis.max_risk_score.toFixed(1)}/100
+                    </span>
+                  </div>
+                  <div className="p-2.5 bg-[#0E1622] rounded border border-[#192638]">
+                    <span className="text-[10px] text-slate-400 block">Active Pattern</span>
+                    <span className="font-mono font-bold text-cyan-300 text-xs uppercase truncate block">
+                      {activeAnalysis.dominant_pattern || 'ANALYZING...'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Controls */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[#192638]">
+                  <div className="flex items-center space-x-2">
+                    {activeAnalysis.status === 'processing' && (
+                      <button
+                        onClick={handlePause}
+                        disabled={jobActionLoading}
+                        className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded bg-[#121C2B] hover:bg-[#182538] border border-[#1E2D40] text-xs font-medium text-slate-300 cursor-pointer"
+                      >
+                        <Pause className="w-3.5 h-3.5" />
+                        <span>Pause</span>
+                      </button>
+                    )}
+                    {activeAnalysis.status === 'paused' && (
+                      <button
+                        onClick={handleResume}
+                        disabled={jobActionLoading}
+                        className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-500/40 text-xs font-medium text-cyan-200 cursor-pointer"
+                      >
+                        <Play className="w-3.5 h-3.5" />
+                        <span>Resume</span>
+                      </button>
+                    )}
+                    {(activeAnalysis.status === 'processing' || activeAnalysis.status === 'paused') && (
+                      <button
+                        onClick={handleCancel}
+                        disabled={jobActionLoading}
+                        className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded bg-rose-950/40 hover:bg-rose-950/60 border border-rose-500/40 text-xs font-medium text-rose-300 cursor-pointer"
+                      >
+                        <XOctagon className="w-3.5 h-3.5" />
+                        <span>Cancel</span>
+                      </button>
+                    )}
+                    {(activeAnalysis.status === 'completed' || activeAnalysis.status === 'failed' || activeAnalysis.status === 'cancelled') && (
+                      <button
+                        onClick={() => setActiveAnalysis(null)}
+                        className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded bg-[#121C2B] hover:bg-[#182538] border border-[#1E2D40] text-xs font-medium text-slate-300 cursor-pointer"
+                      >
+                        <span>Configure New Job</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {activeAnalysis.status === 'completed' && (
                     <button
-                      onClick={handlePause}
-                      className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-medium transition flex items-center space-x-2"
+                      onClick={() => navigate(`/monitoring?analysisId=${activeAnalysis.id}`)}
+                      className="inline-flex items-center space-x-1.5 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-semibold transition-colors cursor-pointer"
                     >
-                      <Pause className="w-4 h-4" />
-                      <span>Pause Analysis</span>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleResume}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-medium transition flex items-center space-x-2"
-                    >
-                      <Play className="w-4 h-4 fill-white" />
-                      <span>Resume Analysis</span>
+                      <span>Open Live Telemetry & Replay</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
                     </button>
                   )}
-                  <button
-                    onClick={handleCancel}
-                    className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-medium transition flex items-center space-x-2"
-                  >
-                    <XOctagon className="w-4 h-4" />
-                    <span>Cancel Pipeline</span>
-                  </button>
-                </>
-              )}
-            </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
 };
+
+export default VideoAnalysis;

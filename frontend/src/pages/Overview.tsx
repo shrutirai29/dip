@@ -392,8 +392,8 @@ export const Overview: React.FC = () => {
           }
           unit={summary && typeof summary.total_videos === 'number' ? 'files' : undefined}
           subtext={
-            summary && typeof summary.completed_analyses === 'number'
-              ? `${summary.completed_analyses} completed audits`
+            summary && typeof summary.total_analyses === 'number'
+              ? `${summary.total_analyses} total surveillance audits`
               : (partialErrors.summary || 'Summary metrics unavailable')
           }
           icon={Video}

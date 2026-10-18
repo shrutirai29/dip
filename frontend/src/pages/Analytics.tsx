@@ -1,202 +1,512 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { 
-  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  Tooltip, 
+  ResponsiveContainer, 
+  CartesianGrid, 
+  AreaChart, 
+  Area,
+  Legend
 } from 'recharts';
+import { 
+  Activity, 
+  TrendingUp, 
+  Compass, 
+  Zap, 
+  RefreshCw, 
+  FileSpreadsheet, 
+  AlertCircle,
+  BarChart2
+} from 'lucide-react';
 import { analysisApi } from '../services/api';
 import { Analysis, FrameRecord } from '../types';
+import { 
+  KPICard, 
+  StatusPill, 
+  EmptyState, 
+  ErrorState, 
+  LoadingBlock 
+} from '../components/UIComponents';
+import { useSystem } from '../context/SystemContext';
 
 export const Analytics: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryAnalysisId = searchParams.get('analysisId');
+  const { selectedAnalysis: contextAnalysis, setSelectedAnalysis: setContextAnalysis } = useSystem();
+
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
-  const [selectedAnalysisId, setSelectedAnalysisId] = useState<string>('');
+  const [selectedAnalysis, setSelectedAnalysis] = useState<Analysis | null>(null);
   const [frameData, setFrameData] = useState<FrameRecord[]>([]);
+  
+  const [loadingList, setLoadingList] = useState<boolean>(true);
+  const [loadingFrames, setLoadingFrames] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadAnalyses();
-  }, []);
-
-  const loadAnalyses = async () => {
-    try {
-      const data = await analysisApi.getAll();
-      setAnalyses(data);
-      if (data.length > 0) {
-        setSelectedAnalysisId(data[0].id);
-        loadFrames(data[0].id);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const loadFrames = async (id: string) => {
+  // Load telemetry frames for a specific session
+  const loadFrames = useCallback(async (id: string) => {
+    setLoadingFrames(true);
     try {
       const frames = await analysisApi.getResults(id);
       setFrameData(frames);
     } catch (e) {
-      console.error(e);
+      console.error('Failed to load frames:', e);
+      setFrameData([]);
+    } finally {
+      setLoadingFrames(false);
+    }
+  }, []);
+
+  // Load catalog of analyses
+  const loadAnalyses = useCallback(async () => {
+    setLoadingList(true);
+    setErrorMessage(null);
+    try {
+      const data = await analysisApi.getAll();
+      setAnalyses(data);
+      if (data.length > 0) {
+        const target = queryAnalysisId 
+          ? data.find((a) => a.id === queryAnalysisId) || data[0]
+          : contextAnalysis 
+            ? data.find((a) => a.id === contextAnalysis.id) || data[0]
+            : data[0];
+
+        setSelectedAnalysis(target);
+        setContextAnalysis(target);
+        loadFrames(target.id);
+      } else {
+        setSelectedAnalysis(null);
+        setFrameData([]);
+      }
+    } catch (e) {
+      console.error('Failed to load analyses:', e);
+      setErrorMessage('Unable to retrieve surveillance analytics data from the backend.');
+    } finally {
+      setLoadingList(false);
+    }
+  }, [queryAnalysisId, contextAnalysis, setContextAnalysis, loadFrames]);
+
+  useEffect(() => {
+    loadAnalyses();
+  }, [loadAnalyses]);
+
+  const handleSelect = (id: string) => {
+    const found = analyses.find((a) => a.id === id);
+    if (found) {
+      setSelectedAnalysis(found);
+      setContextAnalysis(found);
+      setSearchParams({ analysisId: found.id });
+      loadFrames(found.id);
     }
   };
 
-  const handleSelect = (id: string) => {
-    setSelectedAnalysisId(id);
-    loadFrames(id);
-  };
+  // Aggregated Statistical Metrics
+  const metrics = useMemo(() => {
+    if (!frameData || frameData.length === 0) {
+      return {
+        meanSpeed: '—',
+        meanFlow: '—',
+        meanEntropy: '—',
+        meanAccel: '—',
+        peakForecast10s: '—',
+        hasData: false
+      };
+    }
 
-  const meanSpeed = frameData.length > 0
-    ? (frameData.reduce((acc, f) => acc + f.mean_speed_pixels, 0) / frameData.length).toFixed(1)
-    : '0.0';
-    
-  const meanFlow = frameData.length > 0
-    ? (frameData.reduce((acc, f) => acc + f.optical_flow_magnitude, 0) / frameData.length).toFixed(1)
-    : '0.0';
+    const count = frameData.length;
+    const speed = frameData.reduce((acc, f) => acc + (f.mean_speed_pixels || 0), 0) / count;
+    const flow = frameData.reduce((acc, f) => acc + (f.optical_flow_magnitude || 0), 0) / count;
+    const entropy = frameData.reduce((acc, f) => acc + (f.directional_entropy || 0), 0) / count;
+    const accel = frameData.reduce((acc, f) => acc + (f.mean_acceleration || 0), 0) / count;
+    const maxForecast = Math.max(...frameData.map(f => f.forecast_risk_10s || 0));
 
-  const meanEntropy = frameData.length > 0
-    ? (frameData.reduce((acc, f) => acc + f.directional_entropy, 0) / frameData.length).toFixed(3)
-    : '0.000';
+    return {
+      meanSpeed: speed.toFixed(1),
+      meanFlow: flow.toFixed(1),
+      meanEntropy: entropy.toFixed(3),
+      meanAccel: accel.toFixed(2),
+      peakForecast10s: maxForecast.toFixed(1),
+      hasData: true
+    };
+  }, [frameData]);
 
-  const meanAccel = frameData.length > 0
-    ? (frameData.reduce((acc, f) => acc + f.mean_acceleration, 0) / frameData.length).toFixed(2)
-    : '0.00';
+  if (loadingList) {
+    return (
+      <div className="space-y-6">
+        <LoadingBlock text="Aggregating predictive crowd telemetry..." height="h-96" />
+      </div>
+    );
+  }
+
+  if (errorMessage) {
+    return (
+      <div className="space-y-6">
+        <ErrorState message={errorMessage} onRetry={loadAnalyses} />
+      </div>
+    );
+  }
+
+  if (analyses.length === 0) {
+    return (
+      <div className="space-y-6">
+        <EmptyState
+          title="No Analytics Data Available"
+          description="There are currently no surveillance runs in the system to calculate crowd dynamics or predictive trends. Run an analysis session first."
+          actionText="Go to Ingestion Studio"
+          onAction={() => window.location.href = '/video-analysis'}
+          icon={BarChart2}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-7xl">
-      <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-[#1D2935] gap-4">
+      {/* Header with Session Selector, Status, and CSV Export */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-4 border-b border-[#1E2D40] gap-4">
         <div>
-          <h1 className="text-xl font-bold text-white tracking-tight">ADVANCED CROWD DYNAMICS & PREDICTIVE ANALYTICS</h1>
-          <p className="text-xs text-[#8C9AAA] mt-0.5">
-            Temporal feature decomposition: Farneback optical flow fields, Shannon entropy, and multi-horizon forecasts
+          <div className="flex items-center space-x-2.5">
+            <h1 className="text-xl font-bold text-white tracking-tight">
+              ADVANCED DYNAMICS & PREDICTIVE ANALYTICS
+            </h1>
+            {selectedAnalysis && <StatusPill status={selectedAnalysis.status} />}
+          </div>
+          <p className="text-xs text-slate-400 mt-1">
+            Temporal feature decomposition: Farneback optical flow velocity vectors, directional Shannon entropy, and multi-horizon risk projections
           </p>
         </div>
 
-        <select
-          value={selectedAnalysisId}
-          onChange={(e) => handleSelect(e.target.value)}
-          className="bg-[#0D131C] border border-[#1D2935] text-xs text-white rounded-lg px-3 py-2"
-        >
-          {analyses.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.id} ({a.created_at.slice(0, 10)})
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Top 4 Telemetry Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-        <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-4">
-          <span className="text-[10px] text-[#8C9AAA] uppercase tracking-wider font-semibold">Mean Flow Speed</span>
-          <div className="flex items-baseline space-x-1.5 mt-1.5">
-            <span className="text-xl font-bold text-cyan-400">{meanSpeed}</span>
-            <span className="text-[10px] text-[#8C9AAA]">px / sec</span>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex items-center space-x-2 bg-[#0E1622] border border-[#1E2D40] rounded-lg px-2.5 py-1.5">
+            <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400">Session:</span>
+            <select
+              value={selectedAnalysis?.id || ''}
+              onChange={(e) => handleSelect(e.target.value)}
+              className="bg-transparent text-xs font-mono text-cyan-300 focus:outline-none cursor-pointer"
+            >
+              {analyses.map((a) => (
+                <option key={a.id} value={a.id} className="bg-[#0E1622] text-white">
+                  {a.id.slice(0, 16)}... ({a.status.toUpperCase()})
+                </option>
+              ))}
+            </select>
           </div>
-          <span className="text-[9px] text-[#8C9AAA] mt-1 block">Tracked centroid displacement</span>
-        </div>
 
-        <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-4">
-          <span className="text-[10px] text-[#8C9AAA] uppercase tracking-wider font-semibold">Optical Flow Magnitude</span>
-          <div className="flex items-baseline space-x-1.5 mt-1.5">
-            <span className="text-xl font-bold text-amber-400">{meanFlow}</span>
-            <span className="text-[10px] text-[#8C9AAA]">px / frame</span>
-          </div>
-          <span className="text-[9px] text-[#8C9AAA] mt-1 block">Farneback dense motion field</span>
-        </div>
+          <button
+            onClick={() => selectedAnalysis && loadFrames(selectedAnalysis.id)}
+            disabled={loadingFrames}
+            className="p-2 bg-[#0E1622] hover:bg-[#141E2B] text-slate-300 hover:text-white border border-[#1E2D40] rounded-lg text-xs transition cursor-pointer"
+            title="Refresh Analytics"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loadingFrames ? 'animate-spin text-cyan-400' : ''}`} />
+          </button>
 
-        <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-4">
-          <span className="text-[10px] text-[#8C9AAA] uppercase tracking-wider font-semibold">Directional Entropy</span>
-          <div className="flex items-baseline space-x-1.5 mt-1.5">
-            <span className="text-xl font-bold text-purple-400">{meanEntropy}</span>
-            <span className="text-[10px] text-[#8C9AAA]">Shannon H / H_max</span>
-          </div>
-          <span className="text-[9px] text-[#8C9AAA] mt-1 block">Angular vector disorder index</span>
-        </div>
-
-        <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-4">
-          <span className="text-[10px] text-[#8C9AAA] uppercase tracking-wider font-semibold">Crowd Acceleration</span>
-          <div className="flex items-baseline space-x-1.5 mt-1.5">
-            <span className="text-xl font-bold text-rose-400">{meanAccel}</span>
-            <span className="text-[10px] text-[#8C9AAA]">px / sec²</span>
-          </div>
-          <span className="text-[9px] text-[#8C9AAA] mt-1 block">Velocity surge gradient</span>
+          {selectedAnalysis && (
+            <a
+              href={analysisApi.getExportUrl(selectedAnalysis.id)}
+              download
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-cyan-950/30 hover:bg-cyan-900/40 text-cyan-300 rounded-lg text-xs font-medium border border-cyan-500/30 transition"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Export CSV</span>
+            </a>
+          )}
         </div>
       </div>
 
-      {/* Analytics Charts */}
+      {/* Top 4 Telemetry Metric Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <KPICard
+          label="Mean Flow Speed"
+          value={metrics.meanSpeed}
+          unit="px / sec"
+          subtext="Centroid vector tracking"
+          icon={Activity}
+          tone="cyan"
+        />
+        <KPICard
+          label="Optical Flow Mag"
+          value={metrics.meanFlow}
+          unit="px / frame"
+          subtext="Farneback dense motion field"
+          icon={Zap}
+          tone="amber"
+        />
+        <KPICard
+          label="Directional Entropy"
+          value={metrics.meanEntropy}
+          unit="Shannon H"
+          subtext="Normalized angular disorder"
+          icon={Compass}
+          tone="neutral"
+        />
+        <KPICard
+          label="Surge Acceleration"
+          value={metrics.meanAccel}
+          unit="px / sec²"
+          subtext="Velocity gradient rate"
+          icon={TrendingUp}
+          tone="rose"
+        />
+      </div>
+
+      {/* Analytics Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Forecast Comparison Chart */}
-        <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
-              Current Risk vs Multi-Horizon Forecast (+5s, +10s, +15s)
-            </h3>
-            <span className="text-[10px] font-mono text-cyan-400">Uncalibrated Trend Extrapolation</span>
+        <div className="bg-[#0E1622] border border-[#1E2D40] rounded-xl p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
+                Current Risk vs Multi-Horizon Forecast (+5s, +10s, +15s)
+              </h3>
+              <p className="text-[10px] text-slate-400 mt-0.5">
+                Velocity and density gradient trend extrapolation
+              </p>
+            </div>
+            <span className="text-[10px] font-mono text-cyan-400 px-2 py-0.5 rounded bg-cyan-950/40 border border-cyan-500/30">
+              Multi-Horizon
+            </span>
           </div>
-          <p className="text-[10px] text-[#8C9AAA] mb-2 font-mono">
-            *Experimental extrapolation from local velocity gradients; not calibrated disaster probability.
-          </p>
-          <div className="h-60">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={frameData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1D2935" />
-                <XAxis dataKey="timestamp_sec" stroke="#8C9AAA" tick={{ fontSize: 10 }} unit="s" />
-                <YAxis stroke="#8C9AAA" domain={[0, 100]} tick={{ fontSize: 10 }} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#0D131C', borderColor: '#1D2935', fontSize: '11px' }}
-                />
-                <Line type="monotone" dataKey="smoothed_risk_score" name="Current Risk" stroke="#f59e0b" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="forecast_risk_5s" name="Forecast +5s" stroke="#38bdf8" strokeDasharray="3 3" dot={false} />
-                <Line type="monotone" dataKey="forecast_risk_10s" name="Forecast +10s" stroke="#ef4444" strokeWidth={2} strokeDasharray="4 4" dot={false} />
-                <Line type="monotone" dataKey="forecast_risk_15s" name="Forecast +15s" stroke="#a855f7" strokeDasharray="2 2" dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
+
+          <div className="p-2.5 rounded-lg bg-[#0A1018] border border-[#1E2D40] text-[10px] text-slate-400 flex items-start space-x-2">
+            <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+            <span>
+              <strong>Scientific Disclaimer:</strong> Forecasts represent heuristic polynomial extrapolations of instantaneous velocity and density gradients. They are uncalibrated advisory indicators and do not guarantee disaster probability.
+            </span>
+          </div>
+
+          <div className="h-64">
+            {frameData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={frameData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1E2D40" />
+                  <XAxis 
+                    dataKey="timestamp_sec" 
+                    stroke="#64748B" 
+                    tick={{ fontSize: 10, fill: '#64748B' }} 
+                    unit="s" 
+                  />
+                  <YAxis 
+                    stroke="#64748B" 
+                    domain={[0, 100]} 
+                    tick={{ fontSize: 10, fill: '#64748B' }} 
+                  />
+                  <Tooltip
+                    contentStyle={{ 
+                      backgroundColor: '#0E1622', 
+                      borderColor: '#1E2D40', 
+                      borderRadius: '8px', 
+                      fontSize: '11px',
+                      color: '#F8FAFC' 
+                    }}
+                  />
+                  <Legend 
+                    wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} 
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="smoothed_risk_score" 
+                    name="Current Risk" 
+                    stroke="#f59e0b" 
+                    strokeWidth={2} 
+                    dot={false} 
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="forecast_risk_5s" 
+                    name="Forecast +5s" 
+                    stroke="#38bdf8" 
+                    strokeWidth={1.5}
+                    strokeDasharray="3 3" 
+                    dot={false} 
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="forecast_risk_10s" 
+                    name="Forecast +10s" 
+                    stroke="#ef4444" 
+                    strokeWidth={2} 
+                    strokeDasharray="4 4" 
+                    dot={false} 
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="forecast_risk_15s" 
+                    name="Forecast +15s" 
+                    stroke="#c084fc" 
+                    strokeWidth={1.5}
+                    strokeDasharray="2 2" 
+                    dot={false} 
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-xs text-slate-500">
+                No telemetry time-series points recorded.
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Directional Shannon Entropy & Velocity Dynamics */}
-        <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
-              Directional Shannon Entropy & Flow Irregularity
-            </h3>
-            <span className="text-[10px] font-mono text-cyan-400">Turbulence / Panic Index</span>
+        {/* Directional Shannon Entropy & Motion Variance */}
+        <div className="bg-[#0E1622] border border-[#1E2D40] rounded-xl p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
+                Directional Shannon Entropy & Motion Variance
+              </h3>
+              <p className="text-[10px] text-slate-400 mt-0.5">
+                Quantifying coordinated laminar flow vs chaotic turbulence
+              </p>
+            </div>
+            <span className="text-[10px] font-mono text-purple-400 px-2 py-0.5 rounded bg-purple-950/40 border border-purple-500/30">
+              Turbulence Index
+            </span>
           </div>
-          <div className="h-60">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={frameData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1D2935" />
-                <XAxis dataKey="timestamp_sec" stroke="#8C9AAA" tick={{ fontSize: 10 }} unit="s" />
-                <YAxis stroke="#8C9AAA" tick={{ fontSize: 10 }} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#0D131C', borderColor: '#1D2935', fontSize: '11px' }}
-                />
-                <Line type="monotone" dataKey="directional_entropy" name="Directional Entropy (0-1)" stroke="#a855f7" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="motion_variance" name="Motion Variance" stroke="#06b6d4" strokeWidth={1.5} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
+
+          <div className="p-2.5 rounded-lg bg-[#0A1018] border border-[#1E2D40] text-[10px] text-slate-400">
+            Shannon entropy values &gt; 0.65 indicate multidirectional vector dispersion or panic agitation. Values &lt; 0.35 indicate uniform, structured pedestrian movement.
+          </div>
+
+          <div className="h-64">
+            {frameData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={frameData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1E2D40" />
+                  <XAxis 
+                    dataKey="timestamp_sec" 
+                    stroke="#64748B" 
+                    tick={{ fontSize: 10, fill: '#64748B' }} 
+                    unit="s" 
+                  />
+                  <YAxis 
+                    stroke="#64748B" 
+                    tick={{ fontSize: 10, fill: '#64748B' }} 
+                  />
+                  <Tooltip
+                    contentStyle={{ 
+                      backgroundColor: '#0E1622', 
+                      borderColor: '#1E2D40', 
+                      borderRadius: '8px', 
+                      fontSize: '11px',
+                      color: '#F8FAFC' 
+                    }}
+                  />
+                  <Legend 
+                    wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} 
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="directional_entropy" 
+                    name="Directional Entropy (0-1)" 
+                    stroke="#c084fc" 
+                    strokeWidth={2} 
+                    dot={false} 
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="motion_variance" 
+                    name="Motion Variance" 
+                    stroke="#06b6d4" 
+                    strokeWidth={1.5} 
+                    dot={false} 
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-xs text-slate-500">
+                No entropy dynamics recorded for this session.
+              </div>
+            )}
           </div>
         </div>
 
-        {/* 4 Normalized Risk Factor Components */}
-        <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-5 lg:col-span-2">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
-              Four Component Heuristic Progression (0.0 to 1.0 Normalized)
-            </h3>
-            <span className="text-[10px] font-mono text-[#8C9AAA]">Density (35%) • Growth (20%) • Motion (25%) • Congestion (20%)</span>
+        {/* 4 Normalized Risk Factor Components Progression */}
+        <div className="bg-[#0E1622] border border-[#1E2D40] rounded-xl p-5 space-y-3 lg:col-span-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
+                Four Normalized Heuristic Risk Components Progression
+              </h3>
+              <p className="text-[10px] text-slate-400 mt-0.5">
+                Decomposition into Density Pressure (35%), Surge Influx (20%), Motion Anomaly (25%), and Spatial Congestion (20%)
+              </p>
+            </div>
+            <span className="text-[10px] font-mono text-slate-400">
+              Normalized [0.0 - 1.0] Range
+            </span>
           </div>
-          <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={frameData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1D2935" />
-                <XAxis dataKey="timestamp_sec" stroke="#8C9AAA" tick={{ fontSize: 10 }} unit="s" />
-                <YAxis stroke="#8C9AAA" domain={[0, 1]} tick={{ fontSize: 10 }} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#0D131C', borderColor: '#1D2935', fontSize: '11px' }}
-                />
-                <Area type="monotone" dataKey="density_component" name="Density Pressure" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.15} />
-                <Area type="monotone" dataKey="growth_component" name="Surge Influx" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.15} />
-                <Area type="monotone" dataKey="motion_anomaly_component" name="Motion Anomaly" stroke="#ef4444" fill="#ef4444" fillOpacity={0.15} />
-                <Area type="monotone" dataKey="congestion_component" name="Grid Congestion" stroke="#a855f7" fill="#a855f7" fillOpacity={0.15} />
-              </AreaChart>
-            </ResponsiveContainer>
+
+          <div className="h-64">
+            {frameData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={frameData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1E2D40" />
+                  <XAxis 
+                    dataKey="timestamp_sec" 
+                    stroke="#64748B" 
+                    tick={{ fontSize: 10, fill: '#64748B' }} 
+                    unit="s" 
+                  />
+                  <YAxis 
+                    stroke="#64748B" 
+                    domain={[0, 1]} 
+                    tick={{ fontSize: 10, fill: '#64748B' }} 
+                  />
+                  <Tooltip
+                    contentStyle={{ 
+                      backgroundColor: '#0E1622', 
+                      borderColor: '#1E2D40', 
+                      borderRadius: '8px', 
+                      fontSize: '11px',
+                      color: '#F8FAFC' 
+                    }}
+                  />
+                  <Legend 
+                    wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} 
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="density_component" 
+                    name="Density Pressure (w=0.35)" 
+                    stroke="#06b6d4" 
+                    fill="#06b6d4" 
+                    fillOpacity={0.12} 
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="growth_component" 
+                    name="Surge Influx (w=0.20)" 
+                    stroke="#f59e0b" 
+                    fill="#f59e0b" 
+                    fillOpacity={0.12} 
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="motion_anomaly_component" 
+                    name="Motion Anomaly (w=0.25)" 
+                    stroke="#ef4444" 
+                    fill="#ef4444" 
+                    fillOpacity={0.12} 
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="congestion_component" 
+                    name="Grid Congestion (w=0.20)" 
+                    stroke="#c084fc" 
+                    fill="#c084fc" 
+                    fillOpacity={0.12} 
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-xs text-slate-500">
+                No component telemetry available.
+              </div>
+            )}
           </div>
         </div>
       </div>

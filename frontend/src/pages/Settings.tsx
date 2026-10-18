@@ -1,85 +1,173 @@
 import React from 'react';
-import { Cpu, Lock, Compass } from 'lucide-react';
+import { 
+  Cpu, 
+  Lock, 
+  Compass, 
+  Sliders, 
+  ShieldCheck, 
+  HardDrive
+} from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
   return (
-    <div className="space-y-6 max-w-4xl text-xs">
-      <div className="pb-4 border-b border-[#1D2935]">
-        <h1 className="text-xl font-bold text-white tracking-tight">ENGINE ARCHITECTURE & CALIBRATION SPECIFICATION</h1>
-        <p className="text-xs text-[#8C9AAA] mt-0.5">
-          Configure default hyperparameters for DIP optical flow, perspective normalization, and privacy protection
+    <div className="space-y-6 max-w-5xl text-xs text-slate-200">
+      {/* Header */}
+      <div className="pb-4 border-b border-[#1E2D40]">
+        <div className="flex items-center space-x-2.5">
+          <h1 className="text-xl font-bold text-white tracking-tight">
+            ENGINE CALIBRATION & RUNTIME SPECIFICATION
+          </h1>
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-cyan-950/40 border border-cyan-500/30 text-cyan-300">
+            SYSTEM ENGINE v2.0
+          </span>
+        </div>
+        <p className="text-xs text-slate-400 mt-1">
+          Active hyperparameter configuration for DIP optical flow, monocular perspective splatting, heuristic weighting, and privacy compliance
         </p>
       </div>
 
       <div className="space-y-5">
-        {/* Detection Engine */}
-        <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-5 space-y-3">
+        {/* Detection Engine & Backbone */}
+        <div className="bg-[#0E1622] border border-[#1E2D40] rounded-xl p-5 space-y-3">
           <div className="flex items-center space-x-2 text-white font-semibold text-xs uppercase tracking-wider">
             <Cpu className="w-4 h-4 text-cyan-400" />
             <span>AI Model & Vision Backbone</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div>
-              <label className="text-[#8C9AAA] block mb-1">Pretrained Architecture</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div className="space-y-1">
+              <label className="text-[10px] font-mono uppercase text-slate-400">Pretrained Object Detector</label>
               <input
                 type="text"
                 disabled
-                value="Ultralytics YOLOv8 Nano (yolov8n.pt - Filtered to Person Class 0)"
-                className="w-full bg-[#111923] border border-[#1D2935] rounded p-2 text-white font-mono"
+                value="Ultralytics YOLOv8 Nano (yolov8n.pt - Class 0 Person)"
+                className="w-full bg-[#0A1018] border border-[#1E2D40] rounded-lg p-2.5 text-cyan-300 font-mono text-xs cursor-not-allowed"
               />
             </div>
-            <div>
-              <label className="text-[#8C9AAA] block mb-1">Hardware Acceleration Device</label>
+            <div className="space-y-1">
+              <label className="text-[10px] font-mono uppercase text-slate-400">Hardware Acceleration</label>
               <input
                 type="text"
                 disabled
                 value="Auto-Detected CPU / CUDA Acceleration"
-                className="w-full bg-[#111923] border border-[#1D2935] rounded p-2 text-white font-mono"
+                className="w-full bg-[#0A1018] border border-[#1E2D40] rounded-lg p-2.5 text-white font-mono text-xs cursor-not-allowed"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-mono uppercase text-slate-400">Multi-Object Tracking Algorithm</label>
+              <input
+                type="text"
+                disabled
+                value="ByteTrack (Kalman Filter State Estimation + High/Low Conf Association)"
+                className="w-full bg-[#0A1018] border border-[#1E2D40] rounded-lg p-2.5 text-white font-mono text-xs cursor-not-allowed"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-mono uppercase text-slate-400">Inference Resolution</label>
+              <input
+                type="text"
+                disabled
+                value="640 × 640 px (Dynamic Aspect-Preserving Letterbox)"
+                className="w-full bg-[#0A1018] border border-[#1E2D40] rounded-lg p-2.5 text-white font-mono text-xs cursor-not-allowed"
               />
             </div>
           </div>
         </div>
 
-        {/* DIP Preprocessing Configuration */}
-        <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-5 space-y-3">
+        {/* DIP Preprocessing & Optical Flow Configuration */}
+        <div className="bg-[#0E1622] border border-[#1E2D40] rounded-xl p-5 space-y-3">
           <div className="flex items-center space-x-2 text-white font-semibold text-xs uppercase tracking-wider">
             <Compass className="w-4 h-4 text-cyan-400" />
             <span>DIP Motion & Density Pipeline Specifications</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="p-3 bg-[#111923] rounded border border-[#1D2935]">
+            <div className="p-3.5 bg-[#0A1018] rounded-lg border border-[#1E2D40] space-y-1">
               <span className="font-semibold text-white block">Dense Optical Flow</span>
-              <p className="text-[#8C9AAA] mt-1 text-[11px] leading-relaxed">
-                Gunnar Farneback quadratic polynomial expansion (pyr_scale=0.5, levels=3, winsize=15).
+              <p className="text-slate-400 text-[11px] leading-relaxed">
+                Gunnar Farneback quadratic polynomial expansion (pyr_scale=0.5, levels=3, winsize=15, iterations=3, poly_n=5, poly_sigma=1.2).
               </p>
             </div>
-            <div className="p-3 bg-[#111923] rounded border border-[#1D2935]">
+            <div className="p-3.5 bg-[#0A1018] rounded-lg border border-[#1E2D40] space-y-1">
               <span className="font-semibold text-white block">Perspective Splatting</span>
-              <p className="text-[#8C9AAA] mt-1 text-[11px] leading-relaxed">
-                2D Gaussian kernels (k=61, σ=14.0) with dynamic Y-axis perspective scale compensation.
+              <p className="text-slate-400 text-[11px] leading-relaxed">
+                2D continuous Gaussian kernels (kernel_size=61, σ=14.0) with adaptive vertical coordinate foreshortening compensation.
               </p>
             </div>
-            <div className="p-3 bg-[#111923] rounded border border-[#1D2935]">
-              <span className="font-semibold text-white block">Directional Entropy</span>
-              <p className="text-[#8C9AAA] mt-1 text-[11px] leading-relaxed">
-                8-sector angular histogram Shannon entropy to quantify coordinated flow vs. panic turbulence.
+            <div className="p-3.5 bg-[#0A1018] rounded-lg border border-[#1E2D40] space-y-1">
+              <span className="font-semibold text-white block">Directional Shannon Entropy</span>
+              <p className="text-slate-400 text-[11px] leading-relaxed">
+                8-sector angular histogram Shannon entropy normalized against log₂(8)=3.0 to isolate coordinated transit from panic dispersion.
               </p>
             </div>
           </div>
         </div>
 
-        {/* Privacy & Ethical Safety Notice */}
-        <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-5 space-y-3">
+        {/* Risk Model Calibration Weights */}
+        <div className="bg-[#0E1622] border border-[#1E2D40] rounded-xl p-5 space-y-3">
+          <div className="flex items-center space-x-2 text-white font-semibold text-xs uppercase tracking-wider">
+            <Sliders className="w-4 h-4 text-cyan-400" />
+            <span>Heuristic Risk Scoring Coefficients</span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono">
+            <div className="p-3 bg-[#0A1018] rounded-lg border border-[#1E2D40]">
+              <span className="text-[10px] text-slate-400 uppercase block">Density Pressure</span>
+              <span className="text-base font-bold text-cyan-400 mt-1 block">35.0%</span>
+              <span className="text-[10px] text-slate-500 font-sans mt-0.5 block">w_density = 0.35</span>
+            </div>
+            <div className="p-3 bg-[#0A1018] rounded-lg border border-[#1E2D40]">
+              <span className="text-[10px] text-slate-400 uppercase block">Surge Influx</span>
+              <span className="text-base font-bold text-amber-400 mt-1 block">20.0%</span>
+              <span className="text-[10px] text-slate-500 font-sans mt-0.5 block">w_growth = 0.20</span>
+            </div>
+            <div className="p-3 bg-[#0A1018] rounded-lg border border-[#1E2D40]">
+              <span className="text-[10px] text-slate-400 uppercase block">Motion Anomaly</span>
+              <span className="text-base font-bold text-rose-400 mt-1 block">25.0%</span>
+              <span className="text-[10px] text-slate-500 font-sans mt-0.5 block">w_motion = 0.25</span>
+            </div>
+            <div className="p-3 bg-[#0A1018] rounded-lg border border-[#1E2D40]">
+              <span className="text-[10px] text-slate-400 uppercase block">Grid Congestion</span>
+              <span className="text-base font-bold text-purple-400 mt-1 block">20.0%</span>
+              <span className="text-[10px] text-slate-500 font-sans mt-0.5 block">w_congestion = 0.20</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Ethical Safeguards & Privacy Preservation */}
+        <div className="bg-[#0E1622] border border-[#1E2D40] rounded-xl p-5 space-y-3">
           <div className="flex items-center space-x-2 text-white font-semibold text-xs uppercase tracking-wider">
             <Lock className="w-4 h-4 text-emerald-400" />
             <span>Ethical Safeguards & Privacy Preservation</span>
           </div>
 
-          <div className="p-3.5 bg-emerald-950/20 border border-emerald-500/20 rounded-lg text-[#8C9AAA] leading-relaxed">
-            <p className="text-white font-semibold mb-1">Non-Invasive Safety Compliance:</p>
-            This system does not perform facial recognition, identity matching, or individual biometric profiling. Privacy options include bilateral face blurring and full silhouette masking. Monocular camera perspective compensation is a mathematical heuristic and does not substitute for calibrated stereoscopic photogrammetry.
+          <div className="p-3.5 bg-emerald-950/20 border border-emerald-500/25 rounded-lg text-slate-300 leading-relaxed space-y-2">
+            <div className="flex items-center space-x-2 text-emerald-400 font-semibold">
+              <ShieldCheck className="w-4 h-4" />
+              <span>Non-Invasive Safety Compliance Verified:</span>
+            </div>
+            <p className="text-slate-400">
+              This surveillance system strictly does NOT perform facial recognition, biometric identity scraping, or person-level behavioral profiling. Privacy filters (Bilateral Gaussian Face Blurring and Silhouette Masking) can be selected during video ingestion. Monocular perspective compensation is a mathematical spatial heuristic and does not replace calibrated stereoscopic photogrammetry.
+            </p>
+          </div>
+        </div>
+
+        {/* System & Storage Runtime */}
+        <div className="bg-[#0E1622] border border-[#1E2D40] rounded-xl p-5 space-y-3">
+          <div className="flex items-center space-x-2 text-white font-semibold text-xs uppercase tracking-wider">
+            <HardDrive className="w-4 h-4 text-cyan-400" />
+            <span>API & Local Storage Runtime</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-slate-300 font-mono text-[11px]">
+            <div className="p-2.5 bg-[#0A1018] rounded-lg border border-[#1E2D40]">
+              <span className="text-slate-500 text-[10px] block">API REST Prefix</span>
+              <span className="text-cyan-400 mt-0.5 block">http://127.0.0.1:8000/api/v1</span>
+            </div>
+            <div className="p-2.5 bg-[#0A1018] rounded-lg border border-[#1E2D40]">
+              <span className="text-slate-500 text-[10px] block">Database Storage</span>
+              <span className="text-white mt-0.5 block">SQLite via SQLAlchemy ORM (crowdguard.db)</span>
+            </div>
           </div>
         </div>
       </div>
