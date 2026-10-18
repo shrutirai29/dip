@@ -176,7 +176,7 @@ export const WebcamIngestionPanel: React.FC = () => {
               onChange={(e) => setPrivacyMode(e.target.value)}
               className="w-full bg-[#111923] border border-[#192638] text-white rounded-lg px-3 py-2 text-xs font-mono focus:border-cyan-500 disabled:opacity-50 cursor-pointer"
             >
-              <option value="none">Standard Surveillance (None)</option>
+              <option value="none">Standard Surveillance (Unfiltered)</option>
               <option value="face_blur">Face Blurring (Gaussian)</option>
               <option value="full_anonymize">Full Silhouette Anonymization</option>
             </select>

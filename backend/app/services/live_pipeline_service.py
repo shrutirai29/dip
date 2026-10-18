@@ -109,6 +109,10 @@ class LivePipelineProcessor:
             if self._worker_thread and self._worker_thread.is_alive():
                 self._worker_thread.join(timeout=2.0)
                 self._worker_thread = None
+            with self._telemetry_lock:
+                self._latest_telemetry = None
+                self._latest_jpeg = None
+                self._processing_fps = 0.0
             logger.info("Live pipeline worker thread stopped.")
 
     def get_latest_telemetry(self) -> Optional[Dict[str, Any]]:

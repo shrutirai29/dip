@@ -163,6 +163,9 @@ class CameraIngestionService:
         self._release_camera()
         self._set_state(CameraState.IDLE, None)
         self._started_at = None
+        with self._frame_lock:
+            self._latest_raw_frame = None
+            self._measured_fps = 0.0
 
     def _release_camera(self):
         if self._cap is not None:

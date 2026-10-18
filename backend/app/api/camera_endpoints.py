@@ -1,4 +1,5 @@
 import time
+import logging
 from typing import Optional, Dict, Any
 from fastapi import APIRouter, HTTPException, Response, status
 from fastapi.responses import StreamingResponse
@@ -6,6 +7,8 @@ from pydantic import BaseModel, Field
 
 from app.services.camera_service import camera_ingestion_service, CameraState
 from app.services.live_pipeline_service import live_pipeline_processor
+
+logger = logging.getLogger("crowdguard.camera_api")
 
 router = APIRouter()
 
@@ -153,15 +156,21 @@ def get_latest_frame_snapshot():
 def generate_mjpeg_stream():
     """
     Generator yielding multipart MJPEG frame chunks.
+    Handles client disconnects and CameraState changes gracefully.
     """
-    while camera_ingestion_service.state in (CameraState.CONNECTED, CameraState.CONNECTING, CameraState.DEGRADED):
-        jpeg_bytes = live_pipeline_processor.get_latest_jpeg()
-        if jpeg_bytes is not None:
-            yield (
-                b"--frame\r\n"
-                b"Content-Type: image/jpeg\r\n\r\n" + jpeg_bytes + b"\r\n"
-            )
-        time.sleep(0.04)  # ~25 FPS pacing
+    try:
+        while camera_ingestion_service.state in (CameraState.CONNECTED, CameraState.CONNECTING, CameraState.DEGRADED):
+            jpeg_bytes = live_pipeline_processor.get_latest_jpeg()
+            if jpeg_bytes is not None:
+                yield (
+                    b"--frame\r\n"
+                    b"Content-Type: image/jpeg\r\n\r\n" + jpeg_bytes + b"\r\n"
+                )
+            time.sleep(0.04)  # ~25 FPS pacing
+    except GeneratorExit:
+        logger.debug("MJPEG stream consumer disconnected (GeneratorExit).")
+    except Exception as e:
+        logger.warning(f"MJPEG stream error or unexpected disconnect: {e}")
 
 
 @router.get("/stream")

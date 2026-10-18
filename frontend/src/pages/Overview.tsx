@@ -12,7 +12,8 @@ import {
   ShieldAlert,
   Info,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  Camera
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { 
@@ -25,8 +26,8 @@ import {
   CartesianGrid 
 } from 'recharts';
 
-import { analyticsApi, analysisApi, incidentApi, videoApi } from '../services/api';
-import { AnalyticsSummary, Analysis, Incident, FrameRecord, Video as VideoType } from '../types';
+import { analyticsApi, analysisApi, incidentApi, videoApi, cameraApi } from '../services/api';
+import { AnalyticsSummary, Analysis, Incident, FrameRecord, Video as VideoType, CameraSessionStatus } from '../types';
 import { 
   KPICard, 
   StatusPill, 
@@ -54,6 +55,7 @@ export const Overview: React.FC = () => {
   const [recentIncidents, setRecentIncidents] = useState<Incident[] | null>(null);
   const [frameHistory, setFrameHistory] = useState<FrameRecord[] | null>(null);
   const [latestFrame, setLatestFrame] = useState<FrameRecord | null>(null);
+  const [cameraStatus, setCameraStatus] = useState<CameraSessionStatus | null>(null);
 
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -76,14 +78,22 @@ export const Overview: React.FC = () => {
     const detectedErrors: PartialEndpointErrors = {};
 
     try {
-      // 1. Fetch summary, analyses, and incidents in parallel with allSettled
-      const [sumResult, analysesResult, incidentsResult] = await Promise.allSettled([
+      // 1. Fetch summary, analyses, incidents, and camera status in parallel with allSettled
+      const [sumResult, analysesResult, incidentsResult, camResult] = await Promise.allSettled([
         analyticsApi.getSummary(),
         analysisApi.getAll(),
         incidentApi.getAll(),
+        cameraApi.getStatus(),
       ]);
 
       if (currentRequestId !== overviewRequestIdRef.current) return;
+
+      // Handle camera status
+      if (camResult.status === 'fulfilled') {
+        setCameraStatus(camResult.value);
+      } else {
+        setCameraStatus(null);
+      }
 
       // Handle summary endpoint
       if (sumResult.status === 'fulfilled') {
@@ -193,6 +203,20 @@ export const Overview: React.FC = () => {
       loadOverviewData(true);
     }
   }, [refreshCounter, loadOverviewData]);
+
+  // Real-time camera status polling when webcam is actively ingesting
+  useEffect(() => {
+    if (!cameraStatus?.is_active) return;
+    const interval = setInterval(async () => {
+      try {
+        const stat = await cameraApi.getStatus();
+        setCameraStatus(stat);
+      } catch {
+        // Degraded or unreachable, ignore silent poll errors
+      }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [cameraStatus?.is_active]);
 
   // Format chart data honestly from actual recorded frames
   const chartData = useMemo(() => {
@@ -306,6 +330,66 @@ export const Overview: React.FC = () => {
           >
             Retry Telemetry
           </button>
+        </div>
+      )}
+
+      {/* -------------------------------------------------------------------------
+          LIVE WEBCAM STREAM BANNER (when hardware webcam is streaming)
+          ------------------------------------------------------------------------- */}
+      {cameraStatus && cameraStatus.is_active && (
+        <div className="rounded-xl border border-cyan-500/40 bg-[#07131F] p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm shadow-cyan-950/20">
+          <div className="flex items-center space-x-3 overflow-hidden">
+            <div className="w-10 h-10 rounded-lg bg-cyan-950/60 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shrink-0 relative">
+              <Camera className="w-5 h-5" />
+              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+            </div>
+            <div className="truncate">
+              <div className="flex items-center space-x-2">
+                <span className="text-xs font-semibold text-white">Live Hardware Webcam Feed:</span>
+                <span className="text-xs font-mono text-cyan-300 font-medium">
+                  Device #{cameraStatus.device_index ?? 0}
+                </span>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-medium border ${
+                  cameraStatus.state === 'CONNECTED' ? 'bg-emerald-950/40 text-emerald-300 border-emerald-500/30' :
+                  cameraStatus.state === 'CONNECTING' ? 'bg-cyan-950/40 text-cyan-300 border-cyan-500/30 animate-pulse' :
+                  cameraStatus.state === 'DEGRADED' ? 'bg-amber-950/40 text-amber-300 border-amber-500/30' :
+                  'bg-rose-950/40 text-rose-300 border-rose-500/30'
+                }`}>
+                  {cameraStatus.state}
+                </span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950/50 text-cyan-300 border border-cyan-500/30">
+                  LIVE STREAM
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-400 mt-1">
+                <span>
+                  Capture: <strong className="text-slate-200 font-mono">{cameraStatus.measured_fps.toFixed(1)} FPS</strong>
+                </span>
+                <span>•</span>
+                <span>
+                  Inference: <strong className="text-emerald-400 font-mono">{cameraStatus.processing_fps.toFixed(1)} FPS</strong>
+                </span>
+                <span>•</span>
+                <span>
+                  Frames: <strong className="text-slate-200 font-mono">#{cameraStatus.latest_frame_id}</strong> ({cameraStatus.frames_captured} capt, {cameraStatus.frames_dropped} drop)
+                </span>
+                <span>•</span>
+                <span>
+                  Uptime: <strong className="text-slate-200 font-mono">{cameraStatus.uptime_seconds}s</strong>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3 shrink-0">
+            <Link
+              to="/monitoring?source=webcam"
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-semibold transition cursor-pointer shadow-xs"
+            >
+              <span>Open Live Surveillance Feed</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
       )}
 
