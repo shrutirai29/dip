@@ -15,8 +15,10 @@ from app.schemas.schemas import (
 )
 from app.services.video_processor import VideoProcessor
 from app.services.report_service import ReportService
+from app.api.camera_endpoints import router as camera_router
 
 router = APIRouter()
+router.include_router(camera_router, prefix="/camera", tags=["Camera Ingestion"])
 
 # Active jobs tracking: analysis_id -> { "cancel_event": Event, "pause_event": Event }
 active_jobs: dict[str, dict] = {}

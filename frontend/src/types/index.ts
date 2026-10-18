@@ -112,3 +112,18 @@ export interface AnalyticsSummary {
   peak_crowd_overall: number;
   avg_risk_overall: number;
 }
+
+export interface CameraSessionStatus {
+  state: 'IDLE' | 'CONNECTING' | 'CONNECTED' | 'DEGRADED' | 'DISCONNECTED';
+  device_index: number | null;
+  is_active: boolean;
+  frames_captured: number;
+  frames_consumed: number;
+  frames_dropped: number;
+  latest_frame_id: number;
+  latest_frame_timestamp: number;
+  measured_fps: number;
+  processing_fps: number;
+  uptime_seconds: number;
+  error_message: string | null;
+}

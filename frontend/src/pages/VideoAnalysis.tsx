@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
   UploadCloud, 
   FileVideo, 
+  Camera,
   Play, 
   Pause, 
   XOctagon, 
@@ -20,11 +21,15 @@ import {
   ErrorState, 
   LoadingBlock 
 } from '../components/UIComponents';
+import { WebcamIngestionPanel } from '../components/WebcamIngestionPanel';
 import { useSystem } from '../context/SystemContext';
 
 export const VideoAnalysis: React.FC = () => {
   const navigate = useNavigate();
   const { setSelectedAnalysis, triggerGlobalRefresh } = useSystem();
+
+  // Source selection: Video Archive vs Live Webcam
+  const [sourceMode, setSourceMode] = useState<'video' | 'webcam'>('video');
 
   // Video catalog state
   const [videos, setVideos] = useState<Video[]>([]);
@@ -234,24 +239,56 @@ export const VideoAnalysis: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* -------------------------------------------------------------------------
-          HEADER
+          HEADER & SOURCE MODE SWITCHER
           ------------------------------------------------------------------------- */}
-      <div className="pb-4 border-b border-[#192638]">
-        <div className="flex items-center space-x-2.5">
-          <h2 className="text-xl font-bold tracking-tight text-white">
-            VIDEO INGESTION & PIPELINE STUDIO
-          </h2>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/10 text-cyan-300 border border-cyan-500/25">
-            ASYNC ENGINE
-          </span>
+      <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-[#192638] gap-4">
+        <div>
+          <div className="flex items-center space-x-2.5">
+            <h2 className="text-xl font-bold tracking-tight text-white">
+              SURVEILLANCE INGESTION STUDIO
+            </h2>
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/10 text-cyan-300 border border-cyan-500/25">
+              {sourceMode === 'video' ? 'ASYNC BATCH' : 'LIVE WEBCAM FOUNDATION'}
+            </span>
+          </div>
+          <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
+            {sourceMode === 'video'
+              ? 'Upload surveillance footage, select preset academic crowd scenarios, calibrate monocular perspective weights, and execute the computer vision pipeline with real-time progress tracking.'
+              : 'Acquire live video from a local webcam device with monotonic frame pacing, bounded latest-frame drop accounting, and incremental DIP telemetry.'}
+          </p>
         </div>
-        <p className="text-xs text-slate-400 mt-1 max-w-3xl leading-relaxed">
-          Upload surveillance footage, select preset academic crowd scenarios, calibrate monocular perspective weights,
-          and execute the computer vision pipeline with real-time progress tracking.
-        </p>
+
+        {/* Source Mode Toggle */}
+        <div className="flex items-center p-1 bg-[#0A1018] border border-[#192638] rounded-xl self-start md:self-auto shrink-0">
+          <button
+            onClick={() => setSourceMode('video')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
+              sourceMode === 'video'
+                ? 'bg-cyan-600 text-white shadow-xs'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <FileVideo className="w-3.5 h-3.5" />
+            <span>Recorded Archive</span>
+          </button>
+          <button
+            onClick={() => setSourceMode('webcam')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
+              sourceMode === 'webcam'
+                ? 'bg-cyan-600 text-white shadow-xs'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Camera className="w-3.5 h-3.5" />
+            <span>Live Local Webcam</span>
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {sourceMode === 'webcam' ? (
+        <WebcamIngestionPanel />
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* =========================================================================
             LEFT COLUMN: VIDEO SOURCES & UPLOAD
             ========================================================================= */}
@@ -727,6 +764,7 @@ export const VideoAnalysis: React.FC = () => {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Video, Analysis, FrameRecord, Incident, AnalyticsSummary } from '../types';
+import { Video, Analysis, FrameRecord, Incident, AnalyticsSummary, CameraSessionStatus } from '../types';
 
 const api = axios.create({
   baseURL: '/api',
@@ -109,6 +109,38 @@ export const analyticsApi = {
     const res = await api.get<AnalyticsSummary>('/analytics/summary');
     return res.data;
   },
+};
+
+export const cameraApi = {
+  start: async (params?: {
+    device_index?: number;
+    conf_threshold?: number;
+    inference_size?: number;
+    perspective_weight?: number;
+    privacy_mode?: string;
+    target_fps?: number;
+  }): Promise<CameraSessionStatus> => {
+    const res = await api.post<CameraSessionStatus>('/camera/session/start', params || {});
+    return res.data;
+  },
+
+  getStatus: async (): Promise<CameraSessionStatus> => {
+    const res = await api.get<CameraSessionStatus>('/camera/session/status');
+    return res.data;
+  },
+
+  stop: async (): Promise<CameraSessionStatus> => {
+    const res = await api.post<CameraSessionStatus>('/camera/session/stop');
+    return res.data;
+  },
+
+  getLatestTelemetry: async (): Promise<FrameRecord> => {
+    const res = await api.get<FrameRecord>('/camera/latest-frame');
+    return res.data;
+  },
+
+  getStreamUrl: (): string => '/api/camera/stream',
+  getSnapshotUrl: (): string => `/api/camera/snapshot?t=${Date.now()}`,
 };
 
 export const systemApi = {
