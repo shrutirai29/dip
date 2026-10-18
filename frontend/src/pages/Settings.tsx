@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sliders, Shield, Cpu, Lock, Compass, Layers } from 'lucide-react';
+import { Cpu, Lock, Compass } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
   return (

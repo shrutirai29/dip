@@ -1,13 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  History, 
   FileSpreadsheet, 
-  Eye, 
-  Calendar, 
-  Clock, 
-  CheckCircle2, 
-  AlertOctagon,
-  ArrowRight
+  Eye
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { analysisApi } from '../services/api';

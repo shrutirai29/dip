@@ -30,8 +30,9 @@ class DIPProcessor:
         """
         DIP: Temporal frame differencing + morphological noise cleanup.
         """
-        if prev_gray is None or curr_gray is None:
-            return 0.0, np.zeros_like(curr_gray if curr_gray is not None else np.zeros((10, 10)))
+        if prev_gray is None or curr_gray is None or prev_gray.size == 0 or curr_gray.size == 0 or prev_gray.shape != curr_gray.shape:
+            fallback = np.zeros_like(curr_gray) if (curr_gray is not None and curr_gray.size > 0) else np.zeros((10, 10), dtype=np.uint8)
+            return 0.0, fallback
         
         diff = cv2.absdiff(curr_gray, prev_gray)
         _, thresh = cv2.threshold(diff, threshold, 255, cv2.THRESH_BINARY)
@@ -58,7 +59,7 @@ class DIPProcessor:
             Low entropy: coordinated laminar motion
             High entropy: chaotic multi-directional turbulence
         """
-        if prev_gray is None or curr_gray is None:
+        if prev_gray is None or curr_gray is None or prev_gray.size == 0 or curr_gray.size == 0 or prev_gray.shape != curr_gray.shape:
             return {
                 "mean_magnitude": 0.0,
                 "motion_variance": 0.0,
@@ -222,13 +223,19 @@ class DIPProcessor:
                 face_y2 = min(y2, y1 + int(box_h * 0.28))
                 face_roi = out[y1:face_y2, x1:x2]
                 if face_roi.size > 0:
-                    blurred = cv2.GaussianBlur(face_roi, (25, 25), 30)
+                    rh, rw = face_roi.shape[:2]
+                    kw = min(25, rw if rw % 2 != 0 else rw - 1)
+                    kh = min(25, rh if rh % 2 != 0 else rh - 1)
+                    kw = max(3, kw)
+                    kh = max(3, kh)
+                    blurred = cv2.GaussianBlur(face_roi, (kw, kh), 30)
                     out[y1:face_y2, x1:x2] = blurred
             elif mode == "full_anonymize":
-                # Dark gray translucent privacy silhouette
-                overlay = out.copy()
-                cv2.rectangle(overlay, (x1, y1), (x2, y2), (40, 45, 55), -1)
-                out = cv2.addWeighted(overlay, 0.75, out, 0.25, 0)
+                # Dark gray privacy silhouette applied strictly inside the bounding box
+                box_roi = out[y1:y2, x1:x2]
+                if box_roi.size > 0:
+                    mask_color = np.full_like(box_roi, (40, 45, 55))
+                    out[y1:y2, x1:x2] = cv2.addWeighted(mask_color, 0.85, box_roi, 0.15, 0)
                 
         return out
 

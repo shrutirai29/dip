@@ -49,28 +49,105 @@ def health_check():
 
 @router.post("/videos/upload", response_model=VideoResponse)
 async def upload_video(file: UploadFile = File(...), db: Session = Depends(get_db)):
-    if not file.filename.lower().endswith(('.mp4', '.avi', '.mov', '.mkv')):
-        raise HTTPException(status_code=400, detail="Unsupported video format. Please upload MP4 or AVI.")
+    safe_filename = os.path.basename(file.filename or "video.mp4")
+    ext = os.path.splitext(safe_filename)[1].lower()
+    if ext not in ('.mp4', '.avi', '.mov', '.mkv'):
+        raise HTTPException(status_code=400, detail="Unsupported video format. Please upload MP4, AVI, MOV, or MKV.")
 
     video_id = f"vid_{uuid.uuid4().hex[:10]}"
-    ext = os.path.splitext(file.filename)[1].lower()
     dest_filename = f"{video_id}{ext}"
     dest_path = os.path.join(settings.UPLOAD_DIR, dest_filename)
 
     file_size = 0
-    with open(dest_path, "wb") as buffer:
-        while chunk := await file.read(1024 * 1024):  # 1MB chunks
-            file_size += len(chunk)
-            if file_size > settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024:
-                os.remove(dest_path)
-                raise HTTPException(status_code=400, detail=f"File exceeds maximum allowed size ({settings.MAX_UPLOAD_SIZE_MB}MB)")
-            buffer.write(chunk)
+    try:
+        with open(dest_path, "wb") as buffer:
+            while chunk := await file.read(1024 * 1024):  # 1MB chunks
+                file_size += len(chunk)
+                if file_size > settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024:
+                    buffer.close()
+                    if os.path.exists(dest_path):
+                        os.remove(dest_path)
+                    raise HTTPException(status_code=400, detail=f"File exceeds maximum allowed size ({settings.MAX_UPLOAD_SIZE_MB}MB)")
+                buffer.write(chunk)
 
-    # Inspect video metadata with OpenCV
-    cap = cv2.VideoCapture(dest_path)
+        if file_size == 0:
+            if os.path.exists(dest_path):
+                os.remove(dest_path)
+            raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+        # Inspect video metadata with OpenCV
+        cap = cv2.VideoCapture(dest_path)
+        if not cap.isOpened():
+            if os.path.exists(dest_path):
+                os.remove(dest_path)
+            raise HTTPException(status_code=400, detail="Corrupted or unreadable video file.")
+
+        fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
+        frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        duration = frame_count / fps if fps > 0 else 0.0
+        cap.release()
+
+        if frame_count <= 0 or width <= 0 or height <= 0:
+            if os.path.exists(dest_path):
+                os.remove(dest_path)
+            raise HTTPException(status_code=400, detail="Invalid video dimensions or frame count.")
+
+        video_record = Video(
+            id=video_id,
+            filename=dest_filename,
+            original_filename=safe_filename,
+            file_path=dest_path,
+            file_size_bytes=file_size,
+            duration_seconds=round(duration, 2),
+            fps=round(fps, 2),
+            width=width,
+            height=height,
+            frame_count=frame_count
+        )
+        db.add(video_record)
+        db.commit()
+        db.refresh(video_record)
+        return video_record
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        if os.path.exists(dest_path):
+            try:
+                os.remove(dest_path)
+            except OSError:
+                pass
+        raise HTTPException(status_code=500, detail=f"Video upload processing failed: {str(e)}")
+
+@router.get("/videos/samples")
+def list_sample_videos():
+    """List preset sample scenario videos available on the server."""
+    samples = []
+    if os.path.exists(settings.SAMPLE_VIDEOS_DIR):
+        for fname in sorted(os.listdir(settings.SAMPLE_VIDEOS_DIR)):
+            if fname.lower().endswith(('.mp4', '.avi', '.mov', '.mkv')):
+                fpath = os.path.join(settings.SAMPLE_VIDEOS_DIR, fname)
+                size_bytes = os.path.getsize(fpath)
+                samples.append({
+                    "filename": fname,
+                    "size_bytes": size_bytes,
+                    "url": f"/data/sample_videos/{fname}"
+                })
+    return samples
+
+@router.post("/videos/samples/{sample_name}/ingest", response_model=VideoResponse)
+def ingest_sample_video(sample_name: str, db: Session = Depends(get_db)):
+    """Ingest a server-side sample video into the active video catalog."""
+    safe_name = os.path.basename(sample_name)
+    sample_path = os.path.join(settings.SAMPLE_VIDEOS_DIR, safe_name)
+    if not os.path.exists(sample_path):
+        raise HTTPException(status_code=404, detail=f"Sample video '{safe_name}' not found.")
+
+    cap = cv2.VideoCapture(sample_path)
     if not cap.isOpened():
-        os.remove(dest_path)
-        raise HTTPException(status_code=400, detail="Corrupted or unreadable video file.")
+        raise HTTPException(status_code=400, detail="Failed to open sample video with OpenCV.")
 
     fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
     frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -79,12 +156,13 @@ async def upload_video(file: UploadFile = File(...), db: Session = Depends(get_d
     duration = frame_count / fps if fps > 0 else 0.0
     cap.release()
 
+    video_id = f"vid_{uuid.uuid4().hex[:10]}"
     video_record = Video(
         id=video_id,
-        filename=dest_filename,
-        original_filename=file.filename,
-        file_path=dest_path,
-        file_size_bytes=file_size,
+        filename=safe_name,
+        original_filename=safe_name,
+        file_path=sample_path,
+        file_size_bytes=os.path.getsize(sample_path),
         duration_seconds=round(duration, 2),
         fps=round(fps, 2),
         width=width,

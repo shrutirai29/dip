@@ -60,6 +60,13 @@ class CrowdRiskEngine:
         Evaluates risk components and returns normalized values, raw and smoothed risk scores,
         band, and clear plain-language rationale.
         """
+        # Input sanitization against NaN or non-finite values
+        current_count = max(0, int(current_count))
+        optical_flow_mag = float(np.nan_to_num(optical_flow_mag, nan=0.0, posinf=100.0, neginf=0.0))
+        mean_speed = float(np.nan_to_num(mean_speed, nan=0.0, posinf=100.0, neginf=0.0))
+        if grid_densities:
+            grid_densities = [float(np.nan_to_num(g, nan=0.0, posinf=1.0, neginf=0.0)) for g in grid_densities]
+
         # 1. Density Component (0.0 to 1.0)
         # Using occupancy heuristic: 0 people -> 0.0; 25+ people in frame -> 1.0
         # If grid densities are provided, peak local cluster density has higher weight

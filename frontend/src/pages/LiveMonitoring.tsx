@@ -1,20 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { FileSpreadsheet } from 'lucide-react';
 import { 
-  Users, 
-  Activity, 
-  TrendingUp, 
-  Compass, 
-  Layers, 
-  Clock, 
-  FileSpreadsheet, 
-  AlertTriangle,
-  Play,
-  Pause,
-  RotateCcw
-} from 'lucide-react';
-import { 
-  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area
+  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
 } from 'recharts';
 import { analysisApi, incidentApi } from '../services/api';
 import { Analysis, FrameRecord, Incident, GridDensityCell } from '../types';
@@ -133,6 +121,9 @@ export const LiveMonitoring: React.FC = () => {
             <div className="flex items-center space-x-2">
               <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
               <h3 className="text-sm font-semibold text-white">Annotated DIP Surveillance Stream</h3>
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                RECORDED REPLAY
+              </span>
             </div>
             <div className="flex items-center space-x-3 text-xs text-[#8C9AAA] font-mono">
               <span>Time: t={selectedFrame?.timestamp_sec || 0}s</span>

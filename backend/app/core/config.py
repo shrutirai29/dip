@@ -42,6 +42,14 @@ class Settings:
     DEFAULT_PRIVACY_MODE: str = "none"  # "none", "face_blur", "full_anonymize"
     
     MAX_UPLOAD_SIZE_MB: int = 150
+    
+    # CORS Allowed Origins
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000"
+    ]
 
 settings = Settings()
 

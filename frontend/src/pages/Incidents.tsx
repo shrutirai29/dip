@@ -3,12 +3,8 @@ import {
   AlertTriangle, 
   Search, 
   Check, 
-  Clock, 
-  ShieldAlert, 
   Eye, 
-  FileSpreadsheet,
-  CheckCircle2,
-  Sparkles
+  CheckCircle2
 } from 'lucide-react';
 import { incidentApi } from '../services/api';
 import { Incident } from '../types';

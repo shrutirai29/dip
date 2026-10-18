@@ -3,11 +3,13 @@ from typing import List, Dict, Tuple
 
 class SimpleByteTracker:
     """
-    Robust multi-object tracker for CCTV people tracking:
-    - Maintains persistent track IDs and lifetime counts.
-    - Calculates instantaneous velocity (px/sec) and acceleration (px/sec²).
-    - Tracks foot-points, directional angles, and active spatial zone.
-    - Manages zone transitions (inflow / outflow) to detect bottlenecks.
+    Custom Greedy IoU Multi-Object Pedestrian Tracker:
+    - Maintains persistent track IDs across frames using greedy IoU matching.
+    - Calculates instantaneous 2D pixel velocity (px/sec) and acceleration (px/sec²).
+    - Tracks ground foot-points, directional heading angles, and active spatial zones (A1–C3).
+    - Detects cross-boundary zone transitions to measure localized inflow and outflow.
+    - Note: This is a custom IoU-based tracking implementation tailored for monocular CCTV footage,
+      not the full external Kalman-filter ByteTrack library.
     """
 
     def __init__(self, max_lost_frames: int = 15, iou_threshold: float = 0.3):
@@ -17,15 +19,21 @@ class SimpleByteTracker:
         self.tracks: Dict[int, Dict] = {}
 
     def _iou(self, boxA: list, boxB: list) -> float:
+        wA = max(0.0, float(boxA[2] - boxA[0]))
+        hA = max(0.0, float(boxA[3] - boxA[1]))
+        wB = max(0.0, float(boxB[2] - boxB[0]))
+        hB = max(0.0, float(boxB[3] - boxB[1]))
+        boxAArea = wA * hA
+        boxBArea = wB * hB
+        if boxAArea <= 0.0 or boxBArea <= 0.0:
+            return 0.0
+
         xA = max(boxA[0], boxB[0])
         yA = max(boxA[1], boxB[1])
         xB = min(boxA[2], boxB[2])
         yB = min(boxA[3], boxB[3])
 
-        interArea = max(0, xB - xA) * max(0, yB - yA)
-        boxAArea = (boxA[2] - boxA[0]) * (boxA[3] - boxA[1])
-        boxBArea = (boxB[2] - boxB[0]) * (boxB[3] - boxB[1])
-
+        interArea = max(0.0, xB - xA) * max(0.0, yB - yA)
         iou = interArea / float(boxAArea + boxBArea - interArea + 1e-6)
         return float(iou)
 

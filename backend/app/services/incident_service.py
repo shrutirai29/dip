@@ -56,9 +56,12 @@ class IncidentService:
         active_pattern = pattern_data.get("pattern", "NORMAL_FLOW")
         f_risk = forecast_data.get("forecast_10s", smoothed_score)
 
-        # 1. Critical Overall Risk Condition
+        # 1. Critical Overall Risk Condition (Reserved for verified high current risk or high risk surging towards critical)
+        critical_condition = (
+            smoothed_score >= 75.0 or (smoothed_score >= 60.0 and f_risk >= 82.0)
+        )
         self._evaluate_sustained_condition(
-            condition=(smoothed_score >= 75.0 or f_risk >= 82.0),
+            condition=critical_condition,
             accumulator=created,
             analysis_id=analysis_id,
             frame_idx=frame_idx,
@@ -69,6 +72,27 @@ class IncidentService:
             forecast_risk=f_risk,
             reason=f"Severe crowd emergency risk threshold exceeded ({smoothed_score:.1f}/100, Forecast +10s: {f_risk:.1f})",
             action="URGENT: Dispatch on-site safety marshals immediately. Open secondary perimeter exit corridors and halt incoming inflow.",
+            measurements={"risk_data": risk_data, "person_count": current_count, "forecast": forecast_data},
+            region="Global Scene",
+            evidence_path=evidence_frame_path
+        )
+
+        # 1b. Early Advisory Warning: High Projected Surge while current risk is moderate
+        projected_surge_condition = (
+            smoothed_score < 60.0 and f_risk >= 82.0 and forecast_data.get("trend") in ["SURGING", "RISING"]
+        )
+        self._evaluate_sustained_condition(
+            condition=projected_surge_condition,
+            accumulator=created,
+            analysis_id=analysis_id,
+            frame_idx=frame_idx,
+            timestamp_sec=timestamp_sec,
+            incident_type="PROJECTED_SURGE_WARNING",
+            severity="MODERATE",
+            risk_score=smoothed_score,
+            forecast_risk=f_risk,
+            reason=f"Advisory: Linear extrapolation projects potential risk surge (+10s: {f_risk:.1f}) while current risk is moderate ({smoothed_score:.1f}/100)",
+            action="ADVISORY: Monitor corridor inflow and prepare standby marshals. Awaiting real-time confirmation before active intervention.",
             measurements={"risk_data": risk_data, "person_count": current_count, "forecast": forecast_data},
             region="Global Scene",
             evidence_path=evidence_frame_path
@@ -202,7 +226,11 @@ class IncidentService:
             status="Open",
             created_at=datetime.datetime.utcnow()
         )
-        self.db.add(incident)
-        self.db.commit()
-        self.db.refresh(incident)
-        accumulator.append(incident)
+        try:
+            self.db.add(incident)
+            self.db.commit()
+            self.db.refresh(incident)
+            accumulator.append(incident)
+        except Exception as e:
+            self.db.rollback()
+            print(f"[IncidentService] Error persisting incident: {e}")

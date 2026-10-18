@@ -7,10 +7,7 @@ import {
   Compass, 
   PlayCircle,
   ArrowRight,
-  ShieldCheck,
-  Radio,
-  Layers,
-  Sparkles
+  ShieldCheck
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { analyticsApi, analysisApi, incidentApi } from '../services/api';

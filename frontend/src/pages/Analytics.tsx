@@ -1,16 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  BarChart3, 
-  TrendingUp, 
-  Compass, 
-  Layers, 
-  Activity,
-  Wind,
-  ShieldCheck,
-  Zap
-} from 'lucide-react';
-import { 
-  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, BarChart, Bar
+  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area
 } from 'recharts';
 import { analysisApi } from '../services/api';
 import { Analysis, FrameRecord } from '../types';
@@ -137,8 +127,11 @@ export const Analytics: React.FC = () => {
             <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
               Current Risk vs Multi-Horizon Forecast (+5s, +10s, +15s)
             </h3>
-            <span className="text-[10px] font-mono text-cyan-400">Statistical Gradient Fit</span>
+            <span className="text-[10px] font-mono text-cyan-400">Uncalibrated Trend Extrapolation</span>
           </div>
+          <p className="text-[10px] text-[#8C9AAA] mb-2 font-mono">
+            *Experimental extrapolation from local velocity gradients; not calibrated disaster probability.
+          </p>
           <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={frameData}>
