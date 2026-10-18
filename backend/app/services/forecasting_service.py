@@ -103,6 +103,12 @@ class PatternAndForecastingEngine:
                 "confidence": 0.78,
                 "details": "Crowd trajectory vectors converging inward toward central quadrant"
             }
+        elif outflow_sum > inflow_sum + 2 and current_count >= 6:
+            return {
+                "pattern": "DIVERGENCE",
+                "confidence": 0.76,
+                "details": "Crowd trajectory vectors dispersing outward away from central area"
+            }
 
         return {"pattern": pattern, "confidence": confidence, "details": details}
 

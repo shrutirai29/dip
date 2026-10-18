@@ -5,11 +5,9 @@ import {
   Play, 
   Pause, 
   XOctagon, 
-  Sliders, 
   RefreshCw,
   Sparkles,
-  ShieldAlert,
-  EyeOff
+  Sliders
 } from 'lucide-react';
 import { videoApi, analysisApi } from '../services/api';
 import { Video, Analysis } from '../types';
@@ -39,8 +37,12 @@ export const VideoAnalysis: React.FC = () => {
   const [activeAnalysis, setActiveAnalysis] = useState<Analysis | null>(null);
   const [jobPolling, setJobPolling] = useState(false);
 
+  const [samples, setSamples] = useState<{ filename: string; size_bytes: number; url: string }[]>([]);
+  const [loadingSample, setLoadingSample] = useState(false);
+
   useEffect(() => {
     loadVideos();
+    loadSamples();
   }, []);
 
   const loadVideos = async () => {
@@ -52,6 +54,28 @@ export const VideoAnalysis: React.FC = () => {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const loadSamples = async () => {
+    try {
+      const data = await videoApi.getSamples();
+      setSamples(data);
+    } catch (err) {
+      console.error('Failed to load sample list', err);
+    }
+  };
+
+  const handleSelectSample = async (sampleName: string) => {
+    setLoadingSample(true);
+    try {
+      const ingested = await videoApi.ingestSample(sampleName);
+      setVideos((prev) => [ingested, ...prev.filter(v => v.id !== ingested.id)]);
+      setSelectedVideo(ingested);
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Failed to load sample scenario');
+    } finally {
+      setLoadingSample(false);
     }
   };
 
@@ -176,6 +200,37 @@ export const VideoAnalysis: React.FC = () => {
               </div>
             )}
           </div>
+
+          {/* Preset Sample Scenarios */}
+          {samples.length > 0 && (
+            <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-5">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xs font-semibold text-white uppercase tracking-wider">Demo Video Scenarios</h3>
+                <span className="text-[10px] text-cyan-400 font-mono">1-Click Load</span>
+              </div>
+              <p className="text-[11px] text-[#8C9AAA] mb-3">
+                Load preset synthetic test scenarios directly from server storage without uploading.
+              </p>
+              <div className="space-y-1.5">
+                {samples.map((s) => (
+                  <button
+                    key={s.filename}
+                    onClick={() => handleSelectSample(s.filename)}
+                    disabled={loadingSample}
+                    className="w-full text-left p-2.5 rounded bg-[#111923] hover:bg-cyan-500/10 border border-[#1D2935] hover:border-cyan-500/40 text-xs text-white transition flex items-center justify-between group"
+                  >
+                    <div className="flex items-center space-x-2 truncate">
+                      <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0 group-hover:rotate-12 transition-transform" />
+                      <span className="truncate font-medium">{s.filename}</span>
+                    </div>
+                    <span className="text-[10px] text-[#8C9AAA] shrink-0 font-mono">
+                      {(s.size_bytes / (1024 * 1024)).toFixed(1)}MB
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Videos List */}
           <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-5">

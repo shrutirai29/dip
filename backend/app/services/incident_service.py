@@ -202,7 +202,11 @@ class IncidentService:
             status="Open",
             created_at=datetime.datetime.utcnow()
         )
-        self.db.add(incident)
-        self.db.commit()
-        self.db.refresh(incident)
-        accumulator.append(incident)
+        try:
+            self.db.add(incident)
+            self.db.commit()
+            self.db.refresh(incident)
+            accumulator.append(incident)
+        except Exception as e:
+            self.db.rollback()
+            print(f"[IncidentService] Error persisting incident: {e}")

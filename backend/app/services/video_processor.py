@@ -329,8 +329,10 @@ class VideoProcessor:
                             "pattern": detected_pattern
                         })
 
-            # Completed
-            if not cancel_event.is_set():
+            # Status assignment
+            if cancel_event.is_set():
+                analysis.status = "cancelled"
+            else:
                 analysis.status = "completed"
                 analysis.progress_percent = 100.0
             
@@ -355,8 +357,19 @@ class VideoProcessor:
             traceback.print_exc()
             analysis.status = "failed"
             analysis.error_message = str(e)
-            self.db.commit()
+            try:
+                self.db.commit()
+            except Exception:
+                self.db.rollback()
             print(f"[VideoProcessor] Exception: {e}")
         finally:
-            cap.release()
-            writer.release()
+            try:
+                if 'cap' in locals() and cap is not None:
+                    cap.release()
+            except Exception:
+                pass
+            try:
+                if 'writer' in locals() and writer is not None:
+                    writer.release()
+            except Exception:
+                pass

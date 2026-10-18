@@ -25,6 +25,16 @@ export const videoApi = {
     const res = await api.get<Video>(`/videos/${id}`);
     return res.data;
   },
+
+  getSamples: async (): Promise<{ filename: string; size_bytes: number; url: string }[]> => {
+    const res = await api.get<{ filename: string; size_bytes: number; url: string }[]>('/videos/samples');
+    return res.data;
+  },
+
+  ingestSample: async (sampleName: string): Promise<Video> => {
+    const res = await api.post<Video>(`/videos/samples/${sampleName}/ingest`);
+    return res.data;
+  },
 };
 
 export const analysisApi = {
