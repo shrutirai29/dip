@@ -197,15 +197,37 @@ def test_all_crowd_patterns():
     p3 = engine.detect_crowd_patterns(tracks_counter, [], optical_entropy=0.4, mean_speed=2.6, current_count=4)
     assert p3["pattern"] == "COUNTERFLOW"
 
-    # 4. Convergence pattern
-    zones_conv = [{"inflow": 5, "outflow": 0}]
-    p4 = engine.detect_crowd_patterns([], zones_conv, optical_entropy=0.2, mean_speed=1.5, current_count=7)
-    assert p4["pattern"] == "CONVERGENCE"
+    # 4. Spatial Divergence (Deterministic outward radial trajectories from centroid)
+    # Centroid is at (300, 300)
+    tracks_diverging = [
+        {"centroid": (350.0, 300.0), "direction_angle": 0.0, "speed": 3.0},       # East of center, moving East (0 rad)
+        {"centroid": (250.0, 300.0), "direction_angle": 3.14159, "speed": 3.0}, # West of center, moving West (pi rad)
+        {"centroid": (300.0, 350.0), "direction_angle": 1.5708, "speed": 3.0},  # South of center, moving South (pi/2)
+        {"centroid": (300.0, 250.0), "direction_angle": -1.5708, "speed": 3.0}, # North of center, moving North (-pi/2)
+    ]
+    p_div = engine.detect_crowd_patterns(tracks_diverging, [], optical_entropy=0.2, mean_speed=3.0, current_count=4)
+    assert p_div["pattern"] == "DIVERGENCE"
+    assert "Spatial outward radial dispersion" in p_div["details"]
 
-    # 5. Divergence pattern
-    zones_div = [{"inflow": 0, "outflow": 5}]
-    p5 = engine.detect_crowd_patterns([], zones_div, optical_entropy=0.2, mean_speed=1.5, current_count=7)
-    assert p5["pattern"] == "DIVERGENCE"
+    # 4b. Negative Divergence test: inward motion towards centroid must NOT trigger DIVERGENCE
+    tracks_converging = [
+        {"centroid": (350.0, 300.0), "direction_angle": 3.14159, "speed": 3.0}, # East of center, moving West (inward)
+        {"centroid": (250.0, 300.0), "direction_angle": 0.0, "speed": 3.0},       # West of center, moving East (inward)
+        {"centroid": (300.0, 350.0), "direction_angle": -1.5708, "speed": 3.0},  # South of center, moving North (inward)
+        {"centroid": (300.0, 250.0), "direction_angle": 1.5708, "speed": 3.0},   # North of center, moving South (inward)
+    ]
+    p_conv = engine.detect_crowd_patterns(tracks_converging, [], optical_entropy=0.2, mean_speed=3.0, current_count=4)
+    assert p_conv["pattern"] == "CONVERGENCE"
+    assert "Spatial inward radial convergence" in p_conv["details"]
+
+    # 5. Fallback Convergence & Divergence via zone telemetry
+    zones_conv = [{"inflow": 6, "outflow": 0}]
+    p5_conv = engine.detect_crowd_patterns([], zones_conv, optical_entropy=0.2, mean_speed=1.5, current_count=7)
+    assert p5_conv["pattern"] == "CONVERGENCE"
+
+    zones_div = [{"inflow": 0, "outflow": 6}]
+    p5_div = engine.detect_crowd_patterns([], zones_div, optical_entropy=0.2, mean_speed=1.5, current_count=7)
+    assert p5_div["pattern"] == "DIVERGENCE"
 
     # 6. Normal flow baseline
     p6 = engine.detect_crowd_patterns([], [], optical_entropy=0.2, mean_speed=1.0, current_count=1)
@@ -292,6 +314,46 @@ def test_incident_sustenance_and_cooldown():
         )
         assert len(res4) == 1
 
+    finally:
+        db.close()
+
+def test_no_critical_alert_on_low_current_risk():
+    """
+    Regression test: Verifies that when current risk is low (e.g., 20.5),
+    even an aggressive projected forecast (e.g. 84.0) will NOT trigger a CRITICAL_RISK emergency alert.
+    Instead, it produces an early advisory PROJECTED_SURGE_WARNING with MODERATE severity.
+    """
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(bind=engine)
+    Session = sessionmaker(bind=engine)
+    db = Session()
+
+    try:
+        inc_service = IncidentService(db, sustenance_frames=2, cooldown_sec=5.0)
+        risk_low = {"smoothed_score": 20.5, "density_comp": 0.2, "growth_comp": 0.5, "motion_anomaly_comp": 0.2, "congestion_comp": 0.1}
+        forecast_surging = {"forecast_10s": 84.0, "trend": "SURGING"}
+
+        # Feed 2 sustained frames
+        inc_service.check_and_create_incidents(
+            analysis_id="anl_surge", frame_idx=0, timestamp_sec=0.0,
+            risk_data=risk_low, current_count=10, grid_cells=[],
+            pattern_data={"pattern": "NORMAL_FLOW"}, forecast_data=forecast_surging
+        )
+        res = inc_service.check_and_create_incidents(
+            analysis_id="anl_surge", frame_idx=1, timestamp_sec=0.2,
+            risk_data=risk_low, current_count=10, grid_cells=[],
+            pattern_data={"pattern": "NORMAL_FLOW"}, forecast_data=forecast_surging
+        )
+
+        assert len(res) == 1
+        # MUST NOT be CRITICAL_RISK
+        assert res[0].incident_type != "CRITICAL_RISK"
+        assert res[0].severity != "CRITICAL"
+        # MUST be PROJECTED_SURGE_WARNING advisory
+        assert res[0].incident_type == "PROJECTED_SURGE_WARNING"
+        assert res[0].severity == "MODERATE"
+        assert "Advisory" in res[0].trigger_reason
+        assert "ADVISORY:" in res[0].recommended_action
     finally:
         db.close()
 

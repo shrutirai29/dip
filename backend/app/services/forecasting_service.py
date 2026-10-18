@@ -94,20 +94,65 @@ class PatternAndForecastingEngine:
                     "details": "Simultaneous rapid influx and high movement velocity detected"
                 }
 
-        # 5. Convergence vs Divergence
+        # 5. Spatial Convergence vs Divergence (Radial velocity relative to crowd centroid)
+        moving_tracks = [
+            t for t in tracks
+            if t.get("speed", 0.0) > 1.0 and "centroid" in t and "direction_angle" in t
+        ]
+        if len(moving_tracks) >= 4:
+            # Compute crowd geometric centroid
+            cx = float(np.mean([t["centroid"][0] for t in moving_tracks]))
+            cy = float(np.mean([t["centroid"][1] for t in moving_tracks]))
+
+            radial_projections = []
+            for t in moving_tracks:
+                tx, ty = t["centroid"]
+                dx = tx - cx
+                dy = ty - cy
+                dist = np.hypot(dx, dy)
+                if dist > 15.0:  # Skip tracks already virtually at the centroid
+                    # Unit radial outward vector: (dx/dist, dy/dist)
+                    # Unit velocity vector: (cos(angle), sin(angle))
+                    angle = t["direction_angle"]
+                    vx = np.cos(angle)
+                    vy = np.sin(angle)
+                    # Dot product > 0: moving outward away from centroid (divergence)
+                    # Dot product < 0: moving inward toward centroid (convergence)
+                    radial_dot = (dx * vx + dy * vy) / dist
+                    radial_projections.append(radial_dot)
+
+            if len(radial_projections) >= 4:
+                mean_radial = float(np.mean(radial_projections))
+                outward_ratio = sum(1 for r in radial_projections if r > 0.3) / len(radial_projections)
+                inward_ratio = sum(1 for r in radial_projections if r < -0.3) / len(radial_projections)
+
+                if mean_radial > 0.35 and outward_ratio >= 0.65:
+                    return {
+                        "pattern": "DIVERGENCE",
+                        "confidence": min(0.92, round(0.55 + outward_ratio * 0.35, 2)),
+                        "details": f"Spatial outward radial dispersion: {int(outward_ratio*100)}% of active trajectories moving away from crowd centroid"
+                    }
+                elif mean_radial < -0.35 and inward_ratio >= 0.65:
+                    return {
+                        "pattern": "CONVERGENCE",
+                        "confidence": min(0.92, round(0.55 + inward_ratio * 0.35, 2)),
+                        "details": f"Spatial inward radial convergence: {int(inward_ratio*100)}% of active trajectories focusing toward crowd centroid"
+                    }
+
+        # Secondary fallback: zone cell boundary inflow/outflow imbalance if tracks are sparse
         inflow_sum = sum(z.get("inflow", 0) for z in zone_cells)
         outflow_sum = sum(z.get("outflow", 0) for z in zone_cells)
-        if inflow_sum > outflow_sum + 2 and current_count >= 6:
+        if inflow_sum > outflow_sum + 3 and current_count >= 6:
             return {
                 "pattern": "CONVERGENCE",
-                "confidence": 0.78,
-                "details": "Crowd trajectory vectors converging inward toward central quadrant"
+                "confidence": 0.72,
+                "details": "Crowd trajectory vectors converging inward across zone boundaries"
             }
-        elif outflow_sum > inflow_sum + 2 and current_count >= 6:
+        elif outflow_sum > inflow_sum + 3 and current_count >= 6:
             return {
                 "pattern": "DIVERGENCE",
-                "confidence": 0.76,
-                "details": "Crowd trajectory vectors dispersing outward away from central area"
+                "confidence": 0.70,
+                "details": "Crowd trajectory vectors dispersing outward across zone boundaries"
             }
 
         return {"pattern": pattern, "confidence": confidence, "details": details}
@@ -142,10 +187,10 @@ class PatternAndForecastingEngine:
                 "forecast_5s": round(current_risk, 1),
                 "forecast_10s": round(current_risk, 1),
                 "forecast_15s": round(current_risk, 1),
-                "confidence": 0.50,
+                "confidence": 50.0,
                 "trend": "STABLE",
                 "horizon_sec": 10,
-                "reliability": "Experimental Baseline"
+                "reliability": "Uncalibrated trend-stability heuristic; insufficient history"
             }
 
         # Fit recent risk history and convert the slope to risk points per second.

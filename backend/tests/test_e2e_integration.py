@@ -51,6 +51,13 @@ def test_pipeline():
 
     assert anl["status"] == "completed", f"Job failed or cancelled: {anl.get('error_message')}"
     print(f" -> Job Completed! Peak Count: {anl['peak_count']}, Avg Risk: {anl['avg_risk_score']}, Dominant Pattern: {anl['dominant_pattern']}")
+    
+    # Verify annotated video exists and has non-zero size
+    ann_rel = anl.get("annotated_video_path", "").lstrip("/")
+    ann_full = os.path.join(".", ann_rel)
+    assert os.path.exists(ann_full), f"Annotated video missing on disk: {ann_full}"
+    assert os.path.getsize(ann_full) > 10000, f"Annotated video is too small or empty: {os.path.getsize(ann_full)} bytes"
+    print(f" -> Verified playable annotated video on disk: {ann_full} ({os.path.getsize(ann_full)} bytes)")
 
     print("[4] Fetching frame-by-frame telemetry...")
     res = requests.get(f"{base_url}/analyses/{analysis_id}/results")

@@ -231,12 +231,12 @@ platform win32 -- Python 3.11.9, pytest-8.3.4, pluggy-1.6.0
 rootdir: C:\Users\shrut\Documents\antigravity\modest-pascal
 configfile: pytest.ini
 plugins: anyio-4.15.1
-collected 22 items
+collected 23 items
 
-backend\tests\test_services.py ..............                            [ 63%]
+backend\tests\test_services.py ...............                           [ 65%]
 backend\tests\test_api.py ........                                       [100%]
 
-======================= 22 passed, 5 warnings in 12.13s =======================
+======================= 23 passed, 5 warnings in 11.51s =======================
 ```
 
 ### 2. Live Full Integration Pipeline Test
@@ -247,25 +247,29 @@ cmd /c "set CROWDGUARD_RUN_E2E=1&& pytest backend/tests/test_e2e_integration.py 
 **Actual Observed Execution Output:**
 ```text
 [1] Uploading video...
- -> Uploaded: vid_0775552f61, 10.0s, 250 frames, 25.0 fps
+ -> Uploaded: vid_4dbfa95294, 10.0s, 250 frames, 25.0 fps
 [2] Creating analysis job with DIP perspective & privacy...
- -> Analysis created: anl_f1a351ace7, status: pending
+ -> Analysis created: anl_181712986d, status: pending
 [3] Polling progress until completed...
- -> Progress: 31.2% | Frame: 78/250 | Status: processing | FPS: 11.5
- -> Progress: 67.2% | Frame: 168/250 | Status: processing | FPS: 11.0
- -> Progress: 100.0% | Frame: 248/250 | Status: completed | FPS: 10.6
+ -> Progress: 31.2% | Frame: 78/250 | Status: processing | FPS: 5.8
+ -> Progress: 63.2% | Frame: 158/250 | Status: processing | FPS: 6.9
+ -> Progress: 100.0% | Frame: 248/250 | Status: completed | FPS: 7.5
  -> Job Completed! Peak Count: 1, Avg Risk: 13.8, Dominant Pattern: NORMAL_FLOW
+ -> Verified playable annotated video on disk: .\data/processed/anl_181712986d_annotated.mp4 (1283376 bytes)
 [4] Fetching frame-by-frame telemetry...
  -> Received 125 recorded frame telemetry objects.
+    Sample t=9.92s: Count=0, CurrentRisk=20.57, Forecast+10s=100.0 (SURGING), Pattern=NORMAL_FLOW, Entropy=0.719
 [5] Fetching incidents...
- -> Found 4 sustained incidents generated for session.
+ -> Found 5 sustained incidents generated for session.
+    Incident: inc_575a88afb9 | Type: PROJECTED_SURGE_WARNING | Severity: MODERATE | Score: 22.0 | Rec: ADVISORY: Monitor corridor inflow and prepare standby marshals. Awaiting real-time confirmation before active intervention.
 [6] Testing CSV export...
  -> CSV export verified successfully!
+
 ALL 6 PIPELINE INTEGRATION STEPS PASSED PERFECTLY!
-============================= 1 passed in 12.47s ==============================
+============================= 1 passed in 17.59s ==============================
 ```
 
-### 3. Forecast Verification Benchmark
+### 3. Forecast Verification Benchmark & Scientific Findings
 Command:
 ```bash
 python backend/app/utils/evaluate_forecasts.py
@@ -273,21 +277,21 @@ python backend/app/utils/evaluate_forecasts.py
 **Actual Observed Execution Output:**
 ```json
 {
-  "total_video_catalogs": 2,
+  "total_video_catalogs": 3,
   "development_videos": 1,
-  "held_out_evaluation_videos": 1,
+  "held_out_evaluation_videos": 2,
   "horizons": {
     "+5s": {
-      "valid_points": 75,
-      "missing_points": 50,
+      "valid_points": 150,
+      "missing_points": 100,
       "model_mae": 27.8,
       "model_rmse": 35.67,
       "persistence_baseline_mae": 11.12,
       "persistence_baseline_rmse": 12.86
     },
     "+10s": {
-      "valid_points": 12,
-      "missing_points": 113,
+      "valid_points": 24,
+      "missing_points": 226,
       "model_mae": 27.21,
       "model_rmse": 35.89,
       "persistence_baseline_mae": 16.99,
@@ -295,13 +299,27 @@ python backend/app/utils/evaluate_forecasts.py
     },
     "+15s": {
       "valid_points": 0,
-      "missing_points": 125,
+      "missing_points": 250,
       "model_mae": null,
-      "model_rmse": null
+      "model_rmse": null,
+      "persistence_baseline_mae": null,
+      "persistence_baseline_rmse": null
     }
   }
 }
 ```
+
+> [!NOTE]
+> **Forecasting Performance Finding:**
+> On evaluation across held-out sequences, the persistence baseline ($\text{Risk}(t + \Delta t) = \text{Risk}(t)$, MAE $11.12$ at $+5\text{s}$) outperforms linear trend extrapolation (MAE $27.80$ at $+5\text{s}$). This occurs because linear extrapolation projects ongoing slopes forward without anticipating deceleration or boundaries, whereas abrupt surges level off rapidly. We document this result transparently rather than artificially tuning or overfitting parameters to the held-out sequences.
+
+> [!NOTE]
+> **Synthetic Pedestrian Detection Finding:**
+> The bundled synthetic scenarios (`generate_sample.py`) render pedestrian bodies as geometric silhouettes. Because YOLOv8n is pretrained on real photographic COCO images, geometric shapes yield fewer detections (typically 0–3) compared to real photographic pedestrian surveillance footage. In full deployment, real CCTV camera feeds should be provided.
+
+> [!NOTE]
+> **Incident Decoupling Safeguard:**
+> Emergency `CRITICAL_RISK` incidents are strictly reserved for situations where current risk is verified high ($\ge 75.0$, or $\ge 60.0$ with a surging forecast). When current risk is low/moderate ($\le 60.0$) but extrapolation projects a surge, the system issues an early advisory `PROJECTED_SURGE_WARNING` with `MODERATE` severity, eliminating false critical alarms on calm crowds.
 
 ### 4. Frontend Production Build Check
 Command:
