@@ -16,7 +16,6 @@ import { Incident } from '../types';
 import { 
   KPICard, 
   RiskBadge, 
-  EmptyState, 
   ErrorState, 
   LoadingBlock 
 } from '../components/UIComponents';
