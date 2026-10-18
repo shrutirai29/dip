@@ -1,0 +1,15 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+sqlalchemy==2.0.36
+opencv-python-headless==4.10.0.84
+ultralytics==8.3.58
+numpy>=1.26.0,<2.1.0
+scipy>=1.13.0
+torch>=2.2.0
+torchvision>=0.17.0
+python-multipart==0.0.20
+aiofiles==24.1.0
+pytest==8.3.4
+httpx==0.28.1
+websockets==14.1
