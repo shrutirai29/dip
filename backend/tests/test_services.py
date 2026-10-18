@@ -94,3 +94,36 @@ def test_pattern_detection_and_forecasting():
     assert fc["forecast_10s"] > 50.0
     assert fc["trend"] in ["RISING", "SURGING"]
     assert 0.0 <= fc["confidence"] <= 100.0
+
+
+def test_forecast_horizons_use_real_sample_interval():
+    slow_sampling = PatternAndForecastingEngine(history_window=10)
+    fast_sampling = PatternAndForecastingEngine(history_window=10)
+    risk_samples = [20.0, 22.0, 24.0, 26.0, 28.0]
+    slow_result = fast_result = None
+    for risk in risk_samples:
+        slow_result = slow_sampling.compute_short_term_forecast(
+            risk, 0.4, 0.5, 4.0, "NORMAL_FLOW", sample_interval_sec=1.0
+        )
+        fast_result = fast_sampling.compute_short_term_forecast(
+            risk, 0.4, 0.5, 4.0, "NORMAL_FLOW", sample_interval_sec=0.2
+        )
+    assert slow_result is not None and fast_result is not None
+    assert fast_result["forecast_5s"] >= slow_result["forecast_5s"]
+    assert fast_result["forecast_10s"] >= slow_result["forecast_10s"]
+    assert "not a probability" in fast_result["reliability"]
+
+
+def test_forecast_flat_series_stays_stable_and_bounded():
+    engine = PatternAndForecastingEngine(history_window=10)
+    result = None
+    for _ in range(6):
+        result = engine.compute_short_term_forecast(
+            30.0, 0.4, 0.5, 2.0, "NORMAL_FLOW", sample_interval_sec=0.1
+        )
+    assert result is not None
+    assert result["forecast_5s"] == 30.0
+    assert result["forecast_10s"] == 30.0
+    assert result["forecast_15s"] == 30.0
+    assert result["trend"] == "STABLE"
+    assert 0.0 <= result["confidence"] <= 100.0

@@ -112,7 +112,8 @@ class PatternAndForecastingEngine:
         current_density_comp: float,
         current_entropy: float,
         current_speed: float,
-        detected_pattern: str
+        detected_pattern: str,
+        sample_interval_sec: float = 0.2
     ) -> Dict:
         """
         Multivariate temporal forecast for +5s, +10s, and +15s horizons.
@@ -141,11 +142,12 @@ class PatternAndForecastingEngine:
                 "reliability": "Experimental Baseline"
             }
 
-        # 1. Compute velocity & acceleration of risk (1st & 2nd temporal derivatives)
-        recent_risks = np.array(self.risk_history[-5:])
-        x = np.arange(len(recent_risks))
-        # Linear slope (rate of change per frame step)
+        # Fit recent risk history and convert the slope to risk points per second.
+        recent_risks = np.asarray(self.risk_history[-5:], dtype=float)
+        x = np.arange(len(recent_risks), dtype=float)
+        interval = max(float(sample_interval_sec), 1e-6)
         slope, _ = np.polyfit(x, recent_risks, 1)
+        risk_slope_per_sec = float(slope / interval)
 
         # Factor in pattern hazard multipliers
         pattern_multiplier = 1.0
@@ -158,16 +160,12 @@ class PatternAndForecastingEngine:
         elif detected_pattern == "COUNTERFLOW":
             pattern_multiplier = 1.15
 
-        # Density derivative
-        d_slope = 0.0
-        if len(self.density_history) >= 4:
-            d_slope = float(np.polyfit(np.arange(4), self.density_history[-4:], 1)[0])
-
-        # Project horizons (assuming frame stride is ~0.1 - 0.2s)
-        # +5 sec delta (approx 15-25 frames ahead)
-        delta_5s = (slope * 18.0 + d_slope * 30.0) * pattern_multiplier
-        delta_10s = (slope * 35.0 + d_slope * 50.0) * pattern_multiplier
-        delta_15s = (slope * 50.0 + d_slope * 65.0) * pattern_multiplier
+        # Project in seconds, not a fixed number of samples. Density already
+        # contributes to the composite risk trajectory; adding its derivative
+        # again would double-count it without a calibrated model.
+        delta_5s = risk_slope_per_sec * 5.0 * pattern_multiplier
+        delta_10s = risk_slope_per_sec * 10.0 * pattern_multiplier
+        delta_15s = risk_slope_per_sec * 15.0 * pattern_multiplier
 
         f_5s = max(0.0, min(100.0, current_risk + delta_5s))
         f_10s = max(0.0, min(100.0, current_risk + delta_10s))
@@ -183,9 +181,11 @@ class PatternAndForecastingEngine:
         else:
             trend = "STABLE"
 
-        # Statistical confidence based on linear fit residual variance
-        residuals = np.sum((recent_risks - (slope * x + np.mean(recent_risks))) ** 2)
-        variance_penalty = min(0.35, float(residuals / 100.0))
+        # Fit-stability heuristic, not a calibrated probability or confidence interval.
+        intercept = float(np.mean(recent_risks) - slope * np.mean(x))
+        residuals = recent_risks - (slope * x + intercept)
+        mean_squared_residual = float(np.mean(residuals ** 2))
+        variance_penalty = min(0.35, mean_squared_residual / 100.0)
         confidence = max(0.40, min(0.92, 0.85 - variance_penalty))
 
         return {
@@ -195,5 +195,5 @@ class PatternAndForecastingEngine:
             "confidence": round(confidence * 100.0, 1),
             "trend": trend,
             "horizon_sec": 10,
-            "reliability": "Statistical Gradient Fit"
+            "reliability": "Uncalibrated trend-stability heuristic; not a probability"
         }

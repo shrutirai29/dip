@@ -1,6 +1,13 @@
-import requests
-import json
+import os
 import time
+import pytest
+
+requests = pytest.importorskip("requests")
+
+pytestmark = pytest.mark.skipif(
+    os.getenv("CROWDGUARD_RUN_E2E") != "1",
+    reason="Set CROWDGUARD_RUN_E2E=1 and start the API server to run this integration test."
+)
 
 def test_pipeline():
     base_url = "http://127.0.0.1:8000/api"

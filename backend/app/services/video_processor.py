@@ -186,7 +186,8 @@ class VideoProcessor:
                     current_density_comp=risk_data["density_comp"],
                     current_entropy=flow_entropy,
                     current_speed=mean_speed,
-                    detected_pattern=detected_pattern
+                    detected_pattern=detected_pattern,
+                    sample_interval_sec=stride / max(float(orig_fps), 1e-6)
                 )
 
                 counts.append(person_count)
