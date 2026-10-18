@@ -1,7 +1,6 @@
 import React from 'react';
 import { 
   AlertTriangle, 
-  CheckCircle2, 
   Info, 
   Loader2, 
   TrendingUp, 

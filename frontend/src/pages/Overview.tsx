@@ -385,9 +385,17 @@ export const Overview: React.FC = () => {
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         <KPICard
           label="Total Catalog Videos"
-          value={summary ? summary.total_videos : (partialErrors.summary ? 'Unavailable' : '—')}
-          unit={summary ? 'files' : undefined}
-          subtext={summary ? `${summary.completed_analyses} completed audits` : (partialErrors.summary || 'Awaiting catalog query')}
+          value={
+            summary && typeof summary.total_videos === 'number'
+              ? summary.total_videos
+              : 'Unavailable'
+          }
+          unit={summary && typeof summary.total_videos === 'number' ? 'files' : undefined}
+          subtext={
+            summary && typeof summary.completed_analyses === 'number'
+              ? `${summary.completed_analyses} completed audits`
+              : (partialErrors.summary || 'Summary metrics unavailable')
+          }
           icon={Video}
           tone="cyan"
         />
@@ -436,9 +444,17 @@ export const Overview: React.FC = () => {
 
         <KPICard
           label="Sustained Incidents"
-          value={summary ? summary.total_incidents : (partialErrors.summary ? 'Unavailable' : '—')}
-          unit={summary ? 'events' : undefined}
-          subtext={summary ? `${summary.critical_incidents} critical priority alerts` : (partialErrors.summary || 'Awaiting incident query')}
+          value={
+            summary && typeof summary.total_incidents === 'number'
+              ? summary.total_incidents
+              : 'Unavailable'
+          }
+          unit={summary && typeof summary.total_incidents === 'number' ? 'events' : undefined}
+          subtext={
+            summary && typeof summary.critical_incidents === 'number'
+              ? `${summary.critical_incidents} critical priority alerts`
+              : (partialErrors.summary || 'Incident counts unavailable')
+          }
           icon={AlertTriangle}
           tone={summary && summary.critical_incidents > 0 ? 'rose' : 'amber'}
         />
@@ -743,9 +759,9 @@ export const Overview: React.FC = () => {
           ) : (
             <div className="py-12 text-center text-slate-400">
               <ShieldAlert className="w-8 h-8 mx-auto mb-2 text-slate-400" />
-              <p className="text-xs font-medium text-slate-300">No active hazard incidents registered</p>
+              <p className="text-xs font-medium text-slate-300">No incidents are recorded in the current catalog.</p>
               <p className="text-[11px] text-slate-400 mt-1 max-w-xs mx-auto">
-                Processed video feeds have maintained acceptable density and directional motion parameters.
+                Any automated threshold violations or sustained risk conditions will appear here with evidentiary keyframes.
               </p>
             </div>
           )}
