@@ -111,4 +111,11 @@ export const analyticsApi = {
   },
 };
 
+export const systemApi = {
+  healthCheck: async (): Promise<{ status: string; system: string; version: string }> => {
+    const res = await api.get<{ status: string; system: string; version: string }>('/health');
+    return res.data;
+  },
+};
+
 export default api;
