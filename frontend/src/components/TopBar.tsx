@@ -1,8 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { 
   Menu, 
-  Activity, 
   Clock, 
   ExternalLink,
   RefreshCw
@@ -49,14 +48,48 @@ export const TopBar: React.FC = () => {
   const { 
     selectedAnalysis, 
     setMobileMenuOpen,
-    refreshLatestAnalysis,
-    sidebarCollapsed 
+    triggerGlobalRefresh,
+    systemHealth
   } = useSystem();
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefreshClick = async () => {
+    setIsRefreshing(true);
+    triggerGlobalRefresh();
+    // Keep brief indicator spin for visual feedback
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 600);
+  };
 
   const currentInfo = routeTitles[location.pathname] || {
     title: 'CROWDGUARD Command Center',
     subtitle: 'Digital Image Processing Based Crowd Monitoring & Disaster Risk System',
   };
+
+  const healthBadgeConfig = {
+    checking: {
+      bg: 'bg-slate-800 text-slate-300 border-slate-700',
+      dot: 'bg-slate-400 animate-pulse',
+      label: 'CHECKING',
+    },
+    operational: {
+      bg: 'bg-emerald-950/40 text-emerald-300 border-emerald-500/30',
+      dot: 'bg-emerald-400 animate-pulse',
+      label: 'OPERATIONAL',
+    },
+    degraded: {
+      bg: 'bg-amber-950/40 text-amber-300 border-amber-500/30',
+      dot: 'bg-amber-400',
+      label: 'DEGRADED',
+    },
+    offline: {
+      bg: 'bg-rose-950/40 text-rose-300 border-rose-500/30',
+      dot: 'bg-rose-400',
+      label: 'OFFLINE',
+    },
+  }[systemHealth];
 
   return (
     <header className="sticky top-0 z-20 h-14 bg-[#0A1018]/90 backdrop-blur-md border-b border-[#192638] px-4 md:px-6 flex items-center justify-between transition-all">
@@ -113,16 +146,20 @@ export const TopBar: React.FC = () => {
         {/* Global Operational Status Pill */}
         <div className="flex items-center space-x-2 pl-2 border-l border-[#192638]">
           <button
-            onClick={() => refreshLatestAnalysis()}
-            className="p-1 text-slate-400 hover:text-cyan-300 rounded hover:bg-[#121C2B] transition-colors cursor-pointer"
-            title="Refresh System Telemetry"
-            aria-label="Refresh telemetry"
+            onClick={handleRefreshClick}
+            disabled={isRefreshing}
+            className={`p-1.5 text-slate-400 hover:text-cyan-300 rounded hover:bg-[#121C2B] transition-colors cursor-pointer ${
+              isRefreshing ? 'animate-spin text-cyan-400' : ''
+            }`}
+            title="Refresh System Telemetry & Catalog"
+            aria-label="Refresh telemetry and catalog"
           >
             <RefreshCw className="w-3.5 h-3.5" />
           </button>
-          <div className="flex items-center space-x-1.5 px-2 py-0.5 rounded-full bg-[#0E1622] border border-[#1E2D40]">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[11px] font-mono text-slate-300 font-medium">ONLINE</span>
+          
+          <div className={`flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-mono font-medium ${healthBadgeConfig.bg}`}>
+            <span className={`w-2 h-2 rounded-full ${healthBadgeConfig.dot}`} />
+            <span>{healthBadgeConfig.label}</span>
           </div>
         </div>
       </div>

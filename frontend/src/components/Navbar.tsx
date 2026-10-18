@@ -161,18 +161,36 @@ export const Navbar: React.FC = () => {
         {/* Footer Hardware & Engine Telemetry Status */}
         <div className="p-3 border-t border-[#192638] bg-[#070B11]/80">
           {sidebarCollapsed ? (
-            <div className="flex justify-center" title="Engine Status: Active (v2.0-CV)">
+            <div className="flex justify-center" title={`Engine Status: ${systemHealth.toUpperCase()}`}>
               <span className={`w-2 h-2 rounded-full ${
-                systemHealth === 'operational' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+                systemHealth === 'operational' ? (pipelineActive ? 'bg-cyan-400 animate-pulse' : 'bg-emerald-400') :
+                systemHealth === 'degraded' ? 'bg-amber-400' :
+                systemHealth === 'checking' ? 'bg-slate-500 animate-pulse' : 'bg-rose-500'
               }`} />
             </div>
           ) : (
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-[11px]">
                 <span className="flex items-center space-x-1.5 text-slate-300">
-                  <Radio className={`w-3 h-3 ${pipelineActive ? 'text-emerald-400 animate-pulse' : 'text-slate-400'}`} />
+                  <Radio className={`w-3 h-3 ${
+                    systemHealth === 'operational'
+                      ? (pipelineActive ? 'text-cyan-400 animate-pulse' : 'text-emerald-400')
+                      : systemHealth === 'degraded'
+                      ? 'text-amber-400'
+                      : systemHealth === 'checking'
+                      ? 'text-slate-500 animate-pulse'
+                      : 'text-rose-500'
+                  }`} />
                   <span className="font-medium text-[11px]">
-                    {pipelineActive ? 'Pipeline Active' : 'Engine Ready'}
+                    {pipelineActive
+                      ? 'Job In Progress'
+                      : systemHealth === 'operational'
+                      ? 'Engine Standby'
+                      : systemHealth === 'degraded'
+                      ? 'Degraded Link'
+                      : systemHealth === 'checking'
+                      ? 'Connecting...'
+                      : 'Server Offline'}
                   </span>
                 </span>
                 <span className="text-[10px] bg-[#121C2B] border border-[#1E2D40] px-1.5 py-0.2 rounded text-cyan-300 font-mono">
