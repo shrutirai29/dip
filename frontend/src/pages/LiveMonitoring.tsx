@@ -1,21 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { 
   Users, 
   Activity, 
-  Download, 
-  Layers, 
+  TrendingUp, 
   Compass, 
+  Layers, 
   Clock, 
+  FileSpreadsheet, 
   AlertTriangle,
-  FileSpreadsheet,
-  CheckCircle2
+  Play,
+  Pause,
+  RotateCcw
 } from 'lucide-react';
 import { 
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area
 } from 'recharts';
 import { analysisApi, incidentApi } from '../services/api';
-import { Analysis, FrameRecord, Incident } from '../types';
+import { Analysis, FrameRecord, Incident, GridDensityCell } from '../types';
 
 export const LiveMonitoring: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -25,12 +27,8 @@ export const LiveMonitoring: React.FC = () => {
   const [selectedAnalysis, setSelectedAnalysis] = useState<Analysis | null>(null);
   const [results, setResults] = useState<FrameRecord[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  // Toggle visual overlays
-  const [showHeatmap, setShowHeatmap] = useState(true);
-  const [showBBoxes, setShowBBoxes] = useState(true);
-  const [showTrajectories, setShowTrajectories] = useState(true);
+  const [selectedFrame, setSelectedFrame] = useState<FrameRecord | null>(null);
+  const [selectedZone, setSelectedZone] = useState<GridDensityCell | null>(null);
 
   useEffect(() => {
     loadAnalyses();
@@ -51,7 +49,6 @@ export const LiveMonitoring: React.FC = () => {
   };
 
   const loadSessionDetails = async (id: string) => {
-    setLoading(true);
     try {
       const [resData, incData] = await Promise.all([
         analysisApi.getResults(id),
@@ -59,10 +56,15 @@ export const LiveMonitoring: React.FC = () => {
       ]);
       setResults(resData);
       setIncidents(incData.filter((i) => i.analysis_id === id));
+      if (resData.length > 0) {
+        const latest = resData[resData.length - 1];
+        setSelectedFrame(latest);
+        if (latest.grid_density && latest.grid_density.length > 0) {
+          setSelectedZone(latest.grid_density[4]); // Center Zone B2 default
+        }
+      }
     } catch (err) {
       console.error(err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -75,14 +77,25 @@ export const LiveMonitoring: React.FC = () => {
     }
   };
 
+  // Synchronized scrubbing: click on any chart point to inspect that frame's telemetry
+  const handleChartClick = (e: any) => {
+    if (e && e.activePayload && e.activePayload.length > 0) {
+      const record = e.activePayload[0].payload as FrameRecord;
+      setSelectedFrame(record);
+      if (record.grid_density && record.grid_density.length > 0) {
+        setSelectedZone(record.grid_density[4]);
+      }
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Header & Session Selector */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-gray-800 gap-4">
+    <div className="space-y-6 max-w-7xl">
+      {/* Header and Session Selection */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-[#1D2935] gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Live & Replay Crowd Intelligence</h1>
-          <p className="text-sm text-gray-400 mt-1">
-            Frame-accurate AI detections, DIP density splatting, and temporal motion telemetry
+          <h1 className="text-xl font-bold text-white tracking-tight">LIVE & REPLAY MULTI-CHANNEL TELEMETRY</h1>
+          <p className="text-xs text-[#8C9AAA] mt-0.5">
+            Synchronized video playback, Farneback optical flow velocity field, and interactive 3×3 spatial zone matrices
           </p>
         </div>
 
@@ -90,7 +103,7 @@ export const LiveMonitoring: React.FC = () => {
           <select
             value={selectedAnalysis?.id || ''}
             onChange={handleSelectAnalysis}
-            className="bg-[#111827] border border-gray-700 text-xs text-white rounded-lg px-3 py-2"
+            className="bg-[#0D131C] border border-[#1D2935] text-xs text-white rounded-lg px-3 py-2"
           >
             {analyses.map((a) => (
               <option key={a.id} value={a.id}>
@@ -103,30 +116,31 @@ export const LiveMonitoring: React.FC = () => {
             <a
               href={analysisApi.getExportUrl(selectedAnalysis.id)}
               download
-              className="flex items-center space-x-1.5 px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-xs font-medium border border-gray-700 transition"
+              className="flex items-center space-x-1.5 px-3 py-2 bg-[#111923] hover:bg-[#1D2935] text-white rounded-lg text-xs font-medium border border-[#1D2935] transition"
             >
-              <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-              <span>Export CSV Audit</span>
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Export CSV</span>
             </a>
           )}
         </div>
       </div>
 
-      {/* Main Video View & Live Metrics Bar */}
+      {/* Main Split Screen: Video + Interactive 3x3 Zone Matrix */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Video Player (Annotated with DIP Heatmap) */}
-        <div className="lg:col-span-2 bg-[#111827] border border-gray-800 rounded-xl p-5 space-y-4">
+        {/* Left: Annotated Video Screen */}
+        <div className="lg:col-span-2 bg-[#0D131C] border border-[#1D2935] rounded-xl p-5 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
               <h3 className="text-sm font-semibold text-white">Annotated DIP Surveillance Stream</h3>
             </div>
-            <div className="flex items-center space-x-2 text-xs text-gray-400">
-              <span className="font-mono">{selectedAnalysis?.processing_fps || 0} FPS Processed</span>
+            <div className="flex items-center space-x-3 text-xs text-[#8C9AAA] font-mono">
+              <span>Time: t={selectedFrame?.timestamp_sec || 0}s</span>
+              <span>Pattern: {selectedFrame?.detected_pattern || 'NORMAL_FLOW'}</span>
             </div>
           </div>
 
-          <div className="aspect-video bg-black rounded-lg overflow-hidden border border-gray-800 relative">
+          <div className="aspect-video bg-black rounded-lg overflow-hidden border border-[#1D2935] relative">
             {selectedAnalysis?.annotated_video_path ? (
               <video
                 src={selectedAnalysis.annotated_video_path}
@@ -142,188 +156,217 @@ export const LiveMonitoring: React.FC = () => {
                 className="w-full h-full object-contain"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm">
-                No processed video available for this analysis session.
+              <div className="w-full h-full flex items-center justify-center text-[#8C9AAA] text-xs">
+                No processed video available.
               </div>
             )}
           </div>
 
-          {/* Quick HUD Metrics */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center text-xs">
-            <div className="p-3 bg-gray-900/60 rounded-lg border border-gray-800">
-              <span className="text-gray-400 block text-[11px]">Peak Person Count</span>
-              <span className="text-xl font-bold text-white mt-1 block">
-                {selectedAnalysis?.peak_count || 0}
+          {/* Quick Telemetry Row */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div className="p-3 bg-[#111923] rounded-lg border border-[#1D2935]">
+              <span className="text-[10px] text-[#8C9AAA] block">Observed People</span>
+              <span className="text-lg font-bold text-white mt-1 block">
+                {selectedFrame?.person_count || 0}
               </span>
             </div>
-            <div className="p-3 bg-gray-900/60 rounded-lg border border-gray-800">
-              <span className="text-gray-400 block text-[11px]">Average Risk Score</span>
-              <span className="text-xl font-bold text-cyan-400 mt-1 block">
-                {selectedAnalysis?.avg_risk_score.toFixed(1) || '0.0'}
+            <div className="p-3 bg-[#111923] rounded-lg border border-[#1D2935]">
+              <span className="text-[10px] text-[#8C9AAA] block">Current Risk</span>
+              <span className="text-lg font-bold text-amber-400 mt-1 block">
+                {selectedFrame?.smoothed_risk_score.toFixed(1) || '0.0'}
               </span>
             </div>
-            <div className="p-3 bg-gray-900/60 rounded-lg border border-gray-800">
-              <span className="text-gray-400 block text-[11px]">Max Risk Score</span>
-              <span className="text-xl font-bold text-rose-400 mt-1 block">
-                {selectedAnalysis?.max_risk_score.toFixed(1) || '0.0'}
+            <div className="p-3 bg-[#111923] rounded-lg border border-[#1D2935]">
+              <span className="text-[10px] text-[#8C9AAA] block">Forecast (+10s)</span>
+              <span className="text-lg font-bold text-rose-400 mt-1 block">
+                {selectedFrame?.forecast_risk_10s.toFixed(1) || '0.0'}
               </span>
             </div>
-            <div className="p-3 bg-gray-900/60 rounded-lg border border-gray-800">
-              <span className="text-gray-400 block text-[11px]">High-Risk Duration</span>
-              <span className="text-xl font-bold text-amber-400 mt-1 block">
-                {selectedAnalysis?.high_risk_duration_sec || 0}s
+            <div className="p-3 bg-[#111923] rounded-lg border border-[#1D2935]">
+              <span className="text-[10px] text-[#8C9AAA] block">Directional Entropy</span>
+              <span className="text-lg font-bold text-cyan-400 mt-1 block">
+                {selectedFrame?.directional_entropy.toFixed(3) || '0.000'}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Real-time Explainability & Incident Log */}
-        <div className="bg-[#111827] border border-gray-800 rounded-xl p-5 flex flex-col justify-between">
+        {/* Right: Interactive 3x3 Spatial Grid Telemetry */}
+        <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-5 flex flex-col justify-between space-y-4">
           <div>
-            <div className="pb-3 mb-3 border-b border-gray-800 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-white">Explainable Risk Factors</h3>
-              <span className="text-[10px] text-gray-400 font-mono">DIP Heuristic Engine</span>
+            <div className="flex items-center justify-between pb-3 border-b border-[#1D2935]">
+              <div>
+                <h3 className="text-sm font-semibold text-white">Spatial 3×3 Grid Matrix</h3>
+                <p className="text-[10px] text-[#8C9AAA]">Click any quadrant to inspect localized telemetry</p>
+              </div>
+              <span className="text-[10px] font-mono text-cyan-400">9 Zones (A1–C3)</span>
             </div>
 
-            {results.length > 0 ? (
-              <div className="space-y-4">
-                {/* Last recorded frame metrics breakdown */}
-                {(() => {
-                  const latest = results[results.length - 1];
+            {/* 3x3 Interactive Grid */}
+            <div className="grid grid-cols-3 gap-2 mt-3">
+              {selectedFrame?.grid_density ? (
+                selectedFrame.grid_density.map((zone) => {
+                  const isSelected = selectedZone?.name === zone.name;
+                  const isCritical = zone.density_level === 'Critical';
+                  const isHigh = zone.density_level === 'High';
+                  const isMod = zone.density_level === 'Moderate';
+                  
                   return (
-                    <div className="space-y-3">
-                      <div className="p-3 bg-gray-900/60 rounded-lg border border-gray-800">
-                        <span className="text-xs text-gray-400 block mb-1">Latest Risk Rationale:</span>
-                        <p className="text-xs text-gray-200 font-medium">{latest.risk_explanation}</p>
+                    <button
+                      key={zone.name}
+                      onClick={() => setSelectedZone(zone)}
+                      className={`p-2.5 rounded-lg border text-left transition relative ${
+                        isSelected
+                          ? 'border-cyan-400 bg-cyan-950/30'
+                          : isCritical
+                          ? 'border-rose-500/40 bg-rose-950/20'
+                          : isHigh
+                          ? 'border-amber-500/40 bg-amber-950/20'
+                          : 'border-[#1D2935] bg-[#111923]'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center text-[10px] text-[#8C9AAA]">
+                        <span className="font-bold text-white">{zone.name.replace('Zone ', '')}</span>
+                        <span className={`font-mono text-[9px] ${
+                          isCritical ? 'text-rose-400' : isHigh ? 'text-amber-400' : 'text-emerald-400'
+                        }`}>
+                          {zone.density_level[0]}
+                        </span>
                       </div>
-
-                      <div className="space-y-2 text-xs">
-                        <div>
-                          <div className="flex justify-between text-gray-400 mb-1">
-                            <span>Density Pressure (35%)</span>
-                            <span className="font-mono text-white">{(latest.density_component * 100).toFixed(0)}%</span>
-                          </div>
-                          <div className="w-full bg-gray-800 rounded-full h-1.5 overflow-hidden">
-                            <div className="bg-cyan-500 h-1.5" style={{ width: `${latest.density_component * 100}%` }} />
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="flex justify-between text-gray-400 mb-1">
-                            <span>Crowd Growth / Surge (20%)</span>
-                            <span className="font-mono text-white">{(latest.growth_component * 100).toFixed(0)}%</span>
-                          </div>
-                          <div className="w-full bg-gray-800 rounded-full h-1.5 overflow-hidden">
-                            <div className="bg-amber-500 h-1.5" style={{ width: `${latest.growth_component * 100}%` }} />
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="flex justify-between text-gray-400 mb-1">
-                            <span>Optical Flow Anomaly (25%)</span>
-                            <span className="font-mono text-white">{(latest.motion_anomaly_component * 100).toFixed(0)}%</span>
-                          </div>
-                          <div className="w-full bg-gray-800 rounded-full h-1.5 overflow-hidden">
-                            <div className="bg-rose-500 h-1.5" style={{ width: `${latest.motion_anomaly_component * 100}%` }} />
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="flex justify-between text-gray-400 mb-1">
-                            <span>Grid Congestion (20%)</span>
-                            <span className="font-mono text-white">{(latest.congestion_component * 100).toFixed(0)}%</span>
-                          </div>
-                          <div className="w-full bg-gray-800 rounded-full h-1.5 overflow-hidden">
-                            <div className="bg-purple-500 h-1.5" style={{ width: `${latest.congestion_component * 100}%` }} />
-                          </div>
-                        </div>
+                      <div className="mt-1 flex items-baseline justify-between">
+                        <span className="text-sm font-bold text-white">{zone.population}</span>
+                        <span className="text-[9px] text-[#8C9AAA] font-mono">r:{zone.zone_risk}</span>
                       </div>
-                    </div>
+                    </button>
                   );
-                })()}
-              </div>
-            ) : (
-              <p className="text-xs text-gray-500 py-6 text-center">No frame telemetry recorded yet.</p>
-            )}
-
-            {/* Incidents within this session */}
-            <div className="mt-6 pt-4 border-t border-gray-800">
-              <h4 className="text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">
-                Session Incidents ({incidents.length})
-              </h4>
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                {incidents.length === 0 ? (
-                  <p className="text-xs text-gray-500">No safety thresholds breached during session.</p>
-                ) : (
-                  incidents.map((inc) => (
-                    <div key={inc.id} className="p-2 bg-gray-900 rounded border border-gray-800 text-xs">
-                      <div className="flex justify-between items-center text-[10px] text-gray-400">
-                        <span className="text-rose-400 font-bold uppercase">{inc.severity}</span>
-                        <span>t={inc.video_timestamp_sec}s</span>
-                      </div>
-                      <p className="text-gray-300 mt-1 text-[11px] font-medium">{inc.trigger_reason}</p>
-                    </div>
-                  ))
-                )}
-              </div>
+                })
+              ) : (
+                <div className="col-span-3 py-6 text-center text-xs text-[#8C9AAA]">
+                  No zone telemetry loaded.
+                </div>
+              )}
             </div>
+
+            {/* Selected Zone Deep Dive */}
+            {selectedZone && (
+              <div className="mt-4 p-3.5 bg-[#111923] rounded-lg border border-[#1D2935] space-y-2 text-xs">
+                <div className="flex items-center justify-between pb-2 border-b border-[#1D2935]">
+                  <span className="font-bold text-white">{selectedZone.name} Detailed Telemetry</span>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${
+                    selectedZone.density_level === 'Critical' ? 'bg-rose-500/20 text-rose-400' :
+                    selectedZone.density_level === 'High' ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'
+                  }`}>
+                    {selectedZone.density_level}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                  <div>
+                    <span className="text-[#8C9AAA] block text-[10px]">Population:</span>
+                    <span className="font-bold text-white">{selectedZone.population} persons</span>
+                  </div>
+                  <div>
+                    <span className="text-[#8C9AAA] block text-[10px]">Normalized Density:</span>
+                    <span className="font-bold text-white">{(selectedZone.normalized_density * 100).toFixed(0)}%</span>
+                  </div>
+                  <div>
+                    <span className="text-[#8C9AAA] block text-[10px]">Mean Velocity:</span>
+                    <span className="font-bold text-white">{selectedZone.avg_velocity} px/s</span>
+                  </div>
+                  <div>
+                    <span className="text-[#8C9AAA] block text-[10px]">Inflow / Outflow:</span>
+                    <span className="font-bold text-white">+{selectedZone.inflow} / -{selectedZone.outflow}</span>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-[#1D2935]">
+                  <span className="text-[#8C9AAA] text-[10px] block">Quadrant Pattern:</span>
+                  <span className={`font-semibold ${selectedZone.pattern === 'BOTTLENECK' ? 'text-rose-400' : 'text-cyan-400'}`}>
+                    {selectedZone.pattern}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="mt-4 pt-3 border-t border-gray-800 text-[11px] text-gray-500 text-center">
-            Advisory risk rating powered by Farneback Optical Flow & Spatial Splatting.
+          <div className="text-[10px] text-[#8C9AAA] text-center pt-2 border-t border-[#1D2935]">
+            Click any point on the bottom charts to scrub and inspect that exact timestamp.
           </div>
         </div>
       </div>
 
-      {/* Telemetry Charts: Crowd Count & Risk Score Over Time */}
+      {/* Synchronized Telemetry Charts (Clickable) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Crowd Count Timeline */}
-        <div className="bg-[#111827] border border-gray-800 rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-white">Person Count Dynamics Over Time</h3>
-            <span className="text-xs text-gray-400 font-mono">Detections / Frame</span>
+        {/* Risk & Short-Term Forecast Chart */}
+        <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
+              Current Risk vs Forecast (+10s) Timeline
+            </h3>
+            <span className="text-[10px] font-mono text-cyan-400">Click point to scrub</span>
           </div>
-          <div className="h-64">
+          <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={results}>
-                <defs>
-                  <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-                <XAxis dataKey="timestamp_sec" stroke="#4b5563" tick={{ fontSize: 11 }} unit="s" />
-                <YAxis stroke="#4b5563" tick={{ fontSize: 11 }} />
+              <LineChart data={results} onClick={handleChartClick}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1D2935" />
+                <XAxis dataKey="timestamp_sec" stroke="#8C9AAA" tick={{ fontSize: 10 }} unit="s" />
+                <YAxis stroke="#8C9AAA" domain={[0, 100]} tick={{ fontSize: 10 }} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#111827', borderColor: '#374151', fontSize: '12px' }}
-                />
-                <Area type="monotone" dataKey="person_count" stroke="#06b6d4" fillOpacity={1} fill="url(#colorCount)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Risk Score Timeline */}
-        <div className="bg-[#111827] border border-gray-800 rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-white">Smoothed Crowd-Risk Index (0-100)</h3>
-            <span className="text-xs text-amber-400 font-mono">Thresholds: 25 | 50 | 75</span>
-          </div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={results}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-                <XAxis dataKey="timestamp_sec" stroke="#4b5563" tick={{ fontSize: 11 }} unit="s" />
-                <YAxis stroke="#4b5563" domain={[0, 100]} tick={{ fontSize: 11 }} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#111827', borderColor: '#374151', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: '#0D131C', borderColor: '#1D2935', fontSize: '11px' }}
                 />
                 <Line
                   type="monotone"
                   dataKey="smoothed_risk_score"
+                  name="Current Risk"
                   stroke="#f59e0b"
                   strokeWidth={2}
+                  dot={false}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="forecast_risk_10s"
+                  name="Forecast (+10s)"
+                  stroke="#ef4444"
+                  strokeWidth={2}
+                  strokeDasharray="4 4"
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Optical Flow Magnitude & Directional Entropy Chart */}
+        <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
+              Farneback Optical Flow & Directional Entropy
+            </h3>
+            <span className="text-[10px] font-mono text-cyan-400">DIP Motion Features</span>
+          </div>
+          <div className="h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={results} onClick={handleChartClick}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1D2935" />
+                <XAxis dataKey="timestamp_sec" stroke="#8C9AAA" tick={{ fontSize: 10 }} unit="s" />
+                <YAxis stroke="#8C9AAA" tick={{ fontSize: 10 }} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#0D131C', borderColor: '#1D2935', fontSize: '11px' }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="optical_flow_magnitude"
+                  name="Optical Flow Mag (px)"
+                  stroke="#06b6d4"
+                  strokeWidth={2}
+                  dot={false}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="mean_speed_pixels"
+                  name="Velocity (px/s)"
+                  stroke="#a855f7"
+                  strokeWidth={1.5}
                   dot={false}
                 />
               </LineChart>

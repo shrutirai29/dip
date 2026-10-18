@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { 
   BarChart3, 
   TrendingUp, 
-  Users, 
-  Activity, 
   Compass, 
-  Layers,
-  ArrowUpRight
+  Layers, 
+  Activity,
+  Wind,
+  ShieldCheck,
+  Zap
 } from 'lucide-react';
 import { 
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, BarChart, Bar
@@ -50,20 +51,36 @@ export const Analytics: React.FC = () => {
     loadFrames(id);
   };
 
+  const meanSpeed = frameData.length > 0
+    ? (frameData.reduce((acc, f) => acc + f.mean_speed_pixels, 0) / frameData.length).toFixed(1)
+    : '0.0';
+    
+  const meanFlow = frameData.length > 0
+    ? (frameData.reduce((acc, f) => acc + f.optical_flow_magnitude, 0) / frameData.length).toFixed(1)
+    : '0.0';
+
+  const meanEntropy = frameData.length > 0
+    ? (frameData.reduce((acc, f) => acc + f.directional_entropy, 0) / frameData.length).toFixed(3)
+    : '0.000';
+
+  const meanAccel = frameData.length > 0
+    ? (frameData.reduce((acc, f) => acc + f.mean_acceleration, 0) / frameData.length).toFixed(2)
+    : '0.00';
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-gray-800 gap-4">
+    <div className="space-y-6 max-w-7xl">
+      <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-[#1D2935] gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Crowd Dynamics & Movement Analytics</h1>
-          <p className="text-sm text-gray-400 mt-1">
-            Multivariate temporal breakdown of velocity, optical flow, and spatial density vectors
+          <h1 className="text-xl font-bold text-white tracking-tight">ADVANCED CROWD DYNAMICS & PREDICTIVE ANALYTICS</h1>
+          <p className="text-xs text-[#8C9AAA] mt-0.5">
+            Temporal feature decomposition: Farneback optical flow fields, Shannon entropy, and multi-horizon forecasts
           </p>
         </div>
 
         <select
           value={selectedAnalysisId}
           onChange={(e) => handleSelect(e.target.value)}
-          className="bg-[#111827] border border-gray-700 text-xs text-white rounded-lg px-3 py-2"
+          className="bg-[#0D131C] border border-[#1D2935] text-xs text-white rounded-lg px-3 py-2"
         >
           {analyses.map((a) => (
             <option key={a.id} value={a.id}>
@@ -73,104 +90,118 @@ export const Analytics: React.FC = () => {
         </select>
       </div>
 
-      {/* Top 3 KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-[#111827] border border-gray-800 rounded-xl p-5">
-          <span className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Mean Flow Speed</span>
-          <div className="flex items-baseline space-x-2 mt-2">
-            <span className="text-2xl font-bold text-cyan-400">
-              {frameData.length > 0 
-                ? (frameData.reduce((acc, f) => acc + f.mean_speed_pixels, 0) / frameData.length).toFixed(1)
-                : '0.0'}
-            </span>
-            <span className="text-xs text-gray-500">pixels / second</span>
+      {/* Top 4 Telemetry Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-4">
+          <span className="text-[10px] text-[#8C9AAA] uppercase tracking-wider font-semibold">Mean Flow Speed</span>
+          <div className="flex items-baseline space-x-1.5 mt-1.5">
+            <span className="text-xl font-bold text-cyan-400">{meanSpeed}</span>
+            <span className="text-[10px] text-[#8C9AAA]">px / sec</span>
           </div>
-          <span className="text-[11px] text-gray-500 mt-2 block">Track ID centroid displacement</span>
+          <span className="text-[9px] text-[#8C9AAA] mt-1 block">Tracked centroid displacement</span>
         </div>
 
-        <div className="bg-[#111827] border border-gray-800 rounded-xl p-5">
-          <span className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Optical Flow Magnitude</span>
-          <div className="flex items-baseline space-x-2 mt-2">
-            <span className="text-2xl font-bold text-amber-400">
-              {frameData.length > 0
-                ? (frameData.reduce((acc, f) => acc + f.optical_flow_magnitude, 0) / frameData.length).toFixed(1)
-                : '0.0'}
-            </span>
-            <span className="text-xs text-gray-500">px / frame</span>
+        <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-4">
+          <span className="text-[10px] text-[#8C9AAA] uppercase tracking-wider font-semibold">Optical Flow Magnitude</span>
+          <div className="flex items-baseline space-x-1.5 mt-1.5">
+            <span className="text-xl font-bold text-amber-400">{meanFlow}</span>
+            <span className="text-[10px] text-[#8C9AAA]">px / frame</span>
           </div>
-          <span className="text-[11px] text-gray-500 mt-2 block">Dense Gunnar Farneback differential field</span>
+          <span className="text-[9px] text-[#8C9AAA] mt-1 block">Farneback dense motion field</span>
         </div>
 
-        <div className="bg-[#111827] border border-gray-800 rounded-xl p-5">
-          <span className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Congestion Pressure</span>
-          <div className="flex items-baseline space-x-2 mt-2">
-            <span className="text-2xl font-bold text-rose-400">
-              {frameData.length > 0
-                ? (frameData.reduce((acc, f) => acc + f.congestion_component, 0) / frameData.length * 100).toFixed(0)
-                : '0'}%
-            </span>
-            <span className="text-xs text-gray-500">mean concentration</span>
+        <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-4">
+          <span className="text-[10px] text-[#8C9AAA] uppercase tracking-wider font-semibold">Directional Entropy</span>
+          <div className="flex items-baseline space-x-1.5 mt-1.5">
+            <span className="text-xl font-bold text-purple-400">{meanEntropy}</span>
+            <span className="text-[10px] text-[#8C9AAA]">Shannon H / H_max</span>
           </div>
-          <span className="text-[11px] text-gray-500 mt-2 block">Localized 3x3 grid concentration ratio</span>
+          <span className="text-[9px] text-[#8C9AAA] mt-1 block">Angular vector disorder index</span>
+        </div>
+
+        <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-4">
+          <span className="text-[10px] text-[#8C9AAA] uppercase tracking-wider font-semibold">Crowd Acceleration</span>
+          <div className="flex items-baseline space-x-1.5 mt-1.5">
+            <span className="text-xl font-bold text-rose-400">{meanAccel}</span>
+            <span className="text-[10px] text-[#8C9AAA]">px / sec²</span>
+          </div>
+          <span className="text-[9px] text-[#8C9AAA] mt-1 block">Velocity surge gradient</span>
         </div>
       </div>
 
-      {/* Charts Grid */}
+      {/* Analytics Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Optical Flow vs Velocity */}
-        <div className="bg-[#111827] border border-gray-800 rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-white">Motion Dynamics: Optical Flow vs Speed</h3>
-            <span className="text-xs text-cyan-400 font-mono">DIP Farneback (px)</span>
+        {/* Forecast Comparison Chart */}
+        <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
+              Current Risk vs Multi-Horizon Forecast (+5s, +10s, +15s)
+            </h3>
+            <span className="text-[10px] font-mono text-cyan-400">Statistical Gradient Fit</span>
           </div>
-          <div className="h-64">
+          <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={frameData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-                <XAxis dataKey="timestamp_sec" stroke="#4b5563" tick={{ fontSize: 11 }} unit="s" />
-                <YAxis stroke="#4b5563" tick={{ fontSize: 11 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#1D2935" />
+                <XAxis dataKey="timestamp_sec" stroke="#8C9AAA" tick={{ fontSize: 10 }} unit="s" />
+                <YAxis stroke="#8C9AAA" domain={[0, 100]} tick={{ fontSize: 10 }} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#111827', borderColor: '#374151', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: '#0D131C', borderColor: '#1D2935', fontSize: '11px' }}
                 />
-                <Line
-                  type="monotone"
-                  dataKey="optical_flow_magnitude"
-                  name="Optical Flow (px)"
-                  stroke="#38bdf8"
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="mean_speed_pixels"
-                  name="Mean Velocity (px/s)"
-                  stroke="#fbbf24"
-                  strokeWidth={2}
-                  dot={false}
-                />
+                <Line type="monotone" dataKey="smoothed_risk_score" name="Current Risk" stroke="#f59e0b" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="forecast_risk_5s" name="Forecast +5s" stroke="#38bdf8" strokeDasharray="3 3" dot={false} />
+                <Line type="monotone" dataKey="forecast_risk_10s" name="Forecast +10s" stroke="#ef4444" strokeWidth={2} strokeDasharray="4 4" dot={false} />
+                <Line type="monotone" dataKey="forecast_risk_15s" name="Forecast +15s" stroke="#a855f7" strokeDasharray="2 2" dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* 4 Risk Components Breakdown */}
-        <div className="bg-[#111827] border border-gray-800 rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-white">Heuristic Components Progression</h3>
-            <span className="text-xs text-gray-400 font-mono">0.0 to 1.0 Normalized</span>
+        {/* Directional Shannon Entropy & Velocity Dynamics */}
+        <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
+              Directional Shannon Entropy & Flow Irregularity
+            </h3>
+            <span className="text-[10px] font-mono text-cyan-400">Turbulence / Panic Index</span>
           </div>
-          <div className="h-64">
+          <div className="h-60">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={frameData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1D2935" />
+                <XAxis dataKey="timestamp_sec" stroke="#8C9AAA" tick={{ fontSize: 10 }} unit="s" />
+                <YAxis stroke="#8C9AAA" tick={{ fontSize: 10 }} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#0D131C', borderColor: '#1D2935', fontSize: '11px' }}
+                />
+                <Line type="monotone" dataKey="directional_entropy" name="Directional Entropy (0-1)" stroke="#a855f7" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="motion_variance" name="Motion Variance" stroke="#06b6d4" strokeWidth={1.5} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* 4 Normalized Risk Factor Components */}
+        <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-5 lg:col-span-2">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
+              Four Component Heuristic Progression (0.0 to 1.0 Normalized)
+            </h3>
+            <span className="text-[10px] font-mono text-[#8C9AAA]">Density (35%) • Growth (20%) • Motion (25%) • Congestion (20%)</span>
+          </div>
+          <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={frameData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-                <XAxis dataKey="timestamp_sec" stroke="#4b5563" tick={{ fontSize: 11 }} unit="s" />
-                <YAxis stroke="#4b5563" domain={[0, 1]} tick={{ fontSize: 11 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#1D2935" />
+                <XAxis dataKey="timestamp_sec" stroke="#8C9AAA" tick={{ fontSize: 10 }} unit="s" />
+                <YAxis stroke="#8C9AAA" domain={[0, 1]} tick={{ fontSize: 10 }} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#111827', borderColor: '#374151', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: '#0D131C', borderColor: '#1D2935', fontSize: '11px' }}
                 />
-                <Area type="monotone" dataKey="density_component" name="Density (35%)" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.2} />
-                <Area type="monotone" dataKey="growth_component" name="Growth (20%)" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.2} />
-                <Area type="monotone" dataKey="motion_anomaly_component" name="Motion (25%)" stroke="#ef4444" fill="#ef4444" fillOpacity={0.2} />
+                <Area type="monotone" dataKey="density_component" name="Density Pressure" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.15} />
+                <Area type="monotone" dataKey="growth_component" name="Surge Influx" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.15} />
+                <Area type="monotone" dataKey="motion_anomaly_component" name="Motion Anomaly" stroke="#ef4444" fill="#ef4444" fillOpacity={0.15} />
+                <Area type="monotone" dataKey="congestion_component" name="Grid Congestion" stroke="#a855f7" fill="#a855f7" fillOpacity={0.15} />
               </AreaChart>
             </ResponsiveContainer>
           </div>

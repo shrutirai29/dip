@@ -124,7 +124,9 @@ def create_analysis(payload: AnalysisCreate, background_tasks: BackgroundTasks, 
         weight_density=payload.weight_density,
         weight_growth=payload.weight_growth,
         weight_motion_anomaly=payload.weight_motion_anomaly,
-        weight_congestion=payload.weight_congestion
+        weight_congestion=payload.weight_congestion,
+        perspective_weight=payload.perspective_weight,
+        privacy_mode=payload.privacy_mode
     )
     db.add(analysis)
     db.commit()

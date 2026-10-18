@@ -5,20 +5,34 @@ from app.models.entities import Incident
 
 class IncidentService:
     """
-    Evaluates analysis measurements and logs actionable alert records.
-    Types:
-    - CRITICAL_RISK: Overall smoothed risk score exceeds 75
-    - HIGH_CROWD_DENSITY: Density component > 0.70 or count > 20
-    - RAPID_GROWTH: Crowd surge rate > 0.60
-    - ABNORMAL_MOTION: High optical flow speed or sudden crush bottleneck
-    - LOCALIZED_BOTTLENECK: Severe grid cluster congestion
+    Sustained Event-Based Incident Management & Actionable Early Warnings:
+    
+    1. Condition Sustenance Window:
+       Requires conditions to be sustained for N consecutive sampled frames before firing,
+       preventing isolated noise or single-frame flickering alerts.
+       
+    2. Incident Taxonomy:
+       - CRITICAL_RISK: Sustained critical overall hazard (Score > 75)
+       - HIGH_CROWD_DENSITY: Sustained spatial saturation
+       - RAPID_GROWTH: Rapid influx surge
+       - ABNORMAL_MOTION: Turbulent directional disorder / panic vectors
+       - LOCALIZED_BOTTLENECK: Sustained localized choke point
+       - COUNTERFLOW_HAZARD: Opposing bi-directional collision risk
+       - CONVERGENCE_SURGE: Multiple streams focusing into single passage
+       
+    3. Actionable Advisory Recommendations:
+       Generates clear human-operator advisory actions without autonomous unsafe actuation.
     """
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, sustenance_frames: int = 3, cooldown_sec: float = 4.0):
         self.db = db
-        # Cooldown dictionary: (analysis_id, incident_type) -> last_triggered_video_sec
+        self.sustenance_frames = sustenance_frames
+        self.cooldown_sec = cooldown_sec
+        
+        # Tracking condition counter: (analysis_id, incident_type) -> consecutive_frames
+        self.condition_counters: dict[tuple[str, str], int] = {}
+        # Cooldown timer: (analysis_id, incident_type) -> last_triggered_video_sec
         self.cooldowns: dict[tuple[str, str], float] = {}
-        self.cooldown_period_sec = 4.0  # Avoid firing identical alerts continuously every second
 
     def check_and_create_incidents(
         self,
@@ -28,101 +42,116 @@ class IncidentService:
         risk_data: dict,
         current_count: int,
         grid_cells: list[dict],
+        pattern_data: dict,
+        forecast_data: dict,
         evidence_frame_path: str = None
     ) -> list[Incident]:
-        created_incidents = []
+        created = []
         smoothed_score = risk_data.get("smoothed_score", 0.0)
         density_comp = risk_data.get("density_comp", 0.0)
         growth_comp = risk_data.get("growth_comp", 0.0)
         motion_comp = risk_data.get("motion_anomaly_comp", 0.0)
         congestion_comp = risk_data.get("congestion_comp", 0.0)
+        
+        active_pattern = pattern_data.get("pattern", "NORMAL_FLOW")
+        f_risk = forecast_data.get("forecast_10s", smoothed_score)
 
-        # 1. Critical Overall Risk
-        if smoothed_score >= 75.0:
-            self._trigger_incident(
-                created_incidents,
-                analysis_id=analysis_id,
-                frame_idx=frame_idx,
-                timestamp_sec=timestamp_sec,
-                incident_type="CRITICAL_RISK",
-                severity="CRITICAL",
-                risk_score=smoothed_score,
-                reason=f"Severe crowd emergency risk threshold exceeded ({smoothed_score:.1f}/100)",
-                measurements={"risk_data": risk_data, "person_count": current_count},
-                region="Global Scene",
-                evidence_path=evidence_frame_path
-            )
+        # 1. Critical Overall Risk Condition
+        self._evaluate_sustained_condition(
+            condition=(smoothed_score >= 75.0 or f_risk >= 82.0),
+            accumulator=created,
+            analysis_id=analysis_id,
+            frame_idx=frame_idx,
+            timestamp_sec=timestamp_sec,
+            incident_type="CRITICAL_RISK",
+            severity="CRITICAL",
+            risk_score=smoothed_score,
+            forecast_risk=f_risk,
+            reason=f"Severe crowd emergency risk threshold exceeded ({smoothed_score:.1f}/100, Forecast +10s: {f_risk:.1f})",
+            action="URGENT: Dispatch on-site safety marshals immediately. Open secondary perimeter exit corridors and halt incoming inflow.",
+            measurements={"risk_data": risk_data, "person_count": current_count, "forecast": forecast_data},
+            region="Global Scene",
+            evidence_path=evidence_frame_path
+        )
 
-        # 2. High Crowd Density
-        if density_comp >= 0.75:
-            self._trigger_incident(
-                created_incidents,
-                analysis_id=analysis_id,
-                frame_idx=frame_idx,
-                timestamp_sec=timestamp_sec,
-                incident_type="HIGH_CROWD_DENSITY",
-                severity="HIGH",
-                risk_score=smoothed_score,
-                reason=f"Dangerous crowd density detected ({current_count} persons in monitored field)",
-                measurements={"density_comp": density_comp, "person_count": current_count},
-                region="Field of View",
-                evidence_path=evidence_frame_path
-            )
+        # 2. Localized Bottleneck
+        bottleneck_zones = [c for c in grid_cells if c.get("pattern") == "BOTTLENECK"]
+        self._evaluate_sustained_condition(
+            condition=(len(bottleneck_zones) > 0 or active_pattern == "BOTTLENECK"),
+            accumulator=created,
+            analysis_id=analysis_id,
+            frame_idx=frame_idx,
+            timestamp_sec=timestamp_sec,
+            incident_type="LOCALIZED_BOTTLENECK",
+            severity="HIGH",
+            risk_score=smoothed_score,
+            forecast_risk=f_risk,
+            reason=f"Dangerous localized bottleneck detected in {', '.join([z['name'] for z in bottleneck_zones]) if bottleneck_zones else 'Monitored Sector'}",
+            action="Inspect choke point immediately. Deploy staff to alleviate stationary congestion and guide pedestrian movement.",
+            measurements={"bottlenecks": [z["name"] for z in bottleneck_zones], "congestion_comp": congestion_comp},
+            region=bottleneck_zones[0]["name"] if bottleneck_zones else "Sector B2",
+            evidence_path=evidence_frame_path
+        )
 
-        # 3. Rapid Crowd Surge
-        if growth_comp >= 0.70:
-            self._trigger_incident(
-                created_incidents,
-                analysis_id=analysis_id,
-                frame_idx=frame_idx,
-                timestamp_sec=timestamp_sec,
-                incident_type="RAPID_GROWTH",
-                severity="HIGH",
-                risk_score=smoothed_score,
-                reason="Rapid influx / sudden crowd influx surge detected in rolling time window",
-                measurements={"growth_comp": growth_comp},
-                region="Entrance / Passage",
-                evidence_path=evidence_frame_path
-            )
+        # 3. Abnormal Motion / Directional Disorder (Panic / Dispersion)
+        self._evaluate_sustained_condition(
+            condition=(motion_comp >= 0.72 or active_pattern == "ABNORMAL_DISORDER"),
+            accumulator=created,
+            analysis_id=analysis_id,
+            frame_idx=frame_idx,
+            timestamp_sec=timestamp_sec,
+            incident_type="ABNORMAL_MOTION",
+            severity="HIGH" if smoothed_score > 60 else "MODERATE",
+            risk_score=smoothed_score,
+            forecast_risk=f_risk,
+            reason="High directional Shannon entropy and velocity fluctuations detected (potential panic or turbulence)",
+            action="Monitor video feed closely for physical conflict or sudden localized panic. Prepare public address broadcast.",
+            measurements={"motion_comp": motion_comp, "pattern": pattern_data},
+            region="Central Passage",
+            evidence_path=evidence_frame_path
+        )
 
-        # 4. Abnormal Motion / Flow Irregularity
-        if motion_comp >= 0.75:
-            self._trigger_incident(
-                created_incidents,
-                analysis_id=analysis_id,
-                frame_idx=frame_idx,
-                timestamp_sec=timestamp_sec,
-                incident_type="ABNORMAL_MOTION",
-                severity="MODERATE" if smoothed_score < 70 else "HIGH",
-                risk_score=smoothed_score,
-                reason="High-velocity movement perturbation or sudden panic dispersion motion vectors",
-                measurements={"motion_comp": motion_comp},
-                region="Corridor",
-                evidence_path=evidence_frame_path
-            )
+        # 4. Rapid Crowd Surge / Influx
+        self._evaluate_sustained_condition(
+            condition=(growth_comp >= 0.70 or active_pattern == "RAPID_SURGE"),
+            accumulator=created,
+            analysis_id=analysis_id,
+            frame_idx=frame_idx,
+            timestamp_sec=timestamp_sec,
+            incident_type="RAPID_GROWTH",
+            severity="HIGH",
+            risk_score=smoothed_score,
+            forecast_risk=f_risk,
+            reason="Abrupt influx surge detected in rolling temporal window",
+            action="Temporarily meter entry turnstiles/gates to regulate inflow rate into corridor.",
+            measurements={"growth_comp": growth_comp},
+            region="Entrance Inflow",
+            evidence_path=evidence_frame_path
+        )
 
-        # 5. Localized Congestion in Grid Cells
-        critical_cells = [c for c in grid_cells if c.get("density_level") == "Critical"]
-        if critical_cells and congestion_comp >= 0.65:
-            hotspot_names = ", ".join([c["name"] for c in critical_cells])
-            self._trigger_incident(
-                created_incidents,
-                analysis_id=analysis_id,
-                frame_idx=frame_idx,
-                timestamp_sec=timestamp_sec,
-                incident_type="LOCALIZED_BOTTLENECK",
-                severity="HIGH",
-                risk_score=smoothed_score,
-                reason=f"Localized bottleneck formed with high concentration in: {hotspot_names}",
-                measurements={"hotspots": [c["name"] for c in critical_cells], "congestion_comp": congestion_comp},
-                region=hotspot_names,
-                evidence_path=evidence_frame_path
-            )
+        # 5. Counterflow Collision Hazard
+        self._evaluate_sustained_condition(
+            condition=(active_pattern == "COUNTERFLOW"),
+            accumulator=created,
+            analysis_id=analysis_id,
+            frame_idx=frame_idx,
+            timestamp_sec=timestamp_sec,
+            incident_type="COUNTERFLOW_HAZARD",
+            severity="MODERATE",
+            risk_score=smoothed_score,
+            forecast_risk=f_risk,
+            reason="Opposing bi-directional crowd streams colliding in narrow space",
+            action="Establish directional physical barricades or one-way lane guidance to separate opposing flows.",
+            measurements={"pattern": pattern_data},
+            region="Transit Corridor",
+            evidence_path=evidence_frame_path
+        )
 
-        return created_incidents
+        return created
 
-    def _trigger_incident(
+    def _evaluate_sustained_condition(
         self,
+        condition: bool,
         accumulator: list,
         analysis_id: str,
         frame_idx: int,
@@ -130,16 +159,30 @@ class IncidentService:
         incident_type: str,
         severity: str,
         risk_score: float,
+        forecast_risk: float,
         reason: str,
+        action: str,
         measurements: dict,
         region: str,
         evidence_path: str
     ):
         key = (analysis_id, incident_type)
+        
+        if condition:
+            self.condition_counters[key] = self.condition_counters.get(key, 0) + 1
+        else:
+            self.condition_counters[key] = 0
+            return
+
+        # Condition must be sustained for minimum consecutive frames
+        if self.condition_counters[key] < self.sustenance_frames:
+            return
+
+        # Check cooldown
         last_time = self.cooldowns.get(key, -999.0)
-        if timestamp_sec - last_time < self.cooldown_period_sec:
-            return  # still in cooldown
-            
+        if timestamp_sec - last_time < self.cooldown_sec:
+            return
+
         self.cooldowns[key] = timestamp_sec
 
         incident = Incident(
@@ -150,7 +193,9 @@ class IncidentService:
             incident_type=incident_type,
             severity=severity,
             risk_score=round(risk_score, 1),
+            forecast_risk=round(forecast_risk, 1),
             trigger_reason=reason,
+            recommended_action=action,
             measurements=measurements,
             relevant_region=region,
             evidence_frame_path=evidence_path,

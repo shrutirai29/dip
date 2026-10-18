@@ -1,79 +1,85 @@
 import React from 'react';
-import { Sliders, Shield, Bell, Cpu, Save } from 'lucide-react';
+import { Sliders, Shield, Cpu, Lock, Compass, Layers } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div className="pb-4 border-b border-gray-800">
-        <h1 className="text-2xl font-bold text-white tracking-tight">System & Algorithm Settings</h1>
-        <p className="text-sm text-gray-400 mt-1">
-          Tune global defaults for DIP feature extraction, YOLO model weights, and alert sensitivity thresholds
+    <div className="space-y-6 max-w-4xl text-xs">
+      <div className="pb-4 border-b border-[#1D2935]">
+        <h1 className="text-xl font-bold text-white tracking-tight">ENGINE ARCHITECTURE & CALIBRATION SPECIFICATION</h1>
+        <p className="text-xs text-[#8C9AAA] mt-0.5">
+          Configure default hyperparameters for DIP optical flow, perspective normalization, and privacy protection
         </p>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-5">
         {/* Detection Engine */}
-        <div className="bg-[#111827] border border-gray-800 rounded-xl p-5 space-y-4">
-          <div className="flex items-center space-x-2 text-white font-semibold text-sm">
+        <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-5 space-y-3">
+          <div className="flex items-center space-x-2 text-white font-semibold text-xs uppercase tracking-wider">
             <Cpu className="w-4 h-4 text-cyan-400" />
-            <span>AI Model & Vision Architecture</span>
+            <span>AI Model & Vision Backbone</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div>
-              <label className="text-gray-400 block mb-1">Model Backbone</label>
+              <label className="text-[#8C9AAA] block mb-1">Pretrained Architecture</label>
               <input
                 type="text"
                 disabled
-                value="Ultralytics YOLOv8 Nano (yolov8n.pt - COCO Person Class 0)"
-                className="w-full bg-gray-900 border border-gray-800 rounded p-2 text-gray-300 font-mono"
+                value="Ultralytics YOLOv8 Nano (yolov8n.pt - Filtered to Person Class 0)"
+                className="w-full bg-[#111923] border border-[#1D2935] rounded p-2 text-white font-mono"
               />
             </div>
             <div>
-              <label className="text-gray-400 block mb-1">Inference Device</label>
+              <label className="text-[#8C9AAA] block mb-1">Hardware Acceleration Device</label>
               <input
                 type="text"
                 disabled
                 value="Auto-Detected CPU / CUDA Acceleration"
-                className="w-full bg-gray-900 border border-gray-800 rounded p-2 text-gray-300 font-mono"
+                className="w-full bg-[#111923] border border-[#1D2935] rounded p-2 text-white font-mono"
               />
             </div>
           </div>
         </div>
 
-        {/* DIP Preprocessing */}
-        <div className="bg-[#111827] border border-gray-800 rounded-xl p-5 space-y-4">
-          <div className="flex items-center space-x-2 text-white font-semibold text-sm">
-            <Sliders className="w-4 h-4 text-cyan-400" />
-            <span>Digital Image Processing (DIP) Pipeline</span>
+        {/* DIP Preprocessing Configuration */}
+        <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-5 space-y-3">
+          <div className="flex items-center space-x-2 text-white font-semibold text-xs uppercase tracking-wider">
+            <Compass className="w-4 h-4 text-cyan-400" />
+            <span>DIP Motion & Density Pipeline Specifications</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-            <div className="p-3 bg-gray-900/60 rounded border border-gray-800">
-              <span className="font-semibold text-gray-200 block">Motion Estimation</span>
-              <p className="text-gray-400 mt-1">Gunnar Farneback Dense Optical Flow (pyr_scale=0.5, levels=3)</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="p-3 bg-[#111923] rounded border border-[#1D2935]">
+              <span className="font-semibold text-white block">Dense Optical Flow</span>
+              <p className="text-[#8C9AAA] mt-1 text-[11px] leading-relaxed">
+                Gunnar Farneback quadratic polynomial expansion (pyr_scale=0.5, levels=3, winsize=15).
+              </p>
             </div>
-            <div className="p-3 bg-gray-900/60 rounded border border-gray-800">
-              <span className="font-semibold text-gray-200 block">Density Splatting</span>
-              <p className="text-gray-400 mt-1">2D Gaussian Kernel (k=61, sigma=15.0) projected to feet plane</p>
+            <div className="p-3 bg-[#111923] rounded border border-[#1D2935]">
+              <span className="font-semibold text-white block">Perspective Splatting</span>
+              <p className="text-[#8C9AAA] mt-1 text-[11px] leading-relaxed">
+                2D Gaussian kernels (k=61, σ=14.0) with dynamic Y-axis perspective scale compensation.
+              </p>
             </div>
-            <div className="p-3 bg-gray-900/60 rounded border border-gray-800">
-              <span className="font-semibold text-gray-200 block">Object Tracker</span>
-              <p className="text-gray-400 mt-1">Centroid & Intersection-over-Union (IoU) ByteTracker</p>
+            <div className="p-3 bg-[#111923] rounded border border-[#1D2935]">
+              <span className="font-semibold text-white block">Directional Entropy</span>
+              <p className="text-[#8C9AAA] mt-1 text-[11px] leading-relaxed">
+                8-sector angular histogram Shannon entropy to quantify coordinated flow vs. panic turbulence.
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Risk Thresholds & Legal Notice */}
-        <div className="bg-[#111827] border border-gray-800 rounded-xl p-5 space-y-4">
-          <div className="flex items-center space-x-2 text-white font-semibold text-sm">
-            <Shield className="w-4 h-4 text-amber-400" />
-            <span>Heuristic Calibration & Responsible Safety Notice</span>
+        {/* Privacy & Ethical Safety Notice */}
+        <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl p-5 space-y-3">
+          <div className="flex items-center space-x-2 text-white font-semibold text-xs uppercase tracking-wider">
+            <Lock className="w-4 h-4 text-emerald-400" />
+            <span>Ethical Safeguards & Privacy Preservation</span>
           </div>
 
-          <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-300/90 leading-relaxed">
-            <p className="font-semibold mb-1">Academic & Advisory Safety Disclaimer:</p>
-            The risk score (0-100) generated by this system is an engineering heuristic computed from optical flow velocities, spatial bounding box density, and rolling influx rates. Automated alerts are advisory and must not be connected directly to external emergency dispatch services without human supervisor review. Monocular CCTV video measurements are subject to perspective foreshortening.
+          <div className="p-3.5 bg-emerald-950/20 border border-emerald-500/20 rounded-lg text-[#8C9AAA] leading-relaxed">
+            <p className="text-white font-semibold mb-1">Non-Invasive Safety Compliance:</p>
+            This system does not perform facial recognition, identity matching, or individual biometric profiling. Privacy options include bilateral face blurring and full silhouette masking. Monocular camera perspective compensation is a mathematical heuristic and does not substitute for calibrated stereoscopic photogrammetry.
           </div>
         </div>
       </div>

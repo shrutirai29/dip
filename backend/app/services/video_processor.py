@@ -13,19 +13,25 @@ from app.services.tracking_service import SimpleByteTracker
 from app.services.density_service import DensityService
 from app.services.risk_engine import CrowdRiskEngine
 from app.services.dip_service import DIPProcessor
+from app.services.forecasting_service import PatternAndForecastingEngine
 from app.services.incident_service import IncidentService
 
 class VideoProcessor:
     """
-    Coordinates frame-by-frame end-to-end processing:
-    1. Decoding video via OpenCV
-    2. DIP preprocessing (denoising, optical flow, frame differencing)
-    3. Person Detection via YOLOv8
-    4. Centroid & IoU Persistent Tracking
-    5. Grid Density Mapping & Spatial Continuous Heatmap Splatting
-    6. Heuristic Crowd-Risk Evaluation
-    7. Incident Rule Validation & Alerting
-    8. Annotated Video Composition with standard H.264/MP4 encoding
+    Complete Upgraded Computer Vision & DIP Video Processing Pipeline:
+    1. Video Decoding & Preprocessing (Dual-stage bilateral noise reduction)
+    2. Temporal Frame Differencing (Motion thresholding & morphological noise cleanup)
+    3. YOLOv8 Person Detection (Class 0 strict filter, CPU/CUDA device auto-selection)
+    4. Multi-Object ByteTracker (Foot points, velocity px/s, acceleration, zone transitions)
+    5. Farneback Dense Optical Flow (Mean magnitude, variance, and directional Shannon entropy)
+    6. Perspective-Aware 2D Continuous Gaussian Density Splatting (Y-axis perspective normalization)
+    7. Intelligent 3x3 Spatial Quadrant Telemetry (Population, density, inflow/outflow)
+    8. Pattern Detection (Normal flow, counterflow, convergence, divergence, bottleneck, surge)
+    9. Heuristic Risk Scoring (0-100 explainable index with EMA temporal smoothing)
+    10. Short-term Risk Forecasting (+5s, +10s, +15s horizons with statistical gradient fit)
+    11. Sustained Event Incident Triggering with Actionable Operator Advisories
+    12. Privacy Preserving Surveillance Mode (Face blurring or solid anonymization)
+    13. Real-time H.264 Annotated Video Composition & Evidence Keyframe Capture
     """
 
     def __init__(self, db: Session, detection_service: DetectionService = None):
@@ -42,7 +48,7 @@ class VideoProcessor:
     ):
         analysis = self.db.query(Analysis).filter(Analysis.id == analysis_id).first()
         if not analysis:
-            print(f"[VideoProcessor] Analysis {analysis_id} not found in database.")
+            print(f"[VideoProcessor] Analysis {analysis_id} not found.")
             return
 
         video = self.db.query(Video).filter(Video.id == analysis.video_id).first()
@@ -52,7 +58,6 @@ class VideoProcessor:
             self.db.commit()
             return
 
-        # Initialize Risk Engine with this analysis's weights
         risk_engine = CrowdRiskEngine(
             weight_density=analysis.weight_density,
             weight_growth=analysis.weight_growth,
@@ -60,9 +65,9 @@ class VideoProcessor:
             weight_congestion=analysis.weight_congestion
         )
         tracker = SimpleByteTracker(max_lost_frames=15, iou_threshold=0.3)
-        incident_service = IncidentService(self.db)
+        forecasting_engine = PatternAndForecastingEngine(history_window=25)
+        incident_service = IncidentService(self.db, sustenance_frames=2, cooldown_sec=4.0)
 
-        # Output video paths
         output_filename = f"{analysis.id}_annotated.mp4"
         output_path = os.path.join(settings.PROCESSED_DIR, output_filename)
         analysis.annotated_video_path = f"/data/processed/{output_filename}"
@@ -83,13 +88,10 @@ class VideoProcessor:
         analysis.total_frames = total_frames
         self.db.commit()
 
-        # Target video writer
         stride = max(1, analysis.frame_stride)
         out_fps = max(1.0, orig_fps / stride)
         fourcc = cv2.VideoWriter_fourcc(*'avc1') if os.name == 'nt' else cv2.VideoWriter_fourcc(*'mp4v')
         writer = cv2.VideoWriter(output_path, fourcc, out_fps, (width, height))
-        
-        # Fallback to mp4v if avc1 fails
         if not writer.isOpened():
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
             writer = cv2.VideoWriter(output_path, fourcc, out_fps, (width, height))
@@ -101,6 +103,7 @@ class VideoProcessor:
         
         counts = []
         risks = []
+        pattern_votes: Dict[str, int] = {}
         high_risk_frames = 0
         first_heatmap_saved = False
 
@@ -122,42 +125,66 @@ class VideoProcessor:
                 current_frame_idx = frame_idx
                 frame_idx += 1
 
-                # Frame sampling / stride
                 if current_frame_idx % stride != 0:
                     continue
 
                 timestamp_sec = current_frame_idx / orig_fps
 
-                # 1. DIP Preprocessing & Optical Flow
-                curr_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                # 1. DIP Preprocessing & Filtering
+                frame_clean = DIPProcessor.preprocess_frame(frame, apply_denoise=True)
+
+                # 2. Dense Optical Flow & Directional Shannon Entropy
+                curr_gray = cv2.cvtColor(frame_clean, cv2.COLOR_BGR2GRAY)
                 curr_gray_small = cv2.resize(curr_gray, (320, 240))
-                if prev_gray is not None:
-                    flow_mag, _, _ = DIPProcessor.compute_optical_flow(prev_gray, curr_gray_small)
-                else:
-                    flow_mag = 0.0
+                flow_data = DIPProcessor.compute_optical_flow_dynamics(prev_gray, curr_gray_small)
                 prev_gray = curr_gray_small
 
-                # 2. YOLO Person Detection
+                flow_mag = flow_data["mean_magnitude"]
+                flow_entropy = flow_data["directional_entropy"]
+                motion_var = flow_data["motion_variance"]
+
+                # 3. YOLO Person Detection
                 detections = self.detection_service.detect_persons(
-                    frame,
+                    frame_clean,
                     imgsz=analysis.inference_size
                 )
                 person_count = len(detections)
 
-                # 3. Object Tracking
-                active_tracks = tracker.update(detections, timestamp_sec)
-                mean_speed = float(np.mean([t["speed"] for t in active_tracks])) if active_tracks else 0.0
+                # 4. Object Tracking
+                active_tracks = tracker.update(detections, timestamp_sec, width, height)
+                speeds = [t["speed"] for t in active_tracks]
+                accels = [t["acceleration"] for t in active_tracks]
+                mean_speed = float(np.mean(speeds)) if speeds else 0.0
+                mean_accel = float(np.mean(accels)) if accels else 0.0
 
-                # 4. Grid Density
-                grid_cells = self.density_service.compute_grid_density(width, height, detections)
-                grid_counts = [c["count"] for c in grid_cells]
+                # 5. Intelligent 3x3 Spatial Quadrant Telemetry
+                grid_cells = self.density_service.compute_zone_telemetry(
+                    width, height, detections, active_tracks, flow_data, analysis.perspective_weight
+                )
+                grid_densities = [c["normalized_density"] for c in grid_cells]
 
-                # 5. Risk Calculation
+                # 6. Crowd Pattern Recognition
+                pattern_data = forecasting_engine.detect_crowd_patterns(
+                    active_tracks, grid_cells, flow_entropy, mean_speed, person_count
+                )
+                detected_pattern = pattern_data["pattern"]
+                pattern_votes[detected_pattern] = pattern_votes.get(detected_pattern, 0) + 1
+
+                # 7. Explainable Heuristic Risk Index
                 risk_data = risk_engine.compute_risk(
                     current_count=person_count,
                     optical_flow_mag=flow_mag,
                     mean_speed=mean_speed,
-                    grid_densities=grid_counts
+                    grid_densities=grid_densities
+                )
+
+                # 8. Multivariate Short-Term Risk Forecast (+5s, +10s, +15s)
+                forecast_data = forecasting_engine.compute_short_term_forecast(
+                    current_risk=risk_data["smoothed_score"],
+                    current_density_comp=risk_data["density_comp"],
+                    current_entropy=flow_entropy,
+                    current_speed=mean_speed,
+                    detected_pattern=detected_pattern
                 )
 
                 counts.append(person_count)
@@ -165,43 +192,49 @@ class VideoProcessor:
                 if risk_data["smoothed_score"] >= 50.0:
                     high_risk_frames += 1
 
-                # 6. Generate Density Heatmap (DIP continuous Gaussian splatting)
-                heatmap_overlay = DIPProcessor.generate_density_heatmap((height, width), detections)
-                annotated_frame = DIPProcessor.blend_heatmap_on_frame(frame, heatmap_overlay, alpha=0.45)
+                # 9. Perspective-Aware Continuous 2D Gaussian Density Splatting
+                heatmap_overlay = DIPProcessor.generate_density_heatmap(
+                    (height, width), detections, kernel_size=61, sigma_base=14.0, perspective_weight=analysis.perspective_weight
+                )
+                annotated_frame = DIPProcessor.blend_heatmap_on_frame(frame_clean, heatmap_overlay, alpha=0.45)
 
-                # Draw grid lines & annotations
-                annotated_frame = self.density_service.draw_grid_overlay(annotated_frame, grid_cells, alpha=0.20)
+                # 10. Privacy Anonymization Filter (if configured)
+                annotated_frame = DIPProcessor.apply_privacy_filter(annotated_frame, detections, mode=analysis.privacy_mode)
 
-                # Draw Bounding Boxes and Track Tails
+                # 11. Draw Spatial Quadrant Grid
+                annotated_frame = self.density_service.draw_grid_overlay(annotated_frame, grid_cells, alpha=0.22)
+
+                # 12. Draw Tracks & Velocity Vectors
                 for trk in active_tracks:
-                    bx1, by1, bx2, by2 = trk["bbox"]
+                    bx1, by1, bx2, by2 = [int(v) for v in trk["bbox"]]
                     tid = trk["id"]
-                    # Draw trajectory tail
                     hist = trk.get("history", [])
                     if len(hist) > 1:
                         pts = np.array([(int(p[0]), int(p[1])) for p in hist], np.int32).reshape((-1, 1, 2))
                         cv2.polylines(annotated_frame, [pts], False, (0, 220, 255), 2)
 
-                    # Bounding box
+                    # Bounding Box
                     cv2.rectangle(annotated_frame, (bx1, by1), (bx2, by2), (0, 255, 128), 2)
-                    label = f"ID:{tid} {trk.get('confidence', 0):.2f}"
-                    cv2.putText(annotated_frame, label, (bx1, max(15, by1 - 6)),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 128), 1, cv2.LINE_AA)
+                    label = f"ID:{tid} v:{trk['speed']:.1f}px/s"
+                    cv2.putText(annotated_frame, label, (bx1, max(14, by1 - 5)),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 255, 128), 1, cv2.LINE_AA)
 
-                # Draw HUD Status bar on top
-                hud_bg = (15, 20, 30)
-                cv2.rectangle(annotated_frame, (0, 0), (width, 42), hud_bg, -1)
-                
-                # Risk color tag
+                # 13. HUD Surveillance Status Header
+                cv2.rectangle(annotated_frame, (0, 0), (width, 46), (10, 15, 24), -1)
                 score = risk_data["smoothed_score"]
-                risk_color = (0, 220, 0) if score < 25 else (0, 215, 255) if score < 50 else (0, 140, 255) if score < 75 else (0, 0, 255)
-                hud_text = f"CROWD: {person_count} | TRACKS: {len(active_tracks)} | RISK: {score:.1f} ({risk_data['band']}) | OPT-FLOW: {flow_mag:.1f}px"
-                cv2.putText(annotated_frame, hud_text, (15, 27), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (255, 255, 255), 2, cv2.LINE_AA)
-                cv2.circle(annotated_frame, (width - 25, 21), 10, risk_color, -1)
+                risk_color = (34, 197, 94) if score < 25 else (245, 158, 11) if score < 50 else (249, 115, 22) if score < 75 else (239, 68, 68)
+                
+                hud_line1 = f"CROWD: {person_count} | RISK: {score:.1f} ({risk_data['band']}) | FORECAST +10s: {forecast_data['forecast_10s']:.1f} ({forecast_data['trend']})"
+                cv2.putText(annotated_frame, hud_line1, (12, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.50, (244, 247, 250), 1, cv2.LINE_AA)
+                
+                hud_line2 = f"PATTERN: {detected_pattern} | ENTROPY: {flow_entropy:.2f} | OPT-FLOW: {flow_mag:.1f}px | FPS: {orig_fps:.1f}"
+                cv2.putText(annotated_frame, hud_line2, (12, 38), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (140, 154, 170), 1, cv2.LINE_AA)
+                
+                cv2.circle(annotated_frame, (width - 20, 23), 9, risk_color, -1)
 
                 writer.write(annotated_frame)
 
-                # Save sample evidence frame if critical or first frame for thumbnail
+                # 14. Save Evidence Snapshots & Thumbnail
                 evidence_path = None
                 if not first_heatmap_saved:
                     thumb_name = f"{analysis.id}_preview.jpg"
@@ -210,13 +243,13 @@ class VideoProcessor:
                     analysis.heatmap_preview_path = f"/data/processed/{thumb_name}"
                     first_heatmap_saved = True
 
-                if risk_data["smoothed_score"] >= 50.0:
+                if risk_data["smoothed_score"] >= 50.0 or forecast_data["forecast_10s"] >= 65.0:
                     ev_name = f"ev_{analysis.id}_{current_frame_idx}.jpg"
                     ev_path = os.path.join(settings.PROCESSED_DIR, ev_name)
                     cv2.imwrite(ev_path, annotated_frame)
                     evidence_path = f"/data/processed/{ev_name}"
 
-                # 7. Check Incidents
+                # 15. Sustained Incident Evaluation
                 incident_service.check_and_create_incidents(
                     analysis_id=analysis.id,
                     frame_idx=current_frame_idx,
@@ -224,10 +257,12 @@ class VideoProcessor:
                     risk_data=risk_data,
                     current_count=person_count,
                     grid_cells=grid_cells,
+                    pattern_data=pattern_data,
+                    forecast_data=forecast_data,
                     evidence_frame_path=evidence_path
                 )
 
-                # 8. Store Frame Record in DB
+                # 16. Record Complete Frame Telemetry in SQLite
                 record = FrameRecord(
                     analysis_id=analysis.id,
                     frame_index=current_frame_idx,
@@ -241,10 +276,29 @@ class VideoProcessor:
                     smoothed_risk_score=risk_data["smoothed_score"],
                     risk_band=risk_data["band"],
                     risk_explanation=risk_data["explanation"],
+                    forecast_risk_5s=forecast_data["forecast_5s"],
+                    forecast_risk_10s=forecast_data["forecast_10s"],
+                    forecast_risk_15s=forecast_data["forecast_15s"],
+                    forecast_confidence=forecast_data["confidence"],
+                    forecast_trend=forecast_data["trend"],
                     active_tracks_count=len(active_tracks),
                     mean_speed_pixels=round(mean_speed, 2),
+                    mean_acceleration=round(mean_accel, 2),
                     optical_flow_magnitude=round(flow_mag, 2),
-                    grid_density=[{"name": c["name"], "count": c["count"]} for c in grid_cells]
+                    directional_entropy=round(flow_entropy, 3),
+                    motion_variance=round(motion_var, 2),
+                    detected_pattern=detected_pattern,
+                    grid_density=[{
+                        "name": c["name"],
+                        "population": c["population"],
+                        "normalized_density": c["normalized_density"],
+                        "density_level": c["density_level"],
+                        "avg_velocity": c["avg_velocity"],
+                        "inflow": c["inflow"],
+                        "outflow": c["outflow"],
+                        "zone_risk": c["zone_risk"],
+                        "pattern": c["pattern"]
+                    } for c in grid_cells]
                 )
                 self.db.add(record)
 
@@ -267,7 +321,9 @@ class VideoProcessor:
                             "fps": analysis.processing_fps,
                             "person_count": person_count,
                             "risk_score": risk_data["smoothed_score"],
-                            "risk_band": risk_data["band"]
+                            "risk_band": risk_data["band"],
+                            "forecast_risk": forecast_data["forecast_10s"],
+                            "pattern": detected_pattern
                         })
 
             # Completed
@@ -275,7 +331,10 @@ class VideoProcessor:
                 analysis.status = "completed"
                 analysis.progress_percent = 100.0
             
-            # Compute Final Aggregated Summary
+            # Dominant pattern
+            if pattern_votes:
+                analysis.dominant_pattern = max(pattern_votes, key=pattern_votes.get)
+
             if counts:
                 analysis.peak_count = max(counts)
                 analysis.avg_count = round(float(np.mean(counts)), 2)
@@ -292,7 +351,7 @@ class VideoProcessor:
             analysis.status = "failed"
             analysis.error_message = str(e)
             self.db.commit()
-            print(f"[VideoProcessor] Exception during processing: {e}")
+            print(f"[VideoProcessor] Exception: {e}")
         finally:
             cap.release()
             writer.release()

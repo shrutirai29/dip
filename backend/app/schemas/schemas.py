@@ -26,6 +26,8 @@ class AnalysisCreate(BaseModel):
     weight_growth: float = Field(0.20, ge=0.0, le=1.0)
     weight_motion_anomaly: float = Field(0.25, ge=0.0, le=1.0)
     weight_congestion: float = Field(0.20, ge=0.0, le=1.0)
+    perspective_weight: float = Field(1.0, ge=0.0, le=3.0)
+    privacy_mode: str = Field("none")  # none, face_blur, full_anonymize
 
 class AnalysisResponse(BaseModel):
     id: str
@@ -42,6 +44,8 @@ class AnalysisResponse(BaseModel):
     conf_threshold: float
     frame_stride: int
     inference_size: int
+    perspective_weight: float
+    privacy_mode: str
     
     peak_count: int
     avg_count: float
@@ -49,6 +53,7 @@ class AnalysisResponse(BaseModel):
     avg_risk_score: float
     high_risk_duration_sec: float
     total_incidents_count: int
+    dominant_pattern: str
     
     created_at: datetime
     completed_at: Optional[datetime]
@@ -69,9 +74,21 @@ class FrameRecordResponse(BaseModel):
     smoothed_risk_score: float
     risk_band: str
     risk_explanation: str
+    
+    forecast_risk_5s: float
+    forecast_risk_10s: float
+    forecast_risk_15s: float
+    forecast_confidence: float
+    forecast_trend: str
+    
     active_tracks_count: int
     mean_speed_pixels: float
+    mean_acceleration: float
     optical_flow_magnitude: float
+    directional_entropy: float
+    motion_variance: float
+    detected_pattern: str
+    
     grid_density: Optional[List[Dict[str, Any]]]
 
     class Config:
@@ -85,7 +102,9 @@ class IncidentResponse(BaseModel):
     incident_type: str
     severity: str
     risk_score: float
+    forecast_risk: float
     trigger_reason: str
+    recommended_action: Optional[str]
     measurements: Optional[Dict[str, Any]]
     relevant_region: Optional[str]
     evidence_frame_path: Optional[str]

@@ -44,6 +44,8 @@ class Analysis(Base):
     weight_growth = Column(Float, default=0.20)
     weight_motion_anomaly = Column(Float, default=0.25)
     weight_congestion = Column(Float, default=0.20)
+    perspective_weight = Column(Float, default=1.0)
+    privacy_mode = Column(String, default="none")  # none, face_blur, full_anonymize
     
     # Aggregated Summary Metrics
     peak_count = Column(Integer, default=0)
@@ -52,6 +54,7 @@ class Analysis(Base):
     avg_risk_score = Column(Float, default=0.0)
     high_risk_duration_sec = Column(Float, default=0.0)
     total_incidents_count = Column(Integer, default=0)
+    dominant_pattern = Column(String, default="NORMAL_FLOW")
     
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
@@ -78,12 +81,24 @@ class FrameRecord(Base):
     risk_band = Column(String, default="Low")  # Low, Moderate, High, Critical
     risk_explanation = Column(Text, default="")
     
-    # Detailed tracking/motion payload
+    # Forecasting metrics (+5s, +10s, +15s horizons)
+    forecast_risk_5s = Column(Float, default=0.0)
+    forecast_risk_10s = Column(Float, default=0.0)
+    forecast_risk_15s = Column(Float, default=0.0)
+    forecast_confidence = Column(Float, default=0.0)
+    forecast_trend = Column(String, default="STABLE")  # STABLE, RISING, SURGING, EASING
+    
+    # Advanced DIP & Tracking metrics
     active_tracks_count = Column(Integer, default=0)
     mean_speed_pixels = Column(Float, default=0.0)
+    mean_acceleration = Column(Float, default=0.0)
     optical_flow_magnitude = Column(Float, default=0.0)
+    directional_entropy = Column(Float, default=0.0)
+    motion_variance = Column(Float, default=0.0)
+    detected_pattern = Column(String, default="NORMAL_FLOW")  # NORMAL_FLOW, COUNTERFLOW, CONVERGENCE, DIVERGENCE, BOTTLENECK, RAPID_SURGE, ABNORMAL_DISORDER
     
-    # Regions grid density JSON
+    # 3x3 Zones Full Spatial Telemetry JSON
+    # [ { "id": "zone_0_0", "name": "Zone A1", "population": N, "density": F, "speed": F, "entropy": F, "inflow": N, "outflow": N, "risk": F, "pattern": S } ]
     grid_density = Column(JSON, nullable=True)
 
     analysis = relationship("Analysis", back_populates="frame_records")
@@ -96,11 +111,13 @@ class Incident(Base):
     frame_index = Column(Integer, nullable=False)
     video_timestamp_sec = Column(Float, nullable=False)
     
-    incident_type = Column(String, nullable=False)  # HIGH_CROWD_DENSITY, RAPID_GROWTH, ABNORMAL_MOTION, CONVERGING_FLOW, CRITICAL_RISK
+    incident_type = Column(String, nullable=False)  # CRITICAL_RISK, HIGH_CROWD_DENSITY, RAPID_GROWTH, ABNORMAL_MOTION, LOCALIZED_BOTTLENECK, CONVERGENCE_SURGE, COUNTERFLOW_HAZARD
     severity = Column(String, nullable=False)  # LOW, MODERATE, HIGH, CRITICAL
     risk_score = Column(Float, nullable=False)
+    forecast_risk = Column(Float, default=0.0)
     
     trigger_reason = Column(Text, nullable=False)
+    recommended_action = Column(Text, nullable=True)
     measurements = Column(JSON, nullable=True)
     relevant_region = Column(String, nullable=True)
     evidence_frame_path = Column(String, nullable=True)

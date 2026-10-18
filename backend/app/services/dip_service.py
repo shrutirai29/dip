@@ -3,52 +3,70 @@ import numpy as np
 
 class DIPProcessor:
     """
-    Digital Image Processing (DIP) techniques module:
-    1. Grayscale & Color space transformations (BGR to RGB, HSV, Gray)
-    2. Gaussian smoothing & Bilateral filtering (noise reduction)
-    3. Dense Optical Flow (Farneback) for crowd motion dynamics
-    4. Frame Differencing & Motion magnitude
-    5. Adaptive Gaussian Density Surface Heatmap Generation
+    Advanced Digital Image Processing (DIP) pipeline:
+    1. Preprocessing, aspect-preserving letterbox & bilateral/Gaussian filtering.
+    2. Temporal frame differencing with morphological opening to suppress sensor noise.
+    3. Gunnar Farneback Dense Optical Flow (pyr_scale=0.5, levels=3, winsize=15).
+    4. Motion magnitude, direction vector field, and directional Shannon entropy.
+    5. Perspective-aware 2D continuous Gaussian density splatting (Y-axis perspective normalization).
+    6. Privacy anonymization filters (face blurring & silhouette anonymization).
     """
-    
+
     @staticmethod
-    def preprocess_frame(frame: np.ndarray, target_size=(640, 640), apply_denoise: bool = False) -> np.ndarray:
+    def preprocess_frame(frame: np.ndarray, apply_denoise: bool = True) -> np.ndarray:
         """
-        DIP technique: Aspect-preserving letterbox / resizing & optional Gaussian filtering.
+        DIP: Dual-stage noise suppression (bilateral filter preserving edge gradients).
         """
-        if apply_denoise:
-            # Gaussian blur 3x3 to reduce CCTV sensor noise
-            frame = cv2.GaussianBlur(frame, (3, 3), 0)
+        if apply_denoise and frame is not None:
+            return cv2.bilateralFilter(frame, 5, 50, 50)
         return frame
 
     @staticmethod
-    def compute_frame_difference(prev_gray: np.ndarray, curr_gray: np.ndarray, threshold: int = 25) -> tuple[float, np.ndarray]:
+    def compute_frame_difference(
+        prev_gray: np.ndarray,
+        curr_gray: np.ndarray,
+        threshold: int = 25
+    ) -> tuple[float, np.ndarray]:
         """
-        DIP technique: Temporal frame differencing to quantify baseline pixel motion.
-        Returns:
-            motion_ratio: fraction of pixels with motion (0.0 to 1.0)
-            diff_mask: thresholded binary difference
+        DIP: Temporal frame differencing + morphological noise cleanup.
         """
         if prev_gray is None or curr_gray is None:
-            return 0.0, np.zeros_like(curr_gray if curr_gray is not None else np.zeros((10,10)))
+            return 0.0, np.zeros_like(curr_gray if curr_gray is not None else np.zeros((10, 10)))
         
         diff = cv2.absdiff(curr_gray, prev_gray)
         _, thresh = cv2.threshold(diff, threshold, 255, cv2.THRESH_BINARY)
-        motion_ratio = float(np.count_nonzero(thresh)) / float(thresh.size)
-        return motion_ratio, thresh
+        
+        # Morphological opening (erode followed by dilate) to remove isolated single-pixel sensor noise
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+        clean_thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
+        
+        motion_ratio = float(np.count_nonzero(clean_thresh)) / float(clean_thresh.size)
+        return motion_ratio, clean_thresh
 
     @staticmethod
-    def compute_optical_flow(prev_gray: np.ndarray, curr_gray: np.ndarray) -> tuple[float, np.ndarray, np.ndarray]:
+    def compute_optical_flow_dynamics(
+        prev_gray: np.ndarray,
+        curr_gray: np.ndarray
+    ) -> dict:
         """
-        DIP technique: Gunnar Farneback Dense Optical Flow.
-        Calculates motion vector field [u, v] for crowd flow divergence/irregularity analysis.
-        Returns:
-            mean_magnitude: average flow speed across moving crowd pixels
-            magnitude: 2D array of flow speeds
-            angle: 2D array of flow angles in radians
+        DIP: Gunnar Farneback Dense Optical Flow analysis.
+        Computes:
+        - Mean flow velocity (px/frame)
+        - Velocity variance (motion irregularity / instability)
+        - Directional Shannon Entropy (0.0 to 1.0):
+            H = -Σ p_i log2(p_i) / log2(N_bins)
+            Low entropy: coordinated laminar motion
+            High entropy: chaotic multi-directional turbulence
         """
         if prev_gray is None or curr_gray is None:
-            return 0.0, np.zeros((10, 10)), np.zeros((10, 10))
+            return {
+                "mean_magnitude": 0.0,
+                "motion_variance": 0.0,
+                "directional_entropy": 0.0,
+                "flow_raw": None,
+                "magnitude": np.zeros((10, 10), dtype=np.float32),
+                "angle": np.zeros((10, 10), dtype=np.float32)
+            }
             
         flow = cv2.calcOpticalFlowFarneback(
             prev_gray, curr_gray, None,
@@ -56,24 +74,55 @@ class DIPProcessor:
             iterations=3, poly_n=5, poly_sigma=1.2, flags=0
         )
         
-        mag, ang = cv2.cartToPolar(flow[..., 0], flow[..., 1])
-        # Consider pixels with significant motion (> 1.0 px/frame)
-        moving_mask = mag > 1.0
-        mean_magnitude = float(np.mean(mag[moving_mask])) if np.any(moving_mask) else 0.0
+        u = flow[..., 0]
+        v = flow[..., 1]
+        mag, ang = cv2.cartToPolar(u, v, angleInDegrees=False)  # 0 to 2pi
         
-        return mean_magnitude, mag, ang
+        # Moving threshold (> 0.8 px/frame)
+        moving_mask = mag > 0.8
+        moving_mags = mag[moving_mask]
+        moving_angs = ang[moving_mask]
+        
+        if len(moving_mags) > 10:
+            mean_mag = float(np.mean(moving_mags))
+            var_mag = float(np.var(moving_mags))
+            
+            # Compute Directional Shannon Entropy across 8 angular sectors (N=8 bins: 45° sectors)
+            num_bins = 8
+            hist, _ = np.histogram(moving_angs, bins=num_bins, range=(0, 2 * np.pi))
+            prob = hist / float(np.sum(hist))
+            prob = prob[prob > 0]  # Avoid log(0)
+            
+            shannon_h = -np.sum(prob * np.log2(prob))
+            norm_entropy = float(shannon_h / np.log2(num_bins))
+            norm_entropy = min(1.0, max(0.0, norm_entropy))
+        else:
+            mean_mag = 0.0
+            var_mag = 0.0
+            norm_entropy = 0.0
+
+        return {
+            "mean_magnitude": round(mean_mag, 2),
+            "motion_variance": round(var_mag, 2),
+            "directional_entropy": round(norm_entropy, 3),
+            "flow_raw": flow,
+            "magnitude": mag,
+            "angle": ang
+        }
 
     @staticmethod
     def generate_density_heatmap(
         frame_shape: tuple[int, int],
         detections: list[dict],
         kernel_size: int = 61,
-        sigma: float = 15.0
+        sigma_base: float = 14.0,
+        perspective_weight: float = 1.0
     ) -> np.ndarray:
         """
-        DIP technique: Spatial Continuous Density Estimation via 2D Gaussian Kernel splatting.
-        Takes bounding box bottoms (feet position) or centers and projects Gaussian distributions.
-        Returns a 3-channel BGR heatmap overlay.
+        DIP: Perspective-Aware Continuous 2D Gaussian Density Splatting.
+        Adjusts Gaussian kernel footprint and weighting according to vertical Y-coordinate:
+        - People farther away (higher in frame, small pixel bounding area) receive perspective normalization.
+        - People close up (lower in frame) receive standard ground projection.
         """
         h, w = frame_shape[:2]
         density_map = np.zeros((h, w), dtype=np.float32)
@@ -81,25 +130,37 @@ class DIPProcessor:
         if not detections:
             return np.zeros((h, w, 3), dtype=np.uint8)
             
-        # Accumulate Gaussian kernel at each person's position
-        half_k = kernel_size // 2
-        # Generate 2D Gaussian kernel
-        x = np.arange(-half_k, half_k + 1)
-        y = np.arange(-half_k, half_k + 1)
-        xx, yy = np.meshgrid(x, y)
-        kernel = np.exp(-(xx**2 + yy**2) / (2 * sigma**2))
-        kernel /= np.max(kernel)
-        
         for det in detections:
             bbox = det.get("bbox", [])
             if len(bbox) != 4:
                 continue
             x1, y1, x2, y2 = bbox
-            # Center of bottom third (ground location of person)
             cx = int((x1 + x2) / 2)
-            cy = int(y1 + (y2 - y1) * 0.8)
+            # Ground foot position
+            cy = int(y2)
             
-            # Bounds checking
+            # Y-coordinate perspective scale factor (normalized from horizon 0.2 to bottom 1.0)
+            y_norm = max(0.1, min(1.0, cy / float(h)))
+            
+            # Far perspective weight: when higher up (small y_norm), scale up representation
+            # because 1 person in far pixels represents equal physical space
+            persp_scale = 1.0 + (1.0 - y_norm) * (perspective_weight * 0.8)
+            
+            # Adaptive kernel size scaled by perspective (smaller in background, wider in foreground)
+            k_scaled = int(kernel_size * (0.6 + 0.5 * y_norm))
+            if k_scaled % 2 == 0:
+                k_scaled += 1
+            half_k = k_scaled // 2
+            
+            sigma = max(3.0, sigma_base * (0.6 + 0.5 * y_norm))
+            
+            # Generate local 2D Gaussian kernel patch
+            x = np.arange(-half_k, half_k + 1)
+            y = np.arange(-half_k, half_k + 1)
+            xx, yy = np.meshgrid(x, y)
+            kernel = np.exp(-(xx**2 + yy**2) / (2 * sigma**2)) * persp_scale
+            
+            # Bounds clipping
             kx1 = max(0, cx - half_k)
             kx2 = min(w, cx + half_k + 1)
             ky1 = max(0, cy - half_k)
@@ -113,28 +174,71 @@ class DIPProcessor:
             if kx2 > kx1 and ky2 > ky1 and gk_x2 > gk_x1 and gk_y2 > gk_y1:
                 density_map[ky1:ky2, kx1:kx2] += kernel[gk_y1:gk_y2, gk_x1:gk_x2]
                 
-        # Normalize to 0-255 for color mapping
+        # Normalize continuous surface to 0-255
         max_val = np.max(density_map)
         if max_val > 0:
-            norm_density = np.clip((density_map / max(max_val, 3.0)) * 255, 0, 255).astype(np.uint8)
+            norm_density = np.clip((density_map / max(max_val, 3.5)) * 255, 0, 255).astype(np.uint8)
         else:
             norm_density = np.zeros((h, w), dtype=np.uint8)
             
-        # Apply COLORMAP_JET or COLORMAP_TURBO for professional surveillance heatmap
+        # Colorize using high-contrast JET colormap
         heatmap_colored = cv2.applyColorMap(norm_density, cv2.COLORMAP_JET)
         
-        # Zero out areas with very low density so they don't tint blue
-        mask = norm_density > 15
+        # Suppress lowest 12% to preserve background visibility
+        mask = norm_density > 25
         heatmap_masked = np.zeros_like(heatmap_colored)
         heatmap_masked[mask] = heatmap_colored[mask]
         
         return heatmap_masked
 
     @staticmethod
-    def blend_heatmap_on_frame(frame: np.ndarray, heatmap: np.ndarray, alpha: float = 0.5) -> np.ndarray:
+    def apply_privacy_filter(frame: np.ndarray, detections: list[dict], mode: str = "none") -> np.ndarray:
         """
-        DIP technique: Alpha blending weighted overlay: Output = Frame*(1-alpha) + Heatmap*alpha.
+        DIP Privacy Preservation Module:
+        - "face_blur": Bilateral heavy blur applied to upper 25% head region of every person
+        - "full_anonymize": Solid filled silhouette overlay preventing biometric profiling
         """
+        if mode == "none" or not detections:
+            return frame
+            
+        out = frame.copy()
+        h, w = frame.shape[:2]
+        
+        for det in detections:
+            bbox = det.get("bbox", [])
+            if len(bbox) != 4:
+                continue
+            x1, y1, x2, y2 = [int(v) for v in bbox]
+            x1, y1 = max(0, x1), max(0, y1)
+            x2, y2 = min(w, x2), min(h, y2)
+            
+            if x2 <= x1 or y2 <= y1:
+                continue
+                
+            box_h = y2 - y1
+            
+            if mode == "face_blur":
+                # Upper 28% represents head/face
+                face_y2 = min(y2, y1 + int(box_h * 0.28))
+                face_roi = out[y1:face_y2, x1:x2]
+                if face_roi.size > 0:
+                    blurred = cv2.GaussianBlur(face_roi, (25, 25), 30)
+                    out[y1:face_y2, x1:x2] = blurred
+            elif mode == "full_anonymize":
+                # Dark gray translucent privacy silhouette
+                overlay = out.copy()
+                cv2.rectangle(overlay, (x1, y1), (x2, y2), (40, 45, 55), -1)
+                out = cv2.addWeighted(overlay, 0.75, out, 0.25, 0)
+                
+        return out
+
+    @staticmethod
+    def blend_heatmap_on_frame(frame: np.ndarray, heatmap: np.ndarray, alpha: float = 0.45) -> np.ndarray:
+        """
+        DIP: Alpha blending weighted overlay: Output = Frame*(1-alpha) + Heatmap*alpha.
+        """
+        if heatmap is None:
+            return frame
         mask = cv2.cvtColor(heatmap, cv2.COLOR_BGR2GRAY) > 0
         output = frame.copy()
         output[mask] = cv2.addWeighted(frame[mask], 1.0 - alpha, heatmap[mask], alpha, 0)

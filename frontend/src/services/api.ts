@@ -37,6 +37,8 @@ export const analysisApi = {
     weight_growth?: number;
     weight_motion_anomaly?: number;
     weight_congestion?: number;
+    perspective_weight?: number;
+    privacy_mode?: string;
   }): Promise<Analysis> => {
     const res = await api.post<Analysis>('/analyses', params);
     return res.data;

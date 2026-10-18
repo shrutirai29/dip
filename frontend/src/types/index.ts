@@ -26,6 +26,8 @@ export interface Analysis {
   conf_threshold: number;
   frame_stride: number;
   inference_size: number;
+  perspective_weight: number;
+  privacy_mode: string;
   
   peak_count: number;
   avg_count: number;
@@ -33,6 +35,7 @@ export interface Analysis {
   avg_risk_score: number;
   high_risk_duration_sec: number;
   total_incidents_count: number;
+  dominant_pattern: string;
   
   created_at: string;
   completed_at?: string;
@@ -40,7 +43,14 @@ export interface Analysis {
 
 export interface GridDensityCell {
   name: string;
-  count: number;
+  population: number;
+  normalized_density: number;
+  density_level: 'Low' | 'Moderate' | 'High' | 'Critical';
+  avg_velocity: number;
+  inflow: number;
+  outflow: number;
+  zone_risk: number;
+  pattern: string;
 }
 
 export interface FrameRecord {
@@ -56,9 +66,21 @@ export interface FrameRecord {
   smoothed_risk_score: number;
   risk_band: 'Low' | 'Moderate' | 'High' | 'Critical';
   risk_explanation: string;
+  
+  forecast_risk_5s: number;
+  forecast_risk_10s: number;
+  forecast_risk_15s: number;
+  forecast_confidence: number;
+  forecast_trend: 'STABLE' | 'RISING' | 'SURGING' | 'EASING';
+  
   active_tracks_count: number;
   mean_speed_pixels: number;
+  mean_acceleration: number;
   optical_flow_magnitude: number;
+  directional_entropy: number;
+  motion_variance: number;
+  detected_pattern: string;
+  
   grid_density?: GridDensityCell[];
 }
 
@@ -70,7 +92,9 @@ export interface Incident {
   incident_type: string;
   severity: 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL';
   risk_score: number;
+  forecast_risk: number;
   trigger_reason: string;
+  recommended_action?: string;
   measurements?: any;
   relevant_region?: string;
   evidence_frame_path?: string;
