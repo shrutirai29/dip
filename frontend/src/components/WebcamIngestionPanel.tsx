@@ -333,10 +333,10 @@ export const WebcamIngestionPanel: React.FC = () => {
 
           <div className="pt-3 border-t border-[#192638]">
             <Link
-              to="/monitoring"
+              to="/monitoring?source=webcam"
               className="w-full inline-flex items-center justify-center space-x-1.5 px-3 py-2 rounded-lg bg-[#141E2B] hover:bg-[#1E2D40] text-slate-200 hover:text-white border border-[#192638] transition text-xs font-medium cursor-pointer"
             >
-              <span>View Full Replay & Telemetry</span>
+              <span>View Live Feed & Telemetry</span>
               <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
             </Link>
           </div>

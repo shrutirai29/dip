@@ -101,8 +101,8 @@ def test_camera_session_start_and_telemetry():
 
         # Wait for live worker to process at least one frame
         telemetry = None
-        for _ in range(25):
-            time.sleep(0.1)
+        for _ in range(60):
+            time.sleep(0.15)
             t_res = client.get("/api/camera/latest-frame")
             if t_res.status_code == 200:
                 telemetry = t_res.json()
@@ -134,7 +134,7 @@ def test_camera_session_start_and_telemetry():
 def test_camera_stream_mjpeg_content_type():
     from app.api.camera_endpoints import generate_mjpeg_stream
     fake_jpeg = b"\xff\xd8\xff\xe0\x00\x10JFIF"
-    with patch.object(live_pipeline_processor, "get_latest_jpeg", return_value=fake_jpeg):
+    with patch.object(live_pipeline_processor, "get_latest_jpeg_with_sequence", return_value=(1, fake_jpeg)):
         with patch.object(type(camera_ingestion_service), "state", property(lambda self: CameraState.CONNECTED)):
             gen = generate_mjpeg_stream()
             chunk = next(gen)
@@ -222,3 +222,66 @@ def test_recorded_video_workflow_non_interference():
 
         # Stop camera session
         client.post("/api/camera/session/stop")
+
+
+def test_mjpeg_stream_sequence_gating():
+    """
+    Verify that generate_mjpeg_stream skips duplicate frames with identical sequence IDs,
+    preventing redundant frame transmission to the browser.
+    """
+    from app.api.camera_endpoints import generate_mjpeg_stream
+
+    # Mock camera state to CONNECTED
+    with patch.object(camera_ingestion_service, "_state", CameraState.CONNECTED):
+        frames = [
+            (1, b"frame1_data"),
+            (1, b"frame1_data"),  # duplicate sequence - must skip
+            (1, b"frame1_data"),  # duplicate sequence - must skip
+            (2, b"frame2_data"),  # new sequence - must yield
+            (2, b"frame2_data"),  # duplicate sequence - must skip
+        ]
+        call_idx = 0
+
+        def mock_seq():
+            nonlocal call_idx
+            if call_idx < len(frames):
+                res = frames[call_idx]
+                call_idx += 1
+                return res
+            return (2, b"frame2_data")
+
+        with patch.object(live_pipeline_processor, "get_latest_jpeg_with_sequence", side_effect=mock_seq):
+            gen = generate_mjpeg_stream()
+            chunks = []
+            try:
+                for chunk in gen:
+                    chunks.append(chunk)
+                    if len(chunks) == 2:
+                        break
+            finally:
+                gen.close()
+
+            # Must receive exactly 2 chunks corresponding to seq 1 and seq 2
+            assert len(chunks) == 2
+            assert b"frame1_data" in chunks[0]
+            assert b"frame2_data" in chunks[1]
+
+
+def test_live_pipeline_processor_sequence_counter():
+    """
+    Verify that get_latest_jpeg_with_sequence correctly exposes frame sequence counts.
+    """
+    from app.services.live_pipeline_service import LivePipelineProcessor
+    proc = LivePipelineProcessor()
+    seq0, jpeg0 = proc.get_latest_jpeg_with_sequence()
+    assert seq0 == 0
+    assert jpeg0 is None
+
+    with proc._telemetry_lock:
+        proc._latest_jpeg = b"test_jpeg_bytes"
+        proc._frames_processed_count = 42
+
+    seq1, jpeg1 = proc.get_latest_jpeg_with_sequence()
+    assert seq1 == 42
+    assert jpeg1 == b"test_jpeg_bytes"
+

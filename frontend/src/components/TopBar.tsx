@@ -47,6 +47,7 @@ export const TopBar: React.FC = () => {
   const location = useLocation();
   const { 
     selectedAnalysis, 
+    cameraSessionStatus,
     setMobileMenuOpen,
     triggerGlobalRefresh,
     systemHealth
@@ -115,7 +116,29 @@ export const TopBar: React.FC = () => {
 
       {/* Right: Selected Session Context & Global Status Indicator */}
       <div className="flex items-center space-x-3 shrink-0">
-        {selectedAnalysis ? (
+        {cameraSessionStatus && cameraSessionStatus.is_active ? (
+          <div className="hidden lg:flex items-center space-x-2 px-2.5 py-1 rounded-lg bg-[#0E1622] border border-cyan-500/30 text-xs shadow-sm shadow-cyan-950/40">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+            <span className="text-slate-400 font-mono text-[11px]">Live Camera:</span>
+            <span className="text-cyan-300 font-mono font-medium text-[11px]">
+              Device #{cameraSessionStatus.device_index ?? 0}
+            </span>
+            <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono uppercase ${
+              cameraSessionStatus.state === 'CONNECTED' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' :
+              cameraSessionStatus.state === 'CONNECTING' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 animate-pulse' :
+              'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+            }`}>
+              {cameraSessionStatus.state}
+            </span>
+            <Link
+              to="/monitoring?source=webcam"
+              className="text-cyan-400 hover:text-cyan-300 ml-1"
+              title="Open Live Camera Telemetry"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        ) : selectedAnalysis ? (
           <div className="hidden lg:flex items-center space-x-2 px-2.5 py-1 rounded-lg bg-[#0E1622] border border-[#1E2D40] text-xs">
             <span className="text-slate-400 font-mono text-[11px]">Session:</span>
             <span className="text-white font-mono font-medium text-[11px]">

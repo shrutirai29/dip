@@ -1,12 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { analysisApi, systemApi } from '../services/api';
-import { Analysis } from '../types';
+import { analysisApi, systemApi, cameraApi } from '../services/api';
+import { Analysis, CameraSessionStatus } from '../types';
 
 export type SystemHealthStatus = 'checking' | 'operational' | 'degraded' | 'offline';
 
 interface SystemContextType {
   selectedAnalysis: Analysis | null;
   setSelectedAnalysis: (analysis: Analysis | null) => void;
+  cameraSessionStatus: CameraSessionStatus | null;
+  setCameraSessionStatus: (status: CameraSessionStatus | null) => void;
   systemHealth: SystemHealthStatus;
   pipelineActive: boolean;
   refreshLatestAnalysis: () => Promise<void>;
@@ -22,6 +24,7 @@ const SystemContext = createContext<SystemContextType | undefined>(undefined);
 
 export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [selectedAnalysis, setSelectedAnalysis] = useState<Analysis | null>(null);
+  const [cameraSessionStatus, setCameraSessionStatus] = useState<CameraSessionStatus | null>(null);
   const [systemHealth, setSystemHealth] = useState<SystemHealthStatus>('checking');
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
     return window.innerWidth < 1280 && window.innerWidth >= 768;
@@ -47,8 +50,14 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (!healthRes || healthRes.status !== 'healthy') {
         setSystemHealth('offline');
         setSelectedAnalysis(null);
+        setCameraSessionStatus(null);
         return;
       }
+
+      // Check camera status
+      const camStatus = await cameraApi.getStatus().catch(() => null);
+      if (requestId !== lastRequestIdRef.current) return;
+      setCameraSessionStatus(camStatus);
 
       // 2. Fetch analysis sessions
       const all = await analysisApi.getAll().catch(() => null);
@@ -76,6 +85,7 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       console.warn('System telemetry check failed:', err);
       setSystemHealth('offline');
       setSelectedAnalysis(null);
+      setCameraSessionStatus(null);
     }
   }, []);
 
@@ -83,14 +93,34 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     refreshLatestAnalysis();
   }, [refreshLatestAnalysis, refreshCounter]);
 
-  // A pipeline is active ONLY when an analysis status is actively 'processing'
-  const pipelineActive = !!(selectedAnalysis && selectedAnalysis.status === 'processing');
+  // Periodic poll for active camera state (every 3 seconds)
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const cam = await cameraApi.getStatus().catch(() => null);
+        if (cam) {
+          setCameraSessionStatus(cam);
+        }
+      } catch {
+        // Ignore background polling errors
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // A pipeline is active when an analysis status is actively 'processing' OR camera is actively streaming
+  const pipelineActive = !!(
+    (selectedAnalysis && selectedAnalysis.status === 'processing') ||
+    (cameraSessionStatus && cameraSessionStatus.is_active)
+  );
 
   return (
     <SystemContext.Provider
       value={{
         selectedAnalysis,
         setSelectedAnalysis,
+        cameraSessionStatus,
+        setCameraSessionStatus,
         systemHealth,
         pipelineActive,
         refreshLatestAnalysis,

@@ -1,7 +1,7 @@
 import time
 import threading
 import logging
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
 import cv2
 import numpy as np
 
@@ -124,6 +124,10 @@ class LivePipelineProcessor:
     def get_latest_jpeg(self) -> Optional[bytes]:
         with self._telemetry_lock:
             return self._latest_jpeg
+
+    def get_latest_jpeg_with_sequence(self) -> Tuple[int, Optional[bytes]]:
+        with self._telemetry_lock:
+            return self._frames_processed_count, self._latest_jpeg
 
     def get_processing_stats(self) -> Dict[str, Any]:
         with self._telemetry_lock:

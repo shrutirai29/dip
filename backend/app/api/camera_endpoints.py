@@ -156,17 +156,21 @@ def get_latest_frame_snapshot():
 def generate_mjpeg_stream():
     """
     Generator yielding multipart MJPEG frame chunks.
+    Only yields new frames when a new frame is processed (seq != last_seq)
+    to prevent sending redundant identical frames to the browser.
     Handles client disconnects and CameraState changes gracefully.
     """
+    last_seq = -1
     try:
         while camera_ingestion_service.state in (CameraState.CONNECTED, CameraState.CONNECTING, CameraState.DEGRADED):
-            jpeg_bytes = live_pipeline_processor.get_latest_jpeg()
-            if jpeg_bytes is not None:
+            seq, jpeg_bytes = live_pipeline_processor.get_latest_jpeg_with_sequence()
+            if jpeg_bytes is not None and seq != last_seq:
+                last_seq = seq
                 yield (
                     b"--frame\r\n"
                     b"Content-Type: image/jpeg\r\n\r\n" + jpeg_bytes + b"\r\n"
                 )
-            time.sleep(0.04)  # ~25 FPS pacing
+            time.sleep(0.02)  # ~50Hz check for newly processed frames
     except GeneratorExit:
         logger.debug("MJPEG stream consumer disconnected (GeneratorExit).")
     except Exception as e:

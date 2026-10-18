@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { 
   FileSpreadsheet, 
@@ -44,7 +44,11 @@ export const LiveMonitoring: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryAnalysisId = searchParams.get('analysisId');
   const sourceParam = searchParams.get('source');
-  const { selectedAnalysis: contextAnalysis, setSelectedAnalysis: setContextAnalysis } = useSystem();
+  const { 
+    selectedAnalysis: contextAnalysis, 
+    setSelectedAnalysis: setContextAnalysis,
+    cameraSessionStatus
+  } = useSystem();
 
   // Primary source toggle: 'recorded' | 'webcam' derived from URL
   const activeSource = sourceParam === 'webcam' ? 'webcam' : 'recorded';
@@ -62,8 +66,8 @@ export const LiveMonitoring: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
 
-  // Live Webcam Feed State
-  const [cameraStatus, setCameraStatus] = useState<CameraSessionStatus | null>(null);
+  // Live Webcam Feed State - initialized from context to prevent layout flicker
+  const [cameraStatus, setCameraStatus] = useState<CameraSessionStatus | null>(() => cameraSessionStatus);
   const [liveTelemetry, setLiveTelemetry] = useState<FrameRecord | null>(null);
   const [liveHistory, setLiveHistory] = useState<FrameRecord[]>([]);
   const [selectedLiveZone, setSelectedLiveZone] = useState<GridDensityCell | null>(null);
@@ -72,6 +76,13 @@ export const LiveMonitoring: React.FC = () => {
   const [isBackendOffline, setIsBackendOffline] = useState<boolean>(false);
   const [streamKey, setStreamKey] = useState<number>(0);
   const [telemetryAge, setTelemetryAge] = useState<number | null>(null);
+
+  // Keep cameraStatus in sync if context updates
+  useEffect(() => {
+    if (cameraSessionStatus && !cameraStatus) {
+      setCameraStatus(cameraSessionStatus);
+    }
+  }, [cameraSessionStatus, cameraStatus]);
 
   // Handle URL source parameter synchronization
   const handleSourceChange = (source: 'recorded' | 'webcam') => {
@@ -127,6 +138,12 @@ export const LiveMonitoring: React.FC = () => {
     }
   }, []);
 
+  // Context analysis ref to avoid recreating loadAnalyses when contextAnalysis changes
+  const contextAnalysisRef = useRef(contextAnalysis);
+  useEffect(() => {
+    contextAnalysisRef.current = contextAnalysis;
+  }, [contextAnalysis]);
+
   // Load available analysis sessions
   const loadAnalyses = useCallback(async () => {
     setLoadingList(true);
@@ -135,14 +152,17 @@ export const LiveMonitoring: React.FC = () => {
       const data = await analysisApi.getAll();
       setAnalyses(data);
       if (data.length > 0) {
+        const currentContextId = contextAnalysisRef.current?.id;
         const target = queryAnalysisId 
           ? data.find((a) => a.id === queryAnalysisId) || data[0]
-          : contextAnalysis 
-            ? data.find((a) => a.id === contextAnalysis.id) || data[0]
+          : currentContextId 
+            ? data.find((a) => a.id === currentContextId) || data[0]
             : data[0];
         
         setSelectedAnalysis(target);
-        setContextAnalysis(target);
+        if (currentContextId !== target.id) {
+          setContextAnalysis(target);
+        }
         loadSessionDetails(target.id);
       } else {
         setSelectedAnalysis(null);
@@ -155,14 +175,19 @@ export const LiveMonitoring: React.FC = () => {
     } finally {
       setLoadingList(false);
     }
-  }, [queryAnalysisId, contextAnalysis, setContextAnalysis, loadSessionDetails]);
+  }, [queryAnalysisId, setContextAnalysis, loadSessionDetails]);
 
   useEffect(() => {
     loadAnalyses();
   }, [loadAnalyses]);
 
+  // Live polling concurrency guard
+  const isPollingRef = useRef<boolean>(false);
+
   // Live polling for webcam telemetry & status
   const fetchLiveTelemetry = useCallback(async () => {
+    if (isPollingRef.current) return;
+    isPollingRef.current = true;
     try {
       const [statusRes, telemRes] = await Promise.allSettled([
         cameraApi.getStatus(),
@@ -199,6 +224,8 @@ export const LiveMonitoring: React.FC = () => {
       }
     } catch {
       setIsBackendOffline(true);
+    } finally {
+      isPollingRef.current = false;
     }
   }, []);
 
@@ -307,7 +334,7 @@ export const LiveMonitoring: React.FC = () => {
   // Telemetry Freshness computation for live webcam feed
   const isStale = telemetryAge !== null && telemetryAge > 3.0;
 
-  if (loadingList) {
+  if (loadingList && analyses.length === 0 && activeSource === 'recorded') {
     return (
       <div className="space-y-6">
         <LoadingBlock text="Connecting to surveillance telemetry bus..." height="h-96" />
@@ -558,6 +585,11 @@ export const LiveMonitoring: React.FC = () => {
                     alt="Live Hardware Webcam Surveillance Feed"
                     className="w-full h-full object-contain"
                   />
+                ) : cameraStatus === null ? (
+                  <div className="text-center p-8 space-y-3">
+                    <div className="w-8 h-8 rounded-full border-2 border-cyan-500 border-t-transparent animate-spin mx-auto" />
+                    <p className="text-xs text-slate-400 font-mono">Connecting to camera feed...</p>
+                  </div>
                 ) : (
                   <div className="text-center p-8 space-y-3">
                     <div className="w-12 h-12 rounded-xl bg-[#111923] border border-[#1E2D40] flex items-center justify-center mx-auto text-slate-500">
