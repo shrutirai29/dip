@@ -1,29 +1,49 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   AlertTriangle, 
   Search, 
   Check, 
   Eye, 
-  CheckCircle2
+  RefreshCw, 
+  ShieldAlert, 
+  Clock, 
+  X, 
+  SlidersHorizontal, 
+  Inbox
 } from 'lucide-react';
 import { incidentApi } from '../services/api';
 import { Incident } from '../types';
+import { 
+  KPICard, 
+  RiskBadge, 
+  EmptyState, 
+  ErrorState, 
+  LoadingBlock 
+} from '../components/UIComponents';
 
 export const Incidents: React.FC = () => {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [severityFilter, setSeverityFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  
+  const [loading, setLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Inspection modal
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [operatorNotes, setOperatorNotes] = useState('');
+  const [updatingStatus, setUpdatingStatus] = useState<boolean>(false);
+  const [actionSuccessMessage, setActionSuccessMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadIncidents();
-  }, [severityFilter, statusFilter]);
-
-  const loadIncidents = async () => {
+  const loadIncidents = useCallback(async (isSilent = false) => {
+    if (isSilent) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    setErrorMessage(null);
     try {
       const data = await incidentApi.getAll({
         severity: severityFilter || undefined,
@@ -31,11 +51,21 @@ export const Incidents: React.FC = () => {
       });
       setIncidents(data);
     } catch (e) {
-      console.error(e);
+      console.error('Failed to load incidents:', e);
+      setErrorMessage('Unable to retrieve recorded incidents from the surveillance audit log.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, [severityFilter, statusFilter]);
+
+  useEffect(() => {
+    loadIncidents();
+  }, [loadIncidents]);
 
   const handleUpdateStatus = async (id: string, newStatus: string) => {
+    setUpdatingStatus(true);
+    setActionSuccessMessage(null);
     try {
       const updated = await incidentApi.update(id, {
         status: newStatus,
@@ -44,46 +74,139 @@ export const Incidents: React.FC = () => {
       setIncidents((prev) => prev.map((i) => (i.id === id ? updated : i)));
       if (selectedIncident?.id === id) {
         setSelectedIncident(updated);
+        setOperatorNotes(updated.operator_notes || '');
       }
+      setActionSuccessMessage(`Incident marked as ${newStatus}.`);
+      setTimeout(() => setActionSuccessMessage(null), 3000);
     } catch (e) {
-      console.error(e);
+      console.error('Failed to update incident:', e);
+      setActionSuccessMessage('Failed to update status. Please try again.');
+    } finally {
+      setUpdatingStatus(false);
     }
   };
 
-  const filtered = incidents.filter((i) =>
-    i.trigger_reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    i.incident_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    i.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filtered = useMemo(() => {
+    return incidents.filter((i) => {
+      const term = searchTerm.toLowerCase();
+      const matchReason = i.trigger_reason?.toLowerCase().includes(term) || false;
+      const matchType = i.incident_type?.toLowerCase().includes(term) || false;
+      const matchId = i.id?.toLowerCase().includes(term) || false;
+      const matchRegion = i.relevant_region?.toLowerCase().includes(term) || false;
+      return matchReason || matchType || matchId || matchRegion;
+    });
+  }, [incidents, searchTerm]);
+
+  // Metric counts
+  const kpis = useMemo(() => {
+    const total = incidents.length;
+    const critical = incidents.filter(i => i.severity === 'CRITICAL').length;
+    const high = incidents.filter(i => i.severity === 'HIGH').length;
+    const open = incidents.filter(i => i.status === 'Open').length;
+    return { total, critical, high, open };
+  }, [incidents]);
+
+  if (loading && incidents.length === 0) {
+    return (
+      <div className="space-y-6">
+        <LoadingBlock text="Loading incident warnings and evidence keyframes..." height="h-96" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-7xl">
-      <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-[#1D2935] gap-4">
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-4 border-b border-[#1E2D40] gap-4">
         <div>
-          <h1 className="text-xl font-bold text-white tracking-tight">SUSTAINED INCIDENTS & ACTIONABLE EARLY WARNINGS</h1>
-          <p className="text-xs text-[#8C9AAA] mt-0.5">
-            Sustained condition hazard log with automated operator recommendations and audit verification
+          <div className="flex items-center space-x-2.5">
+            <h1 className="text-xl font-bold text-white tracking-tight">
+              INCIDENT WARNINGS & HAZARD AUDIT
+            </h1>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-rose-950/40 border border-rose-500/30 text-rose-300">
+              AUDIT LOG
+            </span>
+          </div>
+          <p className="text-xs text-slate-400 mt-1">
+            Sustained condition hazard log with automated operator recommendations, keyframe evidence, and audit verification
           </p>
         </div>
+
+        <button
+          onClick={() => loadIncidents(true)}
+          disabled={refreshing}
+          className="inline-flex items-center space-x-2 px-3 py-1.5 bg-[#0E1622] hover:bg-[#141E2B] text-slate-300 hover:text-white border border-[#1E2D40] rounded-lg text-xs font-medium transition cursor-pointer self-start lg:self-auto"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-cyan-400' : ''}`} />
+          <span>Refresh Feed</span>
+        </button>
       </div>
 
-      {/* Filter Bar */}
+      {errorMessage && (
+        <ErrorState message={errorMessage} onRetry={() => loadIncidents(false)} />
+      )}
+
+      {/* KPI Cards Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <KPICard
+          label="Total Incidents"
+          value={kpis.total}
+          unit="logged"
+          subtext="Catalog hazard records"
+          icon={AlertTriangle}
+          tone="neutral"
+        />
+        <KPICard
+          label="Critical Severity"
+          value={kpis.critical}
+          unit="events"
+          subtext="Immediate intervention"
+          icon={ShieldAlert}
+          tone="rose"
+        />
+        <KPICard
+          label="High Severity"
+          value={kpis.high}
+          unit="events"
+          subtext="Sustained escalation"
+          icon={SlidersHorizontal}
+          tone="amber"
+        />
+        <KPICard
+          label="Open / Awaiting Action"
+          value={kpis.open}
+          unit="unresolved"
+          subtext="Requires operator sign-off"
+          icon={Clock}
+          tone={kpis.open > 0 ? 'cyan' : 'emerald'}
+        />
+      </div>
+
+      {/* Filter and Search Bar */}
       <div className="flex flex-col sm:flex-row items-center gap-3">
         <div className="relative flex-1 w-full">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-[#8C9AAA]" />
+          <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
           <input
             type="text"
-            placeholder="Search by ID, trigger reason, or zone..."
+            placeholder="Search by ID, trigger reason, sector, or pattern..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-[#0D131C] border border-[#1D2935] text-xs text-white rounded-lg pl-9 pr-4 py-2.5 focus:border-cyan-500"
+            className="w-full bg-[#0E1622] border border-[#1E2D40] text-xs text-white rounded-lg pl-9 pr-4 py-2 focus:border-cyan-500 focus:outline-none placeholder-slate-500"
           />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-2.5 text-slate-400 hover:text-white"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         <select
           value={severityFilter}
           onChange={(e) => setSeverityFilter(e.target.value)}
-          className="bg-[#0D131C] border border-[#1D2935] text-xs text-white rounded-lg px-3 py-2.5 w-full sm:w-auto"
+          className="bg-[#0E1622] border border-[#1E2D40] text-xs text-slate-300 rounded-lg px-3 py-2 w-full sm:w-auto focus:border-cyan-500 focus:outline-none cursor-pointer"
         >
           <option value="">All Severities</option>
           <option value="CRITICAL">Critical</option>
@@ -95,7 +218,7 @@ export const Incidents: React.FC = () => {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="bg-[#0D131C] border border-[#1D2935] text-xs text-white rounded-lg px-3 py-2.5 w-full sm:w-auto"
+          className="bg-[#0E1622] border border-[#1E2D40] text-xs text-slate-300 rounded-lg px-3 py-2 w-full sm:w-auto focus:border-cyan-500 focus:outline-none cursor-pointer"
         >
           <option value="">All Statuses</option>
           <option value="Open">Open</option>
@@ -104,61 +227,72 @@ export const Incidents: React.FC = () => {
         </select>
       </div>
 
-      {/* Incidents Table */}
-      <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl overflow-hidden shadow-sm">
+      {/* Incidents Surveillance Table */}
+      <div className="bg-[#0E1622] border border-[#1E2D40] rounded-xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-[#111923] text-[#8C9AAA] font-semibold uppercase border-b border-[#1D2935]">
+            <thead className="bg-[#0A1018] text-slate-400 font-semibold uppercase tracking-wider text-[11px] border-b border-[#1E2D40]">
               <tr>
                 <th className="p-3.5">Severity</th>
                 <th className="p-3.5">Incident ID</th>
-                <th className="p-3.5">Time</th>
+                <th className="p-3.5">Timestamp</th>
                 <th className="p-3.5">Sector</th>
                 <th className="p-3.5">Trigger Condition</th>
-                <th className="p-3.5">Current / Forecast (+10s)</th>
+                <th className="p-3.5">Risk Score (Now → +10s)</th>
                 <th className="p-3.5">Status</th>
-                <th className="p-3.5 text-right">Action</th>
+                <th className="p-3.5 text-right">Audit Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#1D2935] text-[#F4F7FA]">
+            <tbody className="divide-y divide-[#1E2D40] text-slate-200">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-[#8C9AAA]">
-                    No matching incidents found in surveillance audit log.
+                  <td colSpan={8} className="p-10 text-center text-slate-500">
+                    <div className="max-w-md mx-auto space-y-2">
+                      <Inbox className="w-8 h-8 text-slate-600 mx-auto" />
+                      <p className="text-xs text-slate-400">
+                        {searchTerm || severityFilter || statusFilter
+                          ? 'No incidents match the active search or filter criteria.'
+                          : 'No incidents are recorded in the current catalog.'}
+                      </p>
+                    </div>
                   </td>
                 </tr>
               ) : (
                 filtered.map((inc) => (
-                  <tr key={inc.id} className="hover:bg-[#111923]/60 transition">
+                  <tr key={inc.id} className="hover:bg-[#121C2B] transition-colors">
                     <td className="p-3.5">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                        inc.severity === 'CRITICAL'
-                          ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                          : inc.severity === 'HIGH'
-                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                          : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
-                      }`}>
-                        {inc.severity}
-                      </span>
+                      <RiskBadge band={inc.severity} size="sm" />
                     </td>
-                    <td className="p-3.5 font-mono text-cyan-400">{inc.id}</td>
-                    <td className="p-3.5 text-[#8C9AAA]">t={inc.video_timestamp_sec}s</td>
-                    <td className="p-3.5 font-mono text-white">{inc.relevant_region || 'Sector B2'}</td>
-                    <td className="p-3.5 font-medium max-w-sm truncate">{inc.trigger_reason}</td>
-                    <td className="p-3.5 font-bold">
-                      <span className="text-white">{inc.risk_score}</span>
-                      <span className="text-[#8C9AAA] mx-1">→</span>
-                      <span className="text-rose-400">{inc.forecast_risk}</span>
+                    <td className="p-3.5 font-mono text-cyan-400 font-medium">
+                      {inc.id}
+                    </td>
+                    <td className="p-3.5 text-slate-400 font-mono">
+                      t={inc.video_timestamp_sec?.toFixed(1) || '0.0'}s
+                    </td>
+                    <td className="p-3.5 font-mono text-white">
+                      {inc.relevant_region || 'Sector B2'}
+                    </td>
+                    <td className="p-3.5 max-w-xs truncate text-slate-300">
+                      {inc.trigger_reason}
+                    </td>
+                    <td className="p-3.5 font-mono font-medium">
+                      <span className="text-white">{inc.risk_score?.toFixed(1) ?? '—'}</span>
+                      <span className="text-slate-500 mx-1.5">→</span>
+                      <span className="text-rose-400">{inc.forecast_risk?.toFixed(1) ?? '—'}</span>
                     </td>
                     <td className="p-3.5">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase ${
+                      <span className={`inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium border ${
                         inc.status === 'Open'
-                          ? 'text-rose-400 bg-rose-500/10'
+                          ? 'bg-rose-950/30 border-rose-500/30 text-rose-300'
                           : inc.status === 'Acknowledged'
-                          ? 'text-amber-400 bg-amber-500/10'
-                          : 'text-emerald-400 bg-emerald-500/10'
+                          ? 'bg-amber-950/30 border-amber-500/30 text-amber-300'
+                          : 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300'
                       }`}>
-                        {inc.status}
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          inc.status === 'Open' ? 'bg-rose-400 animate-pulse' :
+                          inc.status === 'Acknowledged' ? 'bg-amber-400' : 'bg-emerald-400'
+                        }`} />
+                        <span>{inc.status}</span>
                       </span>
                     </td>
                     <td className="p-3.5 text-right">
@@ -166,10 +300,12 @@ export const Incidents: React.FC = () => {
                         onClick={() => {
                           setSelectedIncident(inc);
                           setOperatorNotes(inc.operator_notes || '');
+                          setActionSuccessMessage(null);
                         }}
-                        className="px-2.5 py-1 bg-[#111923] hover:bg-[#1D2935] text-[#F4F7FA] rounded border border-[#1D2935] transition"
+                        className="inline-flex items-center space-x-1.5 px-2.5 py-1 bg-[#141E2B] hover:bg-[#1E2D40] text-slate-200 hover:text-white rounded border border-[#1E2D40] transition cursor-pointer text-xs"
                       >
-                        Inspect
+                        <Eye className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>Inspect</span>
                       </button>
                     </td>
                   </tr>
@@ -180,101 +316,137 @@ export const Incidents: React.FC = () => {
         </div>
       </div>
 
-      {/* Incident Details Modal */}
+      {/* Evidentiary Inspection Modal */}
       {selectedIncident && (
-        <div className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
-          <div className="bg-[#0D131C] border border-[#1D2935] rounded-xl max-w-xl w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-[#1D2935]">
-              <div className="flex items-center space-x-2">
-                <AlertTriangle className="w-5 h-5 text-rose-500" />
-                <h3 className="text-sm font-semibold text-white">Incident Audit — {selectedIncident.id}</h3>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-[#0E1622] border border-[#1E2D40] rounded-xl max-w-2xl w-full p-6 space-y-4 shadow-2xl overflow-y-auto max-h-[90vh]">
+            <div className="flex items-center justify-between pb-3 border-b border-[#1E2D40]">
+              <div className="flex items-center space-x-2.5">
+                <RiskBadge band={selectedIncident.severity} size="md" />
+                <h3 className="text-sm font-semibold text-white font-mono">
+                  Hazard Audit: {selectedIncident.id}
+                </h3>
               </div>
               <button
                 onClick={() => setSelectedIncident(null)}
-                className="text-[#8C9AAA] hover:text-white text-sm font-mono"
+                className="text-slate-400 hover:text-white p-1 rounded hover:bg-[#141E2B] transition cursor-pointer"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="space-y-3 text-xs">
-              <div>
-                <span className="text-[#8C9AAA] block mb-1">Trigger Condition:</span>
-                <p className="p-2.5 bg-[#111923] rounded border border-[#1D2935] text-[#F4F7FA] font-medium leading-relaxed">
+            {actionSuccessMessage && (
+              <div className="p-2.5 rounded-lg bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 text-xs flex items-center space-x-2">
+                <Check className="w-4 h-4 text-emerald-400" />
+                <span>{actionSuccessMessage}</span>
+              </div>
+            )}
+
+            <div className="space-y-4 text-xs">
+              {/* Trigger Condition */}
+              <div className="space-y-1">
+                <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400 block">
+                  Identified Hazard Condition:
+                </span>
+                <p className="p-3 bg-[#0A1018] rounded-lg border border-[#1E2D40] text-slate-200 leading-relaxed font-mono">
                   {selectedIncident.trigger_reason}
                 </p>
               </div>
 
+              {/* Recommended Action */}
               {selectedIncident.recommended_action && (
-                <div className="p-3 bg-cyan-950/20 border border-cyan-500/25 rounded-lg space-y-1">
-                  <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block">
-                    Recommended Operator Action:
+                <div className="p-3.5 bg-cyan-950/30 border border-cyan-500/30 rounded-lg space-y-1">
+                  <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block font-mono">
+                    Protocol Recommendation:
                   </span>
-                  <p className="text-gray-200 text-[11px] leading-relaxed">
+                  <p className="text-slate-200 text-xs leading-relaxed">
                     {selectedIncident.recommended_action}
                   </p>
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-2.5 bg-[#111923] rounded border border-[#1D2935]">
-                  <span className="text-[#8C9AAA] block text-[10px]">Risk Profile</span>
-                  <span className="text-xs font-bold text-white mt-1 block">
-                    Current: {selectedIncident.risk_score} | Forecast: {selectedIncident.forecast_risk}
+              {/* Telemetry Stats Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 font-mono">
+                <div className="p-2.5 bg-[#0A1018] rounded-lg border border-[#1E2D40]">
+                  <span className="text-[10px] text-slate-400 block">Trigger Risk</span>
+                  <span className="text-sm font-bold text-white mt-1 block">
+                    {selectedIncident.risk_score?.toFixed(1) ?? '—'}
                   </span>
                 </div>
-                <div className="p-2.5 bg-[#111923] rounded border border-[#1D2935]">
-                  <span className="text-[#8C9AAA] block text-[10px]">Location & Timestamp</span>
-                  <span className="text-xs font-bold text-white mt-1 block">
-                    {selectedIncident.relevant_region || 'Global'} @ t={selectedIncident.video_timestamp_sec}s
+                <div className="p-2.5 bg-[#0A1018] rounded-lg border border-[#1E2D40]">
+                  <span className="text-[10px] text-slate-400 block">Forecast (+10s)</span>
+                  <span className="text-sm font-bold text-rose-400 mt-1 block">
+                    {selectedIncident.forecast_risk?.toFixed(1) ?? '—'}
+                  </span>
+                </div>
+                <div className="p-2.5 bg-[#0A1018] rounded-lg border border-[#1E2D40]">
+                  <span className="text-[10px] text-slate-400 block">Sector / Region</span>
+                  <span className="text-sm font-bold text-cyan-400 mt-1 block">
+                    {selectedIncident.relevant_region || 'Sector B2'}
+                  </span>
+                </div>
+                <div className="p-2.5 bg-[#0A1018] rounded-lg border border-[#1E2D40]">
+                  <span className="text-[10px] text-slate-400 block">Video Timestamp</span>
+                  <span className="text-sm font-bold text-white mt-1 block">
+                    t={selectedIncident.video_timestamp_sec?.toFixed(1) || '0.0'}s
                   </span>
                 </div>
               </div>
 
+              {/* Captured Evidence Keyframe */}
               {selectedIncident.evidence_frame_path && (
-                <div>
-                  <span className="text-[#8C9AAA] block mb-1">Captured Evidence Keyframe:</span>
-                  <div className="aspect-video bg-black rounded border border-[#1D2935] overflow-hidden">
+                <div className="space-y-1">
+                  <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400 block">
+                    Captured Evidence Keyframe:
+                  </span>
+                  <div className="aspect-video bg-black rounded-lg border border-[#1E2D40] overflow-hidden flex items-center justify-center">
                     <img
                       src={selectedIncident.evidence_frame_path}
-                      alt="Evidence Frame"
+                      alt="Incident Evidence Frame"
                       className="w-full h-full object-contain"
                     />
                   </div>
                 </div>
               )}
 
-              <div>
-                <label className="text-[#8C9AAA] block mb-1">Supervisor Verification & Operator Audit Notes:</label>
+              {/* Operator Notes */}
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-mono tracking-wider text-slate-400 block">
+                  Supervisor Verification & Operator Audit Notes:
+                </label>
                 <textarea
                   value={operatorNotes}
                   onChange={(e) => setOperatorNotes(e.target.value)}
-                  placeholder="Record camera angle validation, physical team dispatch, or safety clearance notes..."
-                  className="w-full bg-[#111923] border border-[#1D2935] rounded p-2 text-xs text-white h-16"
+                  placeholder="Record camera angle validation, physical safety team dispatch, or clearance notes..."
+                  className="w-full bg-[#0A1018] border border-[#1E2D40] rounded-lg p-3 text-xs text-white h-20 focus:border-cyan-500 focus:outline-none placeholder-slate-500"
                 />
               </div>
             </div>
 
-            <div className="pt-3 border-t border-[#1D2935] flex items-center justify-between">
-              <div className="flex space-x-2">
+            {/* Modal Actions */}
+            <div className="pt-3 border-t border-[#1E2D40] flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center space-x-2">
                 <button
                   onClick={() => handleUpdateStatus(selectedIncident.id, 'Acknowledged')}
-                  className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded text-xs font-medium"
+                  disabled={updatingStatus || selectedIncident.status === 'Acknowledged'}
+                  className="px-3 py-1.5 bg-amber-600/30 hover:bg-amber-600/40 text-amber-300 border border-amber-500/40 rounded-lg text-xs font-medium transition cursor-pointer disabled:opacity-40"
                 >
-                  Acknowledge
+                  Mark Acknowledged
                 </button>
                 <button
                   onClick={() => handleUpdateStatus(selectedIncident.id, 'Resolved')}
-                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-medium"
+                  disabled={updatingStatus || selectedIncident.status === 'Resolved'}
+                  className="px-3 py-1.5 bg-emerald-600/30 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40 rounded-lg text-xs font-medium transition cursor-pointer disabled:opacity-40"
                 >
                   Resolve Incident
                 </button>
               </div>
+
               <button
                 onClick={() => setSelectedIncident(null)}
-                className="px-3 py-1.5 bg-[#111923] hover:bg-[#1D2935] text-[#8C9AAA] rounded text-xs"
+                className="px-3.5 py-1.5 bg-[#141E2B] hover:bg-[#1E2D40] text-slate-300 rounded-lg text-xs border border-[#1E2D40] transition cursor-pointer"
               >
-                Close
+                Close Inspector
               </button>
             </div>
           </div>
