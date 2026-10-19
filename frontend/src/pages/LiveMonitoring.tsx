@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { 
   FileSpreadsheet, 
@@ -16,7 +16,8 @@ import {
   AlertTriangle,
   Camera,
   Square,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 import { 
   LineChart, 
@@ -28,7 +29,7 @@ import {
   CartesianGrid,
   ReferenceLine
 } from 'recharts';
-import { analysisApi, incidentApi, cameraApi } from '../services/api';
+import { analysisApi, incidentApi, cameraApi, resolveMediaUrl } from '../services/api';
 import { Analysis, FrameRecord, Incident, GridDensityCell, CameraSessionStatus } from '../types';
 import { 
   KPICard, 
@@ -65,6 +66,18 @@ export const LiveMonitoring: React.FC = () => {
   const [loadingDetails, setLoadingDetails] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
+
+  // Video Replay & Timeline Scrubbing State
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const isSeekingRef = useRef<boolean>(false);
+  const [videoLoading, setVideoLoading] = useState<boolean>(true);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const [videoDuration, setVideoDuration] = useState<number>(0);
+
+  const videoSrc = useMemo(() => {
+    if (!selectedAnalysis) return '';
+    return resolveMediaUrl(selectedAnalysis.annotated_video_path, selectedAnalysis.id);
+  }, [selectedAnalysis]);
 
   // Live Webcam Feed State - initialized from context to prevent layout flicker
   const [cameraStatus, setCameraStatus] = useState<CameraSessionStatus | null>(() => cameraSessionStatus);
@@ -302,8 +315,74 @@ export const LiveMonitoring: React.FC = () => {
     }
   }, [currentFrame, selectedZone]);
 
-  // Playback timer for frame timeline scrubbing (recorded mode)
+  // Reset video state when selected analysis changes
   useEffect(() => {
+    setVideoLoading(true);
+    setVideoError(null);
+    setIsPlaying(false);
+  }, [selectedAnalysis?.id]);
+
+  // Synchronize telemetry with video playback
+  const handleTimeUpdate = useCallback(() => {
+    if (isSeekingRef.current) return;
+    const video = videoRef.current;
+    if (!video || results.length === 0) return;
+    const t = video.currentTime;
+
+    let closestIdx = 0;
+    let minDiff = Infinity;
+    for (let i = 0; i < results.length; i++) {
+      const diff = Math.abs(results[i].timestamp_sec - t);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestIdx = i;
+      } else if (results[i].timestamp_sec > t && diff > minDiff) {
+        break;
+      }
+    }
+    setSelectedFrameIndex(closestIdx);
+  }, [results]);
+
+  // Scrub or jump to frame and seek video
+  const handleSeekFrame = useCallback((newIdx: number) => {
+    const clamped = Math.max(0, Math.min(newIdx, results.length - 1));
+    setSelectedFrameIndex(clamped);
+    const target = results[clamped];
+    if (target && videoRef.current) {
+      isSeekingRef.current = true;
+      videoRef.current.currentTime = target.timestamp_sec;
+      setTimeout(() => {
+        isSeekingRef.current = false;
+      }, 80);
+    }
+  }, [results]);
+
+  const handleStepFrame = useCallback((step: number) => {
+    handleSeekFrame(selectedFrameIndex + step);
+  }, [handleSeekFrame, selectedFrameIndex]);
+
+  // Toggle Play / Pause on video element
+  const handleTogglePlayback = useCallback(() => {
+    const video = videoRef.current;
+    if (video) {
+      if (video.paused || video.ended) {
+        if (video.ended) {
+          video.currentTime = 0;
+        }
+        video.play().catch((err) => {
+          console.warn('Playback request prevented:', err);
+        });
+      } else {
+        video.pause();
+      }
+    } else {
+      setIsPlaying((prev) => !prev);
+    }
+  }, []);
+
+  // Fallback timer only if no video element is mounted (e.g. preview image mode)
+  useEffect(() => {
+    if (videoRef.current) return;
     let interval: ReturnType<typeof setInterval>;
     if (isPlaying && results.length > 1) {
       interval = setInterval(() => {
@@ -325,8 +404,7 @@ export const LiveMonitoring: React.FC = () => {
       const record = e.activePayload[0].payload as FrameRecord;
       const idx = results.findIndex((f) => f.frame_index === record.frame_index);
       if (idx !== -1) {
-        setSelectedFrameIndex(idx);
-        setIsPlaying(false);
+        handleSeekFrame(idx);
       }
     }
   };
@@ -1004,15 +1082,111 @@ export const LiveMonitoring: React.FC = () => {
 
               {/* Video Player Display Container */}
               <div className="aspect-video bg-[#070B10] rounded-lg overflow-hidden border border-[#1E2D40] relative flex items-center justify-center">
-                {selectedAnalysis?.annotated_video_path ? (
-                  <video
-                    key={selectedAnalysis.annotated_video_path}
-                    src={selectedAnalysis.annotated_video_path}
-                    controls
-                    autoPlay
-                    loop
-                    className="w-full h-full object-contain"
-                  />
+                {selectedAnalysis?.status === 'processing' || selectedAnalysis?.status === 'pending' ? (
+                  <div className="text-center p-6 space-y-3 max-w-sm">
+                    <div className="w-10 h-10 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin mx-auto" />
+                    <div>
+                      <h4 className="text-xs font-semibold text-white uppercase tracking-wider">
+                        Rendering Surveillance Video
+                      </h4>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Footage is currently being processed ({selectedAnalysis.progress_percent || 0}%).
+                      </p>
+                    </div>
+                    <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                      <div 
+                        className="bg-cyan-400 h-1.5 rounded-full transition-all duration-300"
+                        style={{ width: `${selectedAnalysis.progress_percent || 0}%` }}
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-500 font-mono">Telemetry metrics stream dynamically as frames complete.</p>
+                  </div>
+                ) : selectedAnalysis?.status === 'failed' && !selectedAnalysis.annotated_video_path ? (
+                  <div className="text-center p-6 space-y-2 max-w-sm">
+                    <AlertTriangle className="w-8 h-8 text-rose-500 mx-auto" />
+                    <h4 className="text-xs font-semibold text-rose-400 uppercase tracking-wider">Analysis Failed</h4>
+                    <p className="text-xs text-slate-400">{selectedAnalysis.error_message || 'Video processing encountered an error.'}</p>
+                    <Link
+                      to="/video-analysis"
+                      className="inline-block mt-2 px-3 py-1 text-xs rounded bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 transition"
+                    >
+                      Re-run Analysis
+                    </Link>
+                  </div>
+                ) : videoSrc ? (
+                  <div className="relative w-full h-full flex items-center justify-center bg-black">
+                    <video
+                      ref={videoRef}
+                      key={videoSrc}
+                      src={videoSrc}
+                      controls
+                      autoPlay
+                      playsInline
+                      className="w-full h-full object-contain"
+                      onPlay={() => setIsPlaying(true)}
+                      onPause={() => setIsPlaying(false)}
+                      onEnded={() => setIsPlaying(false)}
+                      onTimeUpdate={handleTimeUpdate}
+                      onLoadedMetadata={(e) => {
+                        const video = e.currentTarget;
+                        setVideoLoading(false);
+                        setVideoError(null);
+                        setVideoDuration(video.duration || 0);
+                        const target = results[selectedFrameIndex];
+                        if (target && target.timestamp_sec > 0) {
+                          video.currentTime = target.timestamp_sec;
+                        }
+                      }}
+                      onWaiting={() => setVideoLoading(true)}
+                      onPlaying={() => setVideoLoading(false)}
+                      onError={(e) => {
+                        const err = (e.currentTarget as HTMLVideoElement).error;
+                        let message = 'Unable to play surveillance video artifact.';
+                        if (err?.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
+                          message = 'Video stream codec or container format is unsupported by this browser.';
+                        } else if (err?.code === MediaError.MEDIA_ERR_NETWORK) {
+                          message = 'Network error encountered while streaming video.';
+                        }
+                        setVideoError(message);
+                        setVideoLoading(false);
+                        setIsPlaying(false);
+                      }}
+                    />
+
+                    {/* Video loading spinner overlay */}
+                    {videoLoading && !videoError && (
+                      <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center pointer-events-none">
+                        <div className="flex items-center space-x-2 text-cyan-400 text-xs font-mono">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Buffering surveillance feed...</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Video error fallback overlay */}
+                    {videoError && (
+                      <div className="absolute inset-0 bg-[#070B10]/95 flex flex-col items-center justify-center p-6 text-center space-y-3">
+                        <AlertCircle className="w-8 h-8 text-amber-400" />
+                        <div>
+                          <h4 className="text-xs font-semibold text-white uppercase tracking-wider">Video Stream Error</h4>
+                          <p className="text-xs text-slate-400 max-w-md mt-1">{videoError}</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setVideoError(null);
+                            setVideoLoading(true);
+                            if (videoRef.current) {
+                              videoRef.current.load();
+                            }
+                          }}
+                          className="px-3 py-1.5 rounded bg-cyan-950/60 hover:bg-cyan-900/60 text-cyan-300 border border-cyan-500/40 text-xs font-medium flex items-center space-x-1.5 transition cursor-pointer"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                          <span>Retry Stream Load</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 ) : selectedAnalysis?.heatmap_preview_path ? (
                   <div className="relative w-full h-full flex items-center justify-center">
                     <img
@@ -1039,17 +1213,14 @@ export const LiveMonitoring: React.FC = () => {
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center space-x-2">
                       <button
-                        onClick={() => setIsPlaying(!isPlaying)}
+                        onClick={handleTogglePlayback}
                         className="p-1.5 rounded bg-[#141E2B] hover:bg-[#1E2D40] text-cyan-400 border border-[#1E2D40] transition cursor-pointer"
                         title={isPlaying ? 'Pause Scrubbing' : 'Play Scrubbing'}
                       >
                         {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
                       </button>
                       <button
-                        onClick={() => {
-                          setIsPlaying(false);
-                          setSelectedFrameIndex(prev => Math.max(0, prev - 1));
-                        }}
+                        onClick={() => handleStepFrame(-1)}
                         disabled={selectedFrameIndex === 0}
                         className="p-1.5 rounded bg-[#141E2B] hover:bg-[#1E2D40] text-slate-300 disabled:opacity-40 border border-[#1E2D40] transition cursor-pointer"
                         title="Previous Frame"
@@ -1057,10 +1228,7 @@ export const LiveMonitoring: React.FC = () => {
                         <ChevronLeft className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => {
-                          setIsPlaying(false);
-                          setSelectedFrameIndex(prev => Math.min(results.length - 1, prev + 1));
-                        }}
+                        onClick={() => handleStepFrame(1)}
                         disabled={selectedFrameIndex >= results.length - 1}
                         className="p-1.5 rounded bg-[#141E2B] hover:bg-[#1E2D40] text-slate-300 disabled:opacity-40 border border-[#1E2D40] transition cursor-pointer"
                         title="Next Frame"
@@ -1073,7 +1241,7 @@ export const LiveMonitoring: React.FC = () => {
                     </div>
 
                     <div className="text-[11px] font-mono text-cyan-400">
-                      t = {currentFrame?.timestamp_sec?.toFixed(1) || '0.0'}s / {results[results.length - 1]?.timestamp_sec?.toFixed(1) || '0.0'}s
+                      t = {currentFrame?.timestamp_sec?.toFixed(1) || '0.0'}s / {videoDuration > 0 ? videoDuration.toFixed(1) : (results[results.length - 1]?.timestamp_sec?.toFixed(1) || '0.0')}s
                     </div>
                   </div>
 
@@ -1083,10 +1251,7 @@ export const LiveMonitoring: React.FC = () => {
                     min={0}
                     max={Math.max(0, results.length - 1)}
                     value={selectedFrameIndex}
-                    onChange={(e) => {
-                      setIsPlaying(false);
-                      setSelectedFrameIndex(Number(e.target.value));
-                    }}
+                    onChange={(e) => handleSeekFrame(Number(e.target.value))}
                     className="w-full h-1.5 bg-[#141E2B] rounded-lg appearance-none cursor-pointer accent-cyan-400"
                   />
                 </div>

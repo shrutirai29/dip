@@ -345,6 +345,17 @@ class VideoProcessor:
                             "pattern": detected_pattern
                         })
 
+            if 'writer' in locals() and writer is not None:
+                writer.release()
+                writer = None
+
+            if not cancel_event.is_set():
+                try:
+                    from app.services.video_transcode_service import ensure_h264_browser_compatible
+                    ensure_h264_browser_compatible(output_path)
+                except Exception as trans_err:
+                    print(f"[VideoProcessor] Video transcoding warning: {trans_err}")
+
             # Status assignment
             if cancel_event.is_set():
                 analysis.status = "cancelled"

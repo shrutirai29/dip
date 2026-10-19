@@ -85,6 +85,16 @@ export const analysisApi = {
   },
 
   getExportUrl: (id: string) => `/api/analyses/${id}/export`,
+  getVideoUrl: (id: string) => `/api/analyses/${id}/video`,
+};
+
+export const resolveMediaUrl = (path?: string | null, analysisId?: string): string => {
+  if (analysisId) {
+    return `/api/analyses/${analysisId}/video`;
+  }
+  if (!path) return '';
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  return path.startsWith('/') ? path : `/${path}`;
 };
 
 export const incidentApi = {
