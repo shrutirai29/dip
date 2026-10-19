@@ -15,7 +15,7 @@ router = APIRouter()
 
 class CameraSessionStartRequest(BaseModel):
     device_index: int = Field(0, ge=0, description="Hardware webcam device index (e.g. 0 for default integrated webcam)")
-    conf_threshold: float = Field(0.25, ge=0.05, le=1.0)
+    conf_threshold: float = Field(0.30, ge=0.05, le=1.0, description="Confidence threshold (calibrated 0.30 baseline to suppress background clutter)")
     inference_size: int = Field(640, ge=320, le=1280)
     perspective_weight: float = Field(1.0, ge=0.0, le=3.0)
     privacy_mode: str = Field("none", pattern="^(none|face_blur|full_anonymize)$")
@@ -125,6 +125,23 @@ def get_latest_frame_telemetry():
         )
 
     return telemetry
+
+
+@router.get("/diagnostics")
+def get_camera_diagnostics():
+    """
+    Development-only diagnostics endpoint returning:
+    - Raw YOLO candidate detections, confidences, coordinates, and filter outcomes
+    - Tracker internal tracks, states ('tentative' vs 'confirmed'), and hit counts
+    - Frame dimensions and model input size
+    """
+    detection_diag = live_pipeline_processor.detection_service.get_latest_diagnostics()
+    tracker_diag = live_pipeline_processor.tracker.get_diagnostic_tracks() if live_pipeline_processor.tracker else []
+    return {
+        "status": "operational",
+        "detection_diagnostics": detection_diag,
+        "tracker_diagnostics": tracker_diag
+    }
 
 
 @router.get("/snapshot")

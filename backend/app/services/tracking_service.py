@@ -1,22 +1,33 @@
 import numpy as np
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Any
 
 class SimpleByteTracker:
     """
-    Custom Greedy IoU Multi-Object Pedestrian Tracker:
+    Evidence-Based Multi-Object Pedestrian Tracker:
     - Maintains persistent track IDs across frames using greedy IoU matching.
+    - Two-stage track confirmation state machine ('tentative' -> 'confirmed'):
+        * Detections with high confidence (>= instant_confirm_conf) confirm immediately.
+        * Moderate confidence detections require min_hits consecutive frames to confirm.
+        * Unconfirmed tentative tracks that miss a single frame are immediately pruned.
+        * Stale tracks (lost_count > 0) are never exposed as active people.
     - Calculates instantaneous 2D pixel velocity (px/sec) and acceleration (px/sec²).
     - Tracks ground foot-points, directional heading angles, and active spatial zones (A1–C3).
     - Detects cross-boundary zone transitions to measure localized inflow and outflow.
-    - Note: This is a custom IoU-based tracking implementation tailored for monocular CCTV footage,
-      not the full external Kalman-filter ByteTrack library.
     """
 
-    def __init__(self, max_lost_frames: int = 15, iou_threshold: float = 0.3):
+    def __init__(
+        self,
+        max_lost_frames: int = 15,
+        iou_threshold: float = 0.3,
+        min_hits: int = 2,
+        instant_confirm_conf: float = 0.60
+    ):
         self.max_lost_frames = max_lost_frames
         self.iou_threshold = iou_threshold
+        self.min_hits = min_hits
+        self.instant_confirm_conf = instant_confirm_conf
         self.next_id = 1
-        self.tracks: Dict[int, Dict] = {}
+        self.tracks: Dict[int, Dict[str, Any]] = {}
 
     def _iou(self, boxA: list, boxB: list) -> float:
         wA = max(0.0, float(boxA[2] - boxA[0]))
@@ -50,39 +61,14 @@ class SimpleByteTracker:
         frame_height: int = 480
     ) -> List[Dict]:
         """
-        Takes raw detections and produces persistent tracked objects with velocity,
-        acceleration, directional angles, and zone assignment.
+        Takes validated person detections and updates confirmed tracked objects.
+        Returns only confirmed tracks actively detected in the current frame.
         """
-        if not self.tracks:
-            for det in detections:
-                bbox = det["bbox"]
-                cx = (bbox[0] + bbox[2]) / 2.0
-                cy = (bbox[1] + bbox[3]) / 2.0
-                foot_pt = (cx, float(bbox[3]))
-                zone = self._get_zone_name(cx, foot_pt[1], frame_width, frame_height)
-                
-                tid = self.next_id
-                self.next_id += 1
-                self.tracks[tid] = {
-                    "id": tid,
-                    "bbox": bbox,
-                    "centroid": (cx, cy),
-                    "foot_point": foot_pt,
-                    "history": [(cx, cy, timestamp_sec)],
-                    "lost_count": 0,
-                    "speed": 0.0,
-                    "acceleration": 0.0,
-                    "direction_angle": 0.0,
-                    "current_zone": zone,
-                    "prev_zone": zone,
-                    "confidence": det.get("confidence", 1.0)
-                }
-            return list(self.tracks.values())
-
         track_ids = list(self.tracks.keys())
         assigned_tracks = set()
         assigned_dets = set()
 
+        # 1. Match existing tracks with current detections using IoU
         if detections and track_ids:
             matches = []
             for tid in track_ids:
@@ -97,63 +83,80 @@ class SimpleByteTracker:
                 if tid not in assigned_tracks and d_idx not in assigned_dets:
                     assigned_tracks.add(tid)
                     assigned_dets.add(d_idx)
-                    
+
                     det = detections[d_idx]
                     bbox = det["bbox"]
+                    conf = float(det.get("confidence", 1.0))
                     cx = (bbox[0] + bbox[2]) / 2.0
                     cy = (bbox[1] + bbox[3]) / 2.0
                     foot_pt = (cx, float(bbox[3]))
                     new_zone = self._get_zone_name(cx, foot_pt[1], frame_width, frame_height)
-                    
+
                     old_history = self.tracks[tid]["history"]
                     old_cx, old_cy, old_time = old_history[-1]
                     old_speed = self.tracks[tid].get("speed", 0.0)
-                    
+
                     dt = max(0.001, timestamp_sec - old_time)
                     dist = np.hypot(cx - old_cx, cy - old_cy)
                     current_speed = dist / dt  # px/sec
-                    
-                    # Acceleration = delta_v / delta_t
+
                     accel = (current_speed - old_speed) / dt
                     direction = np.arctan2(cy - old_cy, cx - old_cx)
-                    
+
                     new_hist = old_history + [(cx, cy, timestamp_sec)]
                     if len(new_hist) > 30:
                         new_hist = new_hist[-30:]
-                        
+
+                    new_hits = self.tracks[tid].get("hits", 1) + 1
+                    is_confirmed = (
+                        self.tracks[tid].get("is_confirmed", False)
+                        or new_hits >= self.min_hits
+                        or conf >= self.instant_confirm_conf
+                    )
+
                     self.tracks[tid].update({
                         "bbox": bbox,
                         "centroid": (cx, cy),
                         "foot_point": foot_pt,
                         "history": new_hist,
+                        "hits": new_hits,
                         "lost_count": 0,
+                        "state": "confirmed" if is_confirmed else "tentative",
+                        "is_confirmed": is_confirmed,
                         "speed": float(current_speed),
                         "acceleration": float(accel),
                         "direction_angle": float(direction),
                         "prev_zone": self.tracks[tid]["current_zone"],
                         "current_zone": new_zone,
-                        "confidence": det.get("confidence", 1.0)
+                        "confidence": conf
                     })
 
+        # 2. Increment lost count for unmatched tracks
         for tid in track_ids:
             if tid not in assigned_tracks:
                 self.tracks[tid]["lost_count"] += 1
 
-        # Prune expired tracks
+        # 3. Prune tracks:
+        # - Tentative tracks that were not detected this frame (lost_count > 0) are PRUNED IMMEDIATELY.
+        # - Confirmed tracks that exceed max_lost_frames are pruned.
         self.tracks = {
             tid: trk for tid, trk in self.tracks.items()
-            if trk["lost_count"] <= self.max_lost_frames
+            if (trk.get("is_confirmed", False) and trk["lost_count"] <= self.max_lost_frames)
         }
 
-        # Initialize unassigned detections
+        # 4. Initialize unassigned detections
         for d_idx, det in enumerate(detections):
             if d_idx not in assigned_dets:
                 bbox = det["bbox"]
+                conf = float(det.get("confidence", 1.0))
                 cx = (bbox[0] + bbox[2]) / 2.0
                 cy = (bbox[1] + bbox[3]) / 2.0
                 foot_pt = (cx, float(bbox[3]))
                 zone = self._get_zone_name(cx, foot_pt[1], frame_width, frame_height)
-                
+
+                is_confirmed = (conf >= self.instant_confirm_conf) or (self.min_hits <= 1)
+                state = "confirmed" if is_confirmed else "tentative"
+
                 tid = self.next_id
                 self.next_id += 1
                 self.tracks[tid] = {
@@ -162,13 +165,36 @@ class SimpleByteTracker:
                     "centroid": (cx, cy),
                     "foot_point": foot_pt,
                     "history": [(cx, cy, timestamp_sec)],
+                    "hits": 1,
                     "lost_count": 0,
+                    "state": state,
+                    "is_confirmed": is_confirmed,
                     "speed": 0.0,
                     "acceleration": 0.0,
                     "direction_angle": 0.0,
                     "current_zone": zone,
                     "prev_zone": zone,
-                    "confidence": det.get("confidence", 1.0)
+                    "confidence": conf
                 }
 
-        return [trk for trk in self.tracks.values() if trk["lost_count"] == 0]
+        # 5. Return strictly confirmed tracks that are actively present (lost_count == 0)
+        return [
+            trk for trk in self.tracks.values()
+            if trk["lost_count"] == 0 and trk.get("is_confirmed", False)
+        ]
+
+    def get_diagnostic_tracks(self) -> List[Dict[str, Any]]:
+        """Exposes internal tracker state including tentative and lost tracks for diagnostics."""
+        return [
+            {
+                "id": trk["id"],
+                "state": trk.get("state", "tentative"),
+                "is_confirmed": trk.get("is_confirmed", False),
+                "hits": trk.get("hits", 1),
+                "lost_count": trk["lost_count"],
+                "confidence": trk.get("confidence", 0.0),
+                "bbox": trk["bbox"]
+            }
+            for trk in self.tracks.values()
+        ]
+

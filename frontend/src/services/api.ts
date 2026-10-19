@@ -139,6 +139,11 @@ export const cameraApi = {
     return res.data;
   },
 
+  getDiagnostics: async (): Promise<any> => {
+    const res = await api.get<any>('/camera/diagnostics');
+    return res.data;
+  },
+
   getStreamUrl: (): string => '/api/camera/stream',
   getSnapshotUrl: (): string => `/api/camera/snapshot?t=${Date.now()}`,
 };

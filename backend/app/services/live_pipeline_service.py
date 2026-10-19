@@ -79,7 +79,12 @@ class LivePipelineProcessor:
             self.weight_congestion = weight_congestion
 
             # Re-initialize stateful tracking and risk engines
-            self.tracker = SimpleByteTracker(max_lost_frames=15, iou_threshold=0.3)
+            self.tracker = SimpleByteTracker(
+                max_lost_frames=settings.TRACKER_MAX_LOST,
+                iou_threshold=0.3,
+                min_hits=settings.TRACKER_MIN_HITS,
+                instant_confirm_conf=settings.TRACKER_INSTANT_CONFIRM_CONF
+            )
             self.forecasting_engine = PatternAndForecastingEngine(history_window=25)
             self.risk_engine = CrowdRiskEngine(
                 weight_density=self.weight_density,
@@ -171,22 +176,34 @@ class LivePipelineProcessor:
                 flow_entropy = flow_data["directional_entropy"]
                 motion_var = flow_data["motion_variance"]
 
-                # 3. YOLOv8 Person Detection (Class 0 strict filter)
+                # 3. YOLOv8 Person Detection (Class 0 strict filter with active conf_threshold)
                 detections = self.detection_service.detect_persons(
-                    frame_clean, imgsz=self.inference_size
+                    frame_clean,
+                    imgsz=self.inference_size,
+                    conf_threshold=self.conf_threshold
                 )
-                person_count = len(detections)
 
-                # 4. Multi-Object ByteTrack
+                # 4. Multi-Object ByteTrack (Confirmed Tracks State Machine)
                 active_tracks = self.tracker.update(detections, timestamp_sec, width, height)
+                confirmed_detections = [
+                    {
+                        "bbox": t["bbox"],
+                        "confidence": t.get("confidence", 1.0),
+                        "class_id": 0,
+                        "class_name": "person"
+                    }
+                    for t in active_tracks
+                ]
+                person_count = len(active_tracks)
+
                 speeds = [t["speed"] for t in active_tracks]
                 accels = [t["acceleration"] for t in active_tracks]
                 mean_speed = float(np.mean(speeds)) if speeds else 0.0
                 mean_accel = float(np.mean(accels)) if accels else 0.0
 
-                # 5. Spatial 3x3 Quadrant Inflow/Outflow Telemetry
+                # 5. Spatial 3x3 Quadrant Inflow/Outflow Telemetry (Confirmed Persons Only)
                 grid_cells = self.density_service.compute_zone_telemetry(
-                    width, height, detections, active_tracks, flow_data, self.perspective_weight
+                    width, height, confirmed_detections, active_tracks, flow_data, self.perspective_weight
                 )
                 grid_densities = [c["normalized_density"] for c in grid_cells]
 
@@ -214,35 +231,36 @@ class LivePipelineProcessor:
                     sample_interval_sec=sample_interval,
                 )
 
-                # 9. Perspective Density Heatmap Splatting
+                # 9. Perspective Density Heatmap Splatting (Confirmed Persons Only)
                 heatmap_overlay = DIPProcessor.generate_density_heatmap(
                     (height, width),
-                    detections,
+                    confirmed_detections,
                     kernel_size=61,
                     sigma_base=14.0,
                     perspective_weight=self.perspective_weight,
                 )
                 annotated_frame = DIPProcessor.blend_heatmap_on_frame(frame_clean, heatmap_overlay, alpha=0.45)
 
-                # 10. Privacy Anonymization Filter (Face Blur or Silhouette)
+                # 10. Privacy Anonymization Filter (Face Blur or Silhouette on Confirmed Persons)
                 annotated_frame = DIPProcessor.apply_privacy_filter(
-                    annotated_frame, detections, mode=self.privacy_mode
+                    annotated_frame, confirmed_detections, mode=self.privacy_mode
                 )
 
                 # 11. Spatial Grid Overlay
                 annotated_frame = self.density_service.draw_grid_overlay(annotated_frame, grid_cells, alpha=0.22)
 
-                # 12. Draw Tracks & Velocity Vectors
+                # 12. Draw Confirmed Tracks & Velocity Vectors with Class & Confidence
                 for trk in active_tracks:
                     bx1, by1, bx2, by2 = [int(v) for v in trk["bbox"]]
                     tid = trk["id"]
+                    t_conf = trk.get("confidence", 0.0)
                     hist = trk.get("history", [])
                     if len(hist) > 1:
                         pts = np.array([(int(p[0]), int(p[1])) for p in hist], np.int32).reshape((-1, 1, 2))
                         cv2.polylines(annotated_frame, [pts], False, (0, 220, 255), 2)
 
                     cv2.rectangle(annotated_frame, (bx1, by1), (bx2, by2), (0, 255, 128), 2)
-                    label = f"ID:{tid} v:{trk['speed']:.1f}px/s"
+                    label = f"person #{tid} {t_conf:.2f} v:{trk['speed']:.1f}px/s"
                     cv2.putText(
                         annotated_frame,
                         label,

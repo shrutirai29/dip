@@ -1,0 +1,51 @@
+[
+  {
+    "filename": "scene_empty_socket.jpg",
+    "description": "Real webcam room containing wall socket with two black plugs and dangling cords. Empty (0 people).",
+    "ground_truth_people": 0,
+    "confusing_objects": [
+      "wall_socket",
+      "plugs",
+      "power_cords"
+    ]
+  },
+  {
+    "filename": "scene_empty_room_clutter.jpg",
+    "description": "Empty room with wall socket, power plugs, wall poster, and chair. Empty (0 people).",
+    "ground_truth_people": 0,
+    "confusing_objects": [
+      "wall_socket",
+      "plugs",
+      "poster",
+      "chair"
+    ]
+  },
+  {
+    "filename": "scene_webcam_one_person.jpg",
+    "description": "Single seated person facing webcam with wall socket in background. (1 person).",
+    "ground_truth_people": 1,
+    "confusing_objects": [
+      "wall_socket",
+      "headphone_cable"
+    ]
+  },
+  {
+    "filename": "scene_bus_multi_person.jpg",
+    "description": "Outdoor urban street scene with multiple pedestrians at varied distances and urban bus. (3 people).",
+    "ground_truth_people": 3,
+    "confusing_objects": [
+      "bus",
+      "signage",
+      "street_furniture"
+    ]
+  },
+  {
+    "filename": "scene_zidane_multi_person.jpg",
+    "description": "Two people standing, partially occluded, sports context. (2 people).",
+    "ground_truth_people": 2,
+    "confusing_objects": [
+      "clothing_folds",
+      "background_stands"
+    ]
+  }
+]

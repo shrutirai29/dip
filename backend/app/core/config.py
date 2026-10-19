@@ -18,10 +18,13 @@ class Settings:
     
     # YOLO Detection Settings
     YOLO_MODEL_NAME: str = "yolov8n.pt"  # nano model for fast CPU/CUDA inference
-    DEFAULT_CONF_THRESHOLD: float = 0.25
+    DEFAULT_CONF_THRESHOLD: float = 0.30  # Evidence-based baseline to suppress small background clutter
     DEFAULT_IOU_THRESHOLD: float = 0.45
     DEFAULT_INFERENCE_SIZE: int = 640
     DEFAULT_FRAME_STRIDE: int = 2  # Process every 2nd frame for real-time CPU balance
+    TRACKER_MIN_HITS: int = 2  # Consecutive frames required to confirm tentative track
+    TRACKER_INSTANT_CONFIRM_CONF: float = 0.60  # Immediate confirmation for high-confidence detections
+    TRACKER_MAX_LOST: int = 15
     
     # Risk Engine Heuristic Weights (Sum to 1.0)
     WEIGHT_DENSITY: float = 0.35

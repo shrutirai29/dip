@@ -15,7 +15,7 @@ export const WebcamIngestionPanel: React.FC = () => {
   const [status, setStatus] = useState<CameraSessionStatus | null>(null);
   const [deviceIndex, setDeviceIndex] = useState<number>(0);
   const [targetFps, setTargetFps] = useState<number>(25);
-  const [confThreshold, setConfThreshold] = useState<number>(0.25);
+  const [confThreshold, setConfThreshold] = useState<number>(0.30);
   const [perspectiveWeight, setPerspectiveWeight] = useState<number>(1.0);
   const [privacyMode, setPrivacyMode] = useState<string>('none');
 
