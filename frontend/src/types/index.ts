@@ -114,8 +114,12 @@ export interface AnalyticsSummary {
 }
 
 export interface CameraSessionStatus {
-  state: 'IDLE' | 'CONNECTING' | 'CONNECTED' | 'DEGRADED' | 'DISCONNECTED';
-  device_index: number | null;
+  state: 'IDLE' | 'CONNECTING' | 'CONNECTED' | 'DEGRADED' | 'RECONNECTING' | 'DISCONNECTED' | 'ERROR';
+  source_type?: 'webcam' | 'rtsp' | null;
+  device_index?: number | null;
+  camera_name?: string | null;
+  sanitized_url?: string | null;
+  location?: string | null;
   is_active: boolean;
   frames_captured: number;
   frames_consumed: number;
@@ -126,4 +130,7 @@ export interface CameraSessionStatus {
   processing_fps: number;
   uptime_seconds: number;
   error_message: string | null;
+  retry_count?: number;
+  max_retries?: number;
+  next_retry_delay_sec?: number;
 }

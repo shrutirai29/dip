@@ -134,6 +134,44 @@ export const cameraApi = {
     return res.data;
   },
 
+  validateRtsp: async (params: {
+    rtsp_url: string;
+    username?: string;
+    password?: string;
+  }): Promise<{
+    is_valid: boolean;
+    sanitized_url: string;
+    host?: string;
+    port?: number;
+    error_message?: string;
+  }> => {
+    const res = await api.post('/camera/rtsp/validate', params);
+    return res.data;
+  },
+
+  startRtsp: async (params: {
+    name: string;
+    rtsp_url: string;
+    username?: string;
+    password?: string;
+    timeout_seconds?: number;
+    max_retries?: number;
+    target_fps?: number;
+    conf_threshold?: number;
+    inference_size?: number;
+    perspective_weight?: number;
+    privacy_mode?: string;
+    location?: string;
+  }): Promise<CameraSessionStatus> => {
+    const res = await api.post<CameraSessionStatus>('/camera/rtsp/start', params);
+    return res.data;
+  },
+
+  retryRtsp: async (): Promise<CameraSessionStatus> => {
+    const res = await api.post<CameraSessionStatus>('/camera/rtsp/retry');
+    return res.data;
+  },
+
   getStatus: async (): Promise<CameraSessionStatus> => {
     const res = await api.get<CameraSessionStatus>('/camera/session/status');
     return res.data;

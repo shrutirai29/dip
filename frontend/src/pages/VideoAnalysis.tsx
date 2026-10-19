@@ -3,6 +3,7 @@ import {
   UploadCloud, 
   FileVideo, 
   Camera,
+  Radio,
   Play, 
   Pause, 
   XOctagon, 
@@ -22,14 +23,15 @@ import {
   LoadingBlock 
 } from '../components/UIComponents';
 import { WebcamIngestionPanel } from '../components/WebcamIngestionPanel';
+import { RtspIngestionPanel } from '../components/RtspIngestionPanel';
 import { useSystem } from '../context/SystemContext';
 
 export const VideoAnalysis: React.FC = () => {
   const navigate = useNavigate();
   const { setSelectedAnalysis, triggerGlobalRefresh } = useSystem();
 
-  // Source selection: Video Archive vs Live Webcam
-  const [sourceMode, setSourceMode] = useState<'video' | 'webcam'>('video');
+  // Source selection: Video Archive vs Live Webcam vs Network CCTV (RTSP)
+  const [sourceMode, setSourceMode] = useState<'video' | 'webcam' | 'rtsp'>('video');
 
   // Video catalog state
   const [videos, setVideos] = useState<Video[]>([]);
@@ -248,13 +250,15 @@ export const VideoAnalysis: React.FC = () => {
               SURVEILLANCE INGESTION STUDIO
             </h2>
             <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/10 text-cyan-300 border border-cyan-500/25">
-              {sourceMode === 'video' ? 'ASYNC BATCH' : 'LIVE WEBCAM FOUNDATION'}
+              {sourceMode === 'video' ? 'ASYNC BATCH' : sourceMode === 'webcam' ? 'LIVE WEBCAM FOUNDATION' : 'SECURE RTSP CCTV'}
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
             {sourceMode === 'video'
               ? 'Upload surveillance footage, select preset academic crowd scenarios, calibrate monocular perspective weights, and execute the computer vision pipeline with real-time progress tracking.'
-              : 'Acquire live video from a local webcam device with monotonic frame pacing, bounded latest-frame drop accounting, and incremental DIP telemetry.'}
+              : sourceMode === 'webcam'
+              ? 'Acquire live video from a local webcam device with monotonic frame pacing, bounded latest-frame drop accounting, and incremental DIP telemetry.'
+              : 'Ingest live network CCTV cameras over RTSP/RTSPS with SSRF protection, credential isolation, stalled stream detection, and resilient exponential reconnects.'}
           </p>
         </div>
 
@@ -282,11 +286,24 @@ export const VideoAnalysis: React.FC = () => {
             <Camera className="w-3.5 h-3.5" />
             <span>Live Local Webcam</span>
           </button>
+          <button
+            onClick={() => setSourceMode('rtsp')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
+              sourceMode === 'rtsp'
+                ? 'bg-cyan-600 text-white shadow-xs'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Radio className="w-3.5 h-3.5" />
+            <span>Network CCTV (RTSP)</span>
+          </button>
         </div>
       </div>
 
       {sourceMode === 'webcam' ? (
         <WebcamIngestionPanel />
+      ) : sourceMode === 'rtsp' ? (
+        <RtspIngestionPanel />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* =========================================================================

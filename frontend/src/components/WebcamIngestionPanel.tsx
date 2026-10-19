@@ -75,11 +75,13 @@ export const WebcamIngestionPanel: React.FC = () => {
   const isActive = status?.is_active || false;
   const currentState = status?.state || 'IDLE';
 
-  const stateColors = {
+  const stateColors: Record<string, string> = {
     IDLE: 'bg-slate-800 text-slate-300 border-slate-700',
     CONNECTING: 'bg-cyan-950/40 text-cyan-300 border-cyan-500/30 animate-pulse',
     CONNECTED: 'bg-emerald-950/40 text-emerald-300 border-emerald-500/30',
     DEGRADED: 'bg-amber-950/40 text-amber-300 border-amber-500/30',
+    RECONNECTING: 'bg-amber-950/40 text-amber-300 border-amber-500/30 animate-pulse',
+    ERROR: 'bg-rose-950/40 text-rose-300 border-rose-500/30',
     DISCONNECTED: 'bg-rose-950/40 text-rose-300 border-rose-500/30',
   };
 

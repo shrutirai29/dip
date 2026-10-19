@@ -46,6 +46,21 @@ class Settings:
     
     MAX_UPLOAD_SIZE_MB: int = 150
     
+    # RTSP CCTV Integration & Network Security
+    ALLOWED_CAMERA_SUBNETS: list[str] = [
+        "192.168.0.0/16",
+        "10.0.0.0/8",
+        "172.16.0.0/12"
+    ]
+    # Allowed ports: standard RTSP (554), RTSPS (322), alternate (8554, 5544, 10554, 7070)
+    # plus non-privileged dynamic port range (1024-65535)
+    ALLOWED_CAMERA_PORTS: list[int] = [554, 322, 8554, 5544, 10554, 7070]
+    ALLOW_LOOPBACK_RTSP_TESTING: bool = os.getenv("ALLOW_LOOPBACK_RTSP_TESTING", "0").lower() in ("1", "true")
+    DEFAULT_RTSP_TIMEOUT_SEC: float = 5.0
+    DEFAULT_RTSP_MAX_RETRIES: int = 5
+    DEFAULT_RTSP_INITIAL_BACKOFF_SEC: float = 1.0
+    DEFAULT_RTSP_MAX_BACKOFF_SEC: float = 16.0
+    
     # CORS Allowed Origins
     CORS_ORIGINS: list[str] = [
         "http://localhost:5173",

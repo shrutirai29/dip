@@ -15,6 +15,7 @@ import {
   Info,
   AlertTriangle,
   Camera,
+  Radio,
   Square,
   AlertCircle,
   Loader2
@@ -512,8 +513,16 @@ export const LiveMonitoring: React.FC = () => {
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <Camera className="w-3.5 h-3.5" />
-              <span>Live Webcam Feed</span>
+              {cameraStatus?.source_type === 'rtsp' ? (
+                <Radio className="w-3.5 h-3.5 text-cyan-200" />
+              ) : (
+                <Camera className="w-3.5 h-3.5" />
+              )}
+              <span>
+                {cameraStatus?.source_type === 'rtsp'
+                  ? `Network CCTV (${cameraStatus.camera_name || 'RTSP'})`
+                  : 'Live Webcam Feed'}
+              </span>
               {cameraStatus?.is_active && (
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" />
               )}
@@ -621,14 +630,18 @@ export const LiveMonitoring: React.FC = () => {
                     cameraStatus?.is_active ? 'bg-cyan-400 animate-pulse' : 'bg-slate-600'
                   }`} />
                   <h3 className="text-sm font-semibold text-white tracking-wide">
-                    Live Hardware Surveillance Viewport
+                    {cameraStatus?.source_type === 'rtsp'
+                      ? `CCTV Feed: ${cameraStatus.camera_name || 'RTSP Stream'}`
+                      : 'Live Hardware Surveillance Viewport'}
                   </h3>
                   <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950/40 text-cyan-300 border border-cyan-500/30">
-                    LIVE MJPEG STREAM
+                    {cameraStatus?.source_type === 'rtsp' ? 'RTSP/H.264 → MJPEG' : 'LIVE MJPEG STREAM'}
                   </span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-300 border border-slate-700">
-                    Standard Surveillance (Unfiltered)
-                  </span>
+                  {cameraStatus?.sanitized_url && (
+                    <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-300 border border-slate-700 truncate max-w-xs" title={cameraStatus.sanitized_url}>
+                      {cameraStatus.sanitized_url}
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-center space-x-3 text-xs font-mono text-slate-400">
