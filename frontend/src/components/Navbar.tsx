@@ -45,6 +45,7 @@ const navGroups: NavGroup[] = [
     items: [
       { name: 'Video Ingestion Studio', shortName: 'Studio', path: '/video-analysis', icon: VideoIcon },
       { name: 'Audit Session History', shortName: 'History', path: '/history', icon: History },
+      { name: 'Model & Scalability Benchmarks', shortName: 'Benchmarks', path: '/benchmarks', icon: Cpu },
       { name: 'DIP Methodology', shortName: 'Methodology', path: '/docs', icon: FileText },
       { name: 'Engine Calibration', shortName: 'Settings', path: '/settings', icon: Settings },
     ],

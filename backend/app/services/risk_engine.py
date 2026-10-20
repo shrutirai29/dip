@@ -61,9 +61,9 @@ class CrowdRiskEngine:
         band, and clear plain-language rationale.
         """
         # Input sanitization against NaN or non-finite values
-        current_count = max(0, int(current_count))
-        optical_flow_mag = float(np.nan_to_num(optical_flow_mag, nan=0.0, posinf=100.0, neginf=0.0))
-        mean_speed = float(np.nan_to_num(mean_speed, nan=0.0, posinf=100.0, neginf=0.0))
+        current_count = max(0, int(current_count)) if current_count is not None else 0
+        optical_flow_mag = float(np.nan_to_num(optical_flow_mag, nan=0.0, posinf=100.0, neginf=0.0)) if optical_flow_mag is not None else 0.0
+        mean_speed = float(np.nan_to_num(mean_speed, nan=0.0, posinf=100.0, neginf=0.0)) if mean_speed is not None else 0.0
         if grid_densities:
             grid_densities = [float(np.nan_to_num(g, nan=0.0, posinf=1.0, neginf=0.0)) for g in grid_densities]
 

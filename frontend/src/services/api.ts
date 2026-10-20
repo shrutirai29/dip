@@ -264,4 +264,32 @@ export const systemApi = {
   },
 };
 
+export const benchmarkApi = {
+  getDataset: async (): Promise<any> => {
+    const res = await api.get('/benchmark/dataset');
+    return res.data;
+  },
+  getAccuracy: async (confThreshold = 0.30, iouThreshold = 0.50): Promise<any> => {
+    const res = await api.get('/benchmark/accuracy', {
+      params: { conf_threshold: confThreshold, iou_threshold: iouThreshold }
+    });
+    return res.data;
+  },
+  getRiskValidation: async (): Promise<any> => {
+    const res = await api.get('/benchmark/risk-validation');
+    return res.data;
+  },
+  getPerformance: async (): Promise<any> => {
+    const res = await api.get('/benchmark/performance');
+    return res.data;
+  },
+  runPerformance: async (maxCameras = 4, durationSec = 5.0): Promise<any> => {
+    const res = await api.post('/benchmark/run-performance', null, {
+      params: { max_cameras: maxCameras, duration_sec: durationSec }
+    });
+    return res.data;
+  },
+  getExportUrl: (): string => '/api/benchmark/export',
+};
+
 export default api;

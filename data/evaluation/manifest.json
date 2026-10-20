@@ -1,0 +1,358 @@
+{
+  "dataset_version": "1.0.0",
+  "name": "CROWDGUARD Ground Truth Evaluation Benchmark",
+  "created_at": "2026-10-20T19:50:00Z",
+  "annotation_convention": {
+    "box_format": "[x1, y1, x2, y2]",
+    "coordinate_system": "pixel-space (top-left 0,0 to bottom-right x2,y2)",
+    "class_name": "person (COCO class 0)",
+    "iou_match_threshold": 0.50,
+    "truncation_rule": "Partially visible persons with visible head/torso are annotated with is_truncated=true",
+    "occlusion_rule": "Partially occluded persons with >=20% visible body parts are annotated with is_occluded=true"
+  },
+  "frames": [
+    {
+      "frame_id": "real_f000",
+      "file_name": "real_f000.jpg",
+      "source_video": "data/uploads/vid_2e28e1e65a.mp4",
+      "frame_index": 0,
+      "timestamp_sec": 0.0,
+      "width": 1560,
+      "height": 890,
+      "category": "multi_person",
+      "description": "Two primary foreground pedestrians walking in concourse plus background pedestrian",
+      "ground_truth_boxes": [
+        {
+          "bbox": [34, 42, 834, 846],
+          "class_name": "person",
+          "is_occluded": false,
+          "is_truncated": true
+        },
+        {
+          "bbox": [707, 21, 1456, 877],
+          "class_name": "person",
+          "is_occluded": false,
+          "is_truncated": true
+        },
+        {
+          "bbox": [499, 38, 719, 280],
+          "class_name": "person",
+          "is_occluded": true,
+          "is_truncated": false
+        }
+      ]
+    },
+    {
+      "frame_id": "real_f029",
+      "file_name": "real_f029.jpg",
+      "source_video": "data/uploads/vid_2e28e1e65a.mp4",
+      "frame_index": 29,
+      "timestamp_sec": 0.97,
+      "width": 1560,
+      "height": 890,
+      "category": "sparse",
+      "description": "Single pedestrian exiting left frame with motion blur",
+      "ground_truth_boxes": [
+        {
+          "bbox": [6, 15, 715, 857],
+          "class_name": "person",
+          "is_occluded": false,
+          "is_truncated": true
+        }
+      ]
+    },
+    {
+      "frame_id": "real_f058",
+      "file_name": "real_f058.jpg",
+      "source_video": "data/uploads/vid_2e28e1e65a.mp4",
+      "frame_index": 58,
+      "timestamp_sec": 1.93,
+      "width": 1560,
+      "height": 890,
+      "category": "empty",
+      "description": "Scene transition interval with zero visible pedestrians (empty scene test)",
+      "ground_truth_boxes": []
+    },
+    {
+      "frame_id": "real_f087",
+      "file_name": "real_f087.jpg",
+      "source_video": "data/uploads/vid_2e28e1e65a.mp4",
+      "frame_index": 87,
+      "timestamp_sec": 2.90,
+      "width": 1560,
+      "height": 890,
+      "category": "empty",
+      "description": "Scene transition screen with zero pedestrians (empty scene test)",
+      "ground_truth_boxes": []
+    },
+    {
+      "frame_id": "real_f116",
+      "file_name": "real_f116.jpg",
+      "source_video": "data/uploads/vid_2e28e1e65a.mp4",
+      "frame_index": 116,
+      "timestamp_sec": 3.87,
+      "width": 1560,
+      "height": 890,
+      "category": "empty",
+      "description": "Scene transition screen before crowd entry (empty scene test)",
+      "ground_truth_boxes": []
+    },
+    {
+      "frame_id": "real_f145",
+      "file_name": "real_f145.jpg",
+      "source_video": "data/uploads/vid_2e28e1e65a.mp4",
+      "frame_index": 145,
+      "timestamp_sec": 4.83,
+      "width": 1560,
+      "height": 890,
+      "category": "dense_occluded",
+      "description": "Dense pedestrian crowd entrance with multiple overlapping walkers",
+      "ground_truth_boxes": [
+        {
+          "bbox": [122, 230, 642, 868],
+          "class_name": "person",
+          "is_occluded": false,
+          "is_truncated": false
+        },
+        {
+          "bbox": [492, 182, 828, 869],
+          "class_name": "person",
+          "is_occluded": false,
+          "is_truncated": false
+        },
+        {
+          "bbox": [814, 214, 1369, 870],
+          "class_name": "person",
+          "is_occluded": false,
+          "is_truncated": false
+        },
+        {
+          "bbox": [783, 186, 977, 847],
+          "class_name": "person",
+          "is_occluded": true,
+          "is_truncated": false
+        },
+        {
+          "bbox": [70, 250, 291, 869],
+          "class_name": "person",
+          "is_occluded": true,
+          "is_truncated": true
+        }
+      ]
+    },
+    {
+      "frame_id": "real_f174",
+      "file_name": "real_f174.jpg",
+      "source_video": "data/uploads/vid_2e28e1e65a.mp4",
+      "frame_index": 174,
+      "timestamp_sec": 5.80,
+      "width": 1560,
+      "height": 890,
+      "category": "dense_occluded",
+      "description": "Active group transit with mutual occlusion",
+      "ground_truth_boxes": [
+        {
+          "bbox": [78, 210, 657, 867],
+          "class_name": "person",
+          "is_occluded": false,
+          "is_truncated": false
+        },
+        {
+          "bbox": [496, 162, 826, 867],
+          "class_name": "person",
+          "is_occluded": false,
+          "is_truncated": false
+        },
+        {
+          "bbox": [753, 175, 1342, 870],
+          "class_name": "person",
+          "is_occluded": false,
+          "is_truncated": false
+        },
+        {
+          "bbox": [95, 242, 260, 862],
+          "class_name": "person",
+          "is_occluded": true,
+          "is_truncated": true
+        }
+      ]
+    },
+    {
+      "frame_id": "real_f203",
+      "file_name": "real_f203.jpg",
+      "source_video": "data/uploads/vid_2e28e1e65a.mp4",
+      "frame_index": 203,
+      "timestamp_sec": 6.77,
+      "width": 1560,
+      "height": 890,
+      "category": "dense_occluded",
+      "description": "Multi-lane crowd flow across concourse",
+      "ground_truth_boxes": [
+        {
+          "bbox": [10, 146, 680, 871],
+          "class_name": "person",
+          "is_occluded": false,
+          "is_truncated": true
+        },
+        {
+          "bbox": [494, 129, 902, 869],
+          "class_name": "person",
+          "is_occluded": false,
+          "is_truncated": false
+        },
+        {
+          "bbox": [835, 178, 1514, 869],
+          "class_name": "person",
+          "is_occluded": false,
+          "is_truncated": true
+        },
+        {
+          "bbox": [762, 127, 1000, 832],
+          "class_name": "person",
+          "is_occluded": true,
+          "is_truncated": false
+        },
+        {
+          "bbox": [7, 199, 200, 837],
+          "class_name": "person",
+          "is_occluded": true,
+          "is_truncated": true
+        }
+      ]
+    },
+    {
+      "frame_id": "real_f232",
+      "file_name": "real_f232.jpg",
+      "source_video": "data/uploads/vid_2e28e1e65a.mp4",
+      "frame_index": 232,
+      "timestamp_sec": 7.73,
+      "width": 1560,
+      "height": 890,
+      "category": "multi_person",
+      "description": "Four pedestrians progressing through corridor",
+      "ground_truth_boxes": [
+        {
+          "bbox": [10, 169, 652, 867],
+          "class_name": "person",
+          "is_occluded": false,
+          "is_truncated": true
+        },
+        {
+          "bbox": [466, 104, 915, 868],
+          "class_name": "person",
+          "is_occluded": false,
+          "is_truncated": false
+        },
+        {
+          "bbox": [889, 110, 1539, 868],
+          "class_name": "person",
+          "is_occluded": false,
+          "is_truncated": true
+        },
+        {
+          "bbox": [816, 144, 1062, 664],
+          "class_name": "person",
+          "is_occluded": true,
+          "is_truncated": false
+        }
+      ]
+    },
+    {
+      "frame_id": "real_f261",
+      "file_name": "real_f261.jpg",
+      "source_video": "data/uploads/vid_2e28e1e65a.mp4",
+      "frame_index": 261,
+      "timestamp_sec": 8.70,
+      "width": 1560,
+      "height": 890,
+      "category": "multi_person",
+      "description": "Pedestrians continuing transit towards exit",
+      "ground_truth_boxes": [
+        {
+          "bbox": [11, 61, 619, 866],
+          "class_name": "person",
+          "is_occluded": false,
+          "is_truncated": true
+        },
+        {
+          "bbox": [442, 86, 922, 867],
+          "class_name": "person",
+          "is_occluded": false,
+          "is_truncated": false
+        },
+        {
+          "bbox": [840, 83, 1542, 870],
+          "class_name": "person",
+          "is_occluded": false,
+          "is_truncated": true
+        },
+        {
+          "bbox": [867, 74, 1129, 738],
+          "class_name": "person",
+          "is_occluded": true,
+          "is_truncated": false
+        }
+      ]
+    },
+    {
+      "frame_id": "syn_f010",
+      "file_name": "syn_f010.jpg",
+      "source_video": "data/sample_videos/crowd_bottleneck_demo.mp4",
+      "frame_index": 10,
+      "timestamp_sec": 0.40,
+      "width": 640,
+      "height": 480,
+      "category": "synthetic_simulation",
+      "description": "Synthetic agent simulation: 22 OpenCV geometric ovals/circles (0 real persons)",
+      "ground_truth_boxes": []
+    },
+    {
+      "frame_id": "syn_f050",
+      "file_name": "syn_f050.jpg",
+      "source_video": "data/sample_videos/crowd_bottleneck_demo.mp4",
+      "frame_index": 50,
+      "timestamp_sec": 2.00,
+      "width": 640,
+      "height": 480,
+      "category": "synthetic_simulation",
+      "description": "Synthetic agent simulation: 22 OpenCV geometric ovals/circles (0 real persons)",
+      "ground_truth_boxes": []
+    },
+    {
+      "frame_id": "syn_f100",
+      "file_name": "syn_f100.jpg",
+      "source_video": "data/sample_videos/crowd_bottleneck_demo.mp4",
+      "frame_index": 100,
+      "timestamp_sec": 4.00,
+      "width": 640,
+      "height": 480,
+      "category": "synthetic_simulation",
+      "description": "Synthetic bottleneck clustering of drawn geometric shapes (0 real persons)",
+      "ground_truth_boxes": []
+    },
+    {
+      "frame_id": "syn_f150",
+      "file_name": "syn_f150.jpg",
+      "source_video": "data/sample_videos/crowd_bottleneck_demo.mp4",
+      "frame_index": 150,
+      "timestamp_sec": 6.00,
+      "width": 640,
+      "height": 480,
+      "category": "synthetic_simulation",
+      "description": "Synthetic bottleneck clustering of drawn geometric shapes (0 real persons)",
+      "ground_truth_boxes": []
+    },
+    {
+      "frame_id": "syn_f200",
+      "file_name": "syn_f200.jpg",
+      "source_video": "data/sample_videos/crowd_bottleneck_demo.mp4",
+      "frame_index": 200,
+      "timestamp_sec": 8.00,
+      "width": 640,
+      "height": 480,
+      "category": "synthetic_simulation",
+      "description": "Synthetic bottleneck clustering of drawn geometric shapes (0 real persons)",
+      "ground_truth_boxes": []
+    }
+  ]
+}

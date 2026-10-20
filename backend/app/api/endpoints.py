@@ -22,6 +22,8 @@ from app.api.multi_camera_endpoints import router as multi_camera_router
 router = APIRouter()
 router.include_router(camera_router, prefix="/camera", tags=["Camera Ingestion"])
 router.include_router(multi_camera_router, prefix="/cameras", tags=["Multi-Camera Surveillance"])
+from app.api.benchmark_endpoints import router as benchmark_router
+router.include_router(benchmark_router, prefix="/benchmark", tags=["Evaluation"])
 
 # Active jobs tracking: analysis_id -> { "cancel_event": Event, "pause_event": Event }
 active_jobs: dict[str, dict] = {}
