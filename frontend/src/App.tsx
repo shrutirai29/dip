@@ -12,6 +12,7 @@ import { Incidents } from './pages/Incidents';
 import { SessionHistory } from './pages/SessionHistory';
 import { SettingsPage } from './pages/Settings';
 import { Documentation } from './pages/Documentation';
+import { MultiCameraPage } from './pages/MultiCamera';
 
 import './App.css';
 
@@ -35,7 +36,7 @@ const AppLayout: React.FC = () => {
         {/* Scrollable Page Content */}
         <main className="flex-1 p-4 md:p-6 lg:p-8 max-w-[1700px] w-full mx-auto">
           <Routes>
-            <Route path="/" element={<Overview />} />
+            <Route path="/" element={<Overview />} />`r`n            <Route path="/cameras" element={<MultiCameraPage />} />
             <Route path="/video-analysis" element={<VideoAnalysis />} />
             <Route path="/monitoring" element={<LiveMonitoring />} />
             <Route path="/analytics" element={<Analytics />} />

@@ -61,6 +61,12 @@ class Settings:
     DEFAULT_RTSP_INITIAL_BACKOFF_SEC: float = 1.0
     DEFAULT_RTSP_MAX_BACKOFF_SEC: float = 16.0
     
+    # Multi-Camera Resource Limits & Scheduling
+    MAX_REGISTERED_CAMERAS: int = 16
+    MAX_ACTIVE_STREAMS: int = 4
+    DEFAULT_CAMERA_FPS: float = 25.0
+    CAMERA_BUFFER_MAX_AGE_SEC: float = 0.5
+    
     # CORS Allowed Origins
     CORS_ORIGINS: list[str] = [
         "http://localhost:5173",

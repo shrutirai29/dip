@@ -114,7 +114,8 @@ export interface AnalyticsSummary {
 }
 
 export interface CameraSessionStatus {
-  state: 'IDLE' | 'CONNECTING' | 'CONNECTED' | 'DEGRADED' | 'RECONNECTING' | 'DISCONNECTED' | 'ERROR';
+  camera_id?: string;
+  state: 'IDLE' | 'CONNECTING' | 'CONNECTED' | 'DEGRADED' | 'RECONNECTING' | 'DISCONNECTED' | 'ERROR' | 'STOPPING';
   source_type?: 'webcam' | 'rtsp' | null;
   device_index?: number | null;
   camera_name?: string | null;
@@ -126,6 +127,7 @@ export interface CameraSessionStatus {
   frames_dropped: number;
   latest_frame_id: number;
   latest_frame_timestamp: number;
+  frame_age_seconds?: number | null;
   measured_fps: number;
   processing_fps: number;
   uptime_seconds: number;
@@ -133,4 +135,39 @@ export interface CameraSessionStatus {
   retry_count?: number;
   max_retries?: number;
   next_retry_delay_sec?: number;
+  person_count?: number;
+  smoothed_risk_score?: number;
+  risk_band?: 'Low' | 'Moderate' | 'High' | 'Critical';
+}
+
+export interface MultiCameraHealth {
+  total_registered: number;
+  max_registered_limit: number;
+  active_streams: number;
+  max_active_limit: number;
+  connected_count: number;
+  degraded_count: number;
+  reconnecting_count: number;
+  error_or_disconnected_count: number;
+  total_observed_persons: number;
+  highest_risk_score: number;
+  system_status: 'OPERATIONAL' | 'DEGRADED' | 'OFFLINE' | 'IDLE';
+}
+
+export interface CameraRegisterPayload {
+  name: string;
+  source_type: 'webcam' | 'rtsp';
+  device_index?: number;
+  rtsp_url?: string;
+  username?: string;
+  password?: string;
+  location?: string;
+  target_fps?: number;
+  conf_threshold?: number;
+  inference_size?: number;
+  perspective_weight?: number;
+  privacy_mode?: string;
+  timeout_seconds?: number;
+  max_retries?: number;
+  start_immediately?: boolean;
 }

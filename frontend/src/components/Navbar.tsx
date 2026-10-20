@@ -34,6 +34,7 @@ const navGroups: NavGroup[] = [
     groupName: 'MONITORING & SURVEILLANCE',
     items: [
       { name: 'Command Overview', shortName: 'Overview', path: '/', icon: LayoutDashboard },
+      { name: 'Multi-Camera Fleet', shortName: 'Cameras', path: '/cameras', icon: Radio }, 
       { name: 'Telemetry & Replay', shortName: 'Telemetry', path: '/monitoring', icon: Activity },
       { name: 'Dynamics & Forecasts', shortName: 'Forecasts', path: '/analytics', icon: BarChart3 },
       { name: 'Incident Warnings', shortName: 'Incidents', path: '/incidents', icon: AlertTriangle },

@@ -196,6 +196,67 @@ export const cameraApi = {
   getSnapshotUrl: (): string => `/api/camera/snapshot?t=${Date.now()}`,
 };
 
+export const multiCameraApi = {
+  list: async (): Promise<CameraSessionStatus[]> => {
+    const res = await api.get<CameraSessionStatus[]>('/cameras');
+    return res.data;
+  },
+
+  getDetails: async (cameraId: string): Promise<CameraSessionStatus> => {
+    const res = await api.get<CameraSessionStatus>(`/cameras/${cameraId}`);
+    return res.data;
+  },
+
+  register: async (payload: any): Promise<CameraSessionStatus> => {
+    const res = await api.post<CameraSessionStatus>('/cameras', payload);
+    return res.data;
+  },
+
+  start: async (cameraId: string): Promise<CameraSessionStatus> => {
+    const res = await api.post<CameraSessionStatus>(`/cameras/${cameraId}/start`);
+    return res.data;
+  },
+
+  stop: async (cameraId: string): Promise<CameraSessionStatus> => {
+    const res = await api.post<CameraSessionStatus>(`/cameras/${cameraId}/stop`);
+    return res.data;
+  },
+
+  retry: async (cameraId: string): Promise<CameraSessionStatus> => {
+    const res = await api.post<CameraSessionStatus>(`/cameras/${cameraId}/retry`);
+    return res.data;
+  },
+
+  remove: async (cameraId: string): Promise<{ status: string; message: string }> => {
+    const res = await api.delete<{ status: string; message: string }>(`/cameras/${cameraId}`);
+    return res.data;
+  },
+
+  getTelemetry: async (cameraId: string): Promise<FrameRecord> => {
+    const res = await api.get<FrameRecord>(`/cameras/${cameraId}/telemetry`);
+    return res.data;
+  },
+
+  getHealth: async (): Promise<any> => {
+    const res = await api.get<any>('/cameras/health');
+    return res.data;
+  },
+
+  validateSource: async (params: { rtsp_url: string; username?: string; password?: string }): Promise<{
+    is_valid: boolean;
+    sanitized_url: string;
+    host?: string;
+    port?: number;
+    error_message?: string;
+  }> => {
+    const res = await api.post('/cameras/validate-source', params);
+    return res.data;
+  },
+
+  getStreamUrl: (cameraId: string): string => `/api/cameras/${cameraId}/stream`,
+  getSnapshotUrl: (cameraId: string): string => `/api/cameras/${cameraId}/snapshot?t=${Date.now()}`,
+};
+
 export const systemApi = {
   healthCheck: async (): Promise<{ status: string; system: string; version: string }> => {
     const res = await api.get<{ status: string; system: string; version: string }>('/health');
