@@ -456,6 +456,8 @@ class CameraSession:
 
     def _inference_worker(self):
         """Camera-specific inference loop executing isolated tracking, DIP, and risk calculations."""
+        prev_gray = None
+        last_time = time.time()
         fps_start = time.time()
         fps_counter = 0
 
@@ -466,85 +468,150 @@ class CameraSession:
                 continue
 
             frame_id, timestamp_sec, frame_bgr = frame_data
+            h, w = frame_bgr.shape[:2]
+            width, height = w, h
+            now_t = time.time()
+            sample_interval = max(0.01, now_t - last_time)
+            last_time = now_t
+
             try:
-                # 1. Detection: run person inference (thread-safe shared detector)
+                # 1. DIP Preprocessing & Edge-Preserving Denoise
+                frame_clean = DIPProcessor.preprocess_frame(frame_bgr, apply_denoise=True)
+
+                # 2. Gunnar Farneback Dense Optical Flow & Directional Shannon Entropy
+                curr_gray = cv2.cvtColor(frame_clean, cv2.COLOR_BGR2GRAY)
+                curr_gray_small = cv2.resize(curr_gray, (320, 240))
+                flow_data = DIPProcessor.compute_optical_flow_dynamics(prev_gray, curr_gray_small)
+                prev_gray = curr_gray_small
+
+                flow_mag = flow_data["mean_magnitude"]
+                flow_entropy = flow_data["directional_entropy"]
+                motion_var = flow_data["motion_variance"]
+
+                # 3. Detection: run person inference (thread-safe shared detector)
                 if self._shared_detector is not None:
                     raw_detections = self._shared_detector.detect_persons(
-                        frame=frame_bgr,
+                        frame=frame_clean,
                         imgsz=self.config.inference_size,
                         conf_threshold=self.config.conf_threshold
                     )
                 else:
                     raw_detections = []
 
-                # 2. Tracking: per-camera isolated ByteTracker
-                active_tracks = self.tracker.update(raw_detections, frame_bgr)
+                # 4. Tracking: per-camera isolated ByteTracker (Confirmed Tracks State Machine)
+                active_tracks = self.tracker.update(raw_detections, timestamp_sec, width, height)
+                confirmed_detections = [
+                    {
+                        "bbox": t["bbox"],
+                        "confidence": t.get("confidence", 1.0),
+                        "class_id": 0,
+                        "class_name": "person"
+                    }
+                    for t in active_tracks
+                ]
                 person_count = len(active_tracks)
 
-                # 3. Density & Velocity
-                density_map = self.density_service.compute_density_heatmap(
-                    frame_bgr=frame_bgr,
-                    tracks=active_tracks,
-                    perspective_weight=self.config.perspective_weight
-                )
-                flow_mag, flow_entropy, motion_var = DIPProcessor.compute_optical_flow_metrics(frame_bgr)
-                mean_speed, mean_accel = self.density_service.compute_crowd_velocity_metrics(active_tracks)
+                speeds = [t["speed"] for t in active_tracks]
+                accels = [t["acceleration"] for t in active_tracks]
+                mean_speed = float(np.mean(speeds)) if speeds else 0.0
+                mean_accel = float(np.mean(accels)) if accels else 0.0
 
-                # 4. Localized 3x3 Spatial Grid Matrix
-                grid_cells = self.density_service.get_localized_quadrant_analysis(
-                    frame_bgr=frame_bgr,
-                    tracks=active_tracks,
-                    density_map=density_map,
-                    optical_flow_magnitude=flow_mag
+                # 5. Spatial 3x3 Quadrant Inflow/Outflow Telemetry (Confirmed Persons Only)
+                grid_cells = self.density_service.compute_zone_telemetry(
+                    width, height, confirmed_detections, active_tracks, flow_data, self.config.perspective_weight
                 )
+                grid_densities = [c["normalized_density"] for c in grid_cells]
 
-                # 5. Risk Assessment (Isolated per-camera history)
-                risk_data = self.risk_engine.calculate_risk(
-                    person_count=person_count,
-                    density_map=density_map,
+                # 6. Crowd Pattern Recognition
+                pattern_data = self.forecasting_engine.detect_crowd_patterns(
+                    active_tracks, grid_cells, flow_entropy, mean_speed, person_count
+                )
+                detected_pattern = pattern_data["pattern"]
+
+                # 7. Heuristic Explainable Risk Index
+                risk_data = self.risk_engine.compute_risk(
+                    current_count=person_count,
                     optical_flow_mag=flow_mag,
-                    directional_entropy=flow_entropy,
-                    motion_variance=motion_var,
-                    active_tracks_count=len(active_tracks),
                     mean_speed=mean_speed,
-                    mean_accel=mean_accel,
-                    current_timestamp_sec=timestamp_sec
+                    grid_densities=grid_densities,
                 )
 
-                # 6. Forecasting & Crowd Pattern Classification
-                self.forecasting_engine.record_state(
-                    timestamp_sec=timestamp_sec,
-                    smoothed_risk=risk_data["smoothed_score"],
-                    count=person_count,
-                    optical_flow_mag=flow_mag,
-                    entropy=flow_entropy,
-                    congestion=risk_data["congestion_comp"]
+                # 8. Multi-Horizon Risk Forecast (+5s, +10s, +15s)
+                forecast_data = self.forecasting_engine.compute_short_term_forecast(
+                    current_risk=risk_data["smoothed_score"],
+                    current_density_comp=risk_data["density_comp"],
+                    current_entropy=flow_entropy,
+                    current_speed=mean_speed,
+                    detected_pattern=detected_pattern,
+                    sample_interval_sec=sample_interval,
                 )
-                detected_pattern = self.forecasting_engine.classify_pattern()
-                forecast_data = self.forecasting_engine.forecast_risk_levels(current_risk=risk_data["smoothed_score"])
 
-                # 7. Privacy filtering & Annotated HUD Render
-                annotated_bgr = frame_bgr.copy()
+                # 9. Perspective Density Heatmap Splatting (Confirmed Persons Only)
+                heatmap_overlay = DIPProcessor.generate_density_heatmap(
+                    (height, width),
+                    confirmed_detections,
+                    kernel_size=61,
+                    sigma_base=14.0,
+                    perspective_weight=self.config.perspective_weight,
+                )
+                annotated_frame = DIPProcessor.blend_heatmap_on_frame(frame_clean, heatmap_overlay, alpha=0.45)
+
+                # 10. Privacy Anonymization Filter (Face Blur or Silhouette on Confirmed Persons)
                 if self.config.privacy_mode != "none":
-                    annotated_bgr = DIPProcessor.apply_privacy_filter(
-                        frame_bgr=annotated_bgr,
-                        tracks=active_tracks,
-                        privacy_mode=self.config.privacy_mode
+                    annotated_frame = DIPProcessor.apply_privacy_filter(
+                        annotated_frame, confirmed_detections, mode=self.config.privacy_mode
                     )
 
-                annotated_bgr = DIPProcessor.draw_visual_hud(
-                    frame_bgr=annotated_bgr,
-                    tracks=active_tracks,
-                    risk_score=risk_data["smoothed_score"],
-                    risk_band=risk_data["band"],
-                    pattern=detected_pattern,
-                    person_count=person_count,
-                    flow_magnitude=flow_mag,
-                    entropy=flow_entropy
+                # 11. Spatial Grid Overlay
+                annotated_frame = self.density_service.draw_grid_overlay(annotated_frame, grid_cells, alpha=0.22)
+
+                # 12. Draw Confirmed Tracks & Velocity Vectors with Class & Confidence
+                for trk in active_tracks:
+                    bx1, by1, bx2, by2 = [int(v) for v in trk["bbox"]]
+                    tid = trk["id"]
+                    t_conf = trk.get("confidence", 0.0)
+                    hist = trk.get("history", [])
+                    if len(hist) > 1:
+                        pts = np.array([(int(p[0]), int(p[1])) for p in hist], np.int32).reshape((-1, 1, 2))
+                        cv2.polylines(annotated_frame, [pts], False, (0, 220, 255), 2)
+
+                    cv2.rectangle(annotated_frame, (bx1, by1), (bx2, by2), (0, 255, 128), 2)
+                    label = f"person #{tid} {t_conf:.2f} v:{trk['speed']:.1f}px/s"
+                    cv2.putText(
+                        annotated_frame,
+                        label,
+                        (bx1, max(14, by1 - 5)),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.42,
+                        (0, 255, 128),
+                        1,
+                        cv2.LINE_AA,
+                    )
+
+                # 13. HUD Surveillance Header (include Camera Name & State)
+                cv2.rectangle(annotated_frame, (0, 0), (width, 46), (10, 15, 24), -1)
+                score = risk_data["smoothed_score"]
+                risk_color = (
+                    (34, 197, 94)
+                    if score < 25
+                    else (245, 158, 11)
+                    if score < 50
+                    else (249, 115, 22)
+                    if score < 75
+                    else (239, 68, 68)
                 )
 
-                success, enc_buf = cv2.imencode('.jpg', annotated_bgr, [cv2.IMWRITE_JPEG_QUALITY, 80])
-                jpeg_bytes = enc_buf.tobytes() if success else None
+                hud_line1 = f"[{self.config.name}] CROWD: {person_count} | RISK: {score:.1f} ({risk_data['band']}) | +10s: {forecast_data['forecast_10s']:.1f}"
+                cv2.putText(annotated_frame, hud_line1, (12, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.46, (244, 247, 250), 1, cv2.LINE_AA)
+
+                hud_line2 = f"PATTERN: {detected_pattern} | ENTROPY: {flow_entropy:.2f} | OPT-FLOW: {flow_mag:.1f}px"
+                cv2.putText(annotated_frame, hud_line2, (12, 38), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (140, 154, 170), 1, cv2.LINE_AA)
+
+                cv2.circle(annotated_frame, (width - 20, 23), 9, risk_color, -1)
+
+                # Encode JPEG in-memory
+                success, encoded_jpeg = cv2.imencode(".jpg", annotated_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+                jpeg_bytes = encoded_jpeg.tobytes() if success else None
 
                 # Assemble Telemetry Object
                 telemetry = {
@@ -577,19 +644,19 @@ class CameraSession:
                     "camera_state": self.state,
                 }
 
-                # Update published state
+                # Update published state thread-safely
                 fps_counter += 1
-                now = time.time()
-                elapsed = now - fps_start
+                now_t = time.time()
+                elapsed = now_t - fps_start
                 with self._telemetry_lock:
                     self._latest_telemetry = telemetry
                     if jpeg_bytes:
                         self._latest_jpeg = jpeg_bytes
                     self._latest_seq += 1
-                    self._last_inference_timestamp = now
+                    self._last_inference_timestamp = now_t
                     if elapsed >= 1.0:
                         self._processing_fps = fps_counter / elapsed
-                        fps_start = now
+                        fps_start = now_t
                         fps_counter = 0
 
             except Exception as e:
