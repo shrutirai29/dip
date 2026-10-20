@@ -36,13 +36,13 @@ export const MultiCameraPage: React.FC = () => {
   const [selectedCameraForView, setSelectedCameraForView] = useState<CameraSessionStatus | null>(null);
 
   // Form registration state
-  const [formName, setFormName] = useState<string>('East Sector CCTV');
-  const [formType, setFormType] = useState<'webcam' | 'rtsp'>('rtsp');
+  const [formName, setFormName] = useState<string>('Live Webcam Node');
+  const [formType, setFormType] = useState<'webcam' | 'rtsp'>('webcam');
   const [formDeviceIndex, setFormDeviceIndex] = useState<number>(0);
-  const [formRtspUrl, setFormRtspUrl] = useState<string>('rtsp://192.168.1.120:554/live/ch0');
+  const [formRtspUrl, setFormRtspUrl] = useState<string>('rtsp://127.0.0.1:8554/live/stream');
   const [formUsername, setFormUsername] = useState<string>('');
   const [formPassword, setFormPassword] = useState<string>('');
-  const [formLocation, setFormLocation] = useState<string>('Perimeter North');
+  const [formLocation, setFormLocation] = useState<string>('Main Entrance');
   const [formTargetFps, setFormTargetFps] = useState<number>(25);
   const [formConfThreshold, setFormConfThreshold] = useState<number>(0.30);
   const [formPrivacyMode, setFormPrivacyMode] = useState<string>('none');
@@ -352,7 +352,7 @@ export const MultiCameraPage: React.FC = () => {
 
                 {/* Card Viewport Preview */}
                 <div className="aspect-video bg-[#05080E] relative flex items-center justify-center overflow-hidden border-b border-[#192638]">
-                  {cam.is_active ? (
+                  {cam.state === 'CONNECTED' ? (
                     <>
                       <img
                         src={multiCameraApi.getStreamUrl(camId)}
@@ -375,12 +375,26 @@ export const MultiCameraPage: React.FC = () => {
                         <Maximize2 className="w-3.5 h-3.5" />
                       </button>
                     </>
+                  ) : cam.state === 'CONNECTING' ? (
+                    <div className="text-center p-6 space-y-2">
+                      <div className="w-8 h-8 rounded-full border-2 border-cyan-500 border-t-transparent animate-spin mx-auto" />
+                      <p className="text-xs text-cyan-300 font-mono">Connecting to stream...</p>
+                      <p className="text-[10px] text-slate-500 font-mono truncate max-w-xs mx-auto">
+                        {cam.sanitized_url || `Device #${cam.device_index}`}
+                      </p>
+                    </div>
+                  ) : cam.state === 'RECONNECTING' ? (
+                    <div className="text-center p-6 space-y-2">
+                      <div className="w-8 h-8 rounded-full border-2 border-amber-500 border-t-transparent animate-spin mx-auto" />
+                      <p className="text-xs text-amber-300 font-mono">Reconnecting (Attempt {cam.retry_count}/{cam.max_retries})...</p>
+                      <p className="text-[10px] text-slate-400 font-mono">Next try in {cam.next_retry_delay_sec?.toFixed(1)}s</p>
+                    </div>
                   ) : (
                     <div className="text-center p-6 space-y-2">
                       <div className="w-10 h-10 rounded-xl bg-[#0E1622] border border-[#1E2D40] flex items-center justify-center mx-auto text-slate-500">
                         {cam.source_type === 'rtsp' ? <Radio className="w-5 h-5" /> : <Camera className="w-5 h-5" />}
                       </div>
-                      <p className="text-xs text-slate-400 font-mono">Stream Inactive</p>
+                      <p className="text-xs text-slate-400 font-mono">Stream Inactive / Disconnected</p>
                     </div>
                   )}
                 </div>

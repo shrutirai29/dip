@@ -398,7 +398,9 @@ class CameraSession:
                         time.sleep(sleep_time)
 
             except Exception as e:
-                logger.warning(f"RTSP stream drop on camera {self.camera_id}: {e}")
+                err = f"RTSP connection error on {self.config.sanitized_url}: {e}"
+                logger.warning(err)
+                self._error_message = err
             finally:
                 self._release_capture()
 
