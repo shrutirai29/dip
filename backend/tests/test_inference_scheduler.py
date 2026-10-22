@@ -146,3 +146,87 @@ def test_scheduler_camera_unregistration_cleanup():
     assert cam_id not in scheduler._registered_cameras
     assert cam_id not in scheduler._camera_order
     assert cam_id not in scheduler._pending_slots
+
+
+def test_scheduler_monotonic_latency_boundaries_and_counters():
+    """Verify drift-free monotonic latency tracking and separated telemetry counters."""
+    mock_detector = MagicMock()
+    mock_detector.detect_persons_with_diagnostics.return_value = (
+        [{"bbox": [5, 5, 25, 25], "confidence": 0.95}],
+        {"mock": True}
+    )
+    scheduler = FairInferenceScheduler(shared_detector=mock_detector)
+    cam_id = "cam_mono_test"
+    scheduler.register_camera(cam_id)
+    scheduler.start()
+
+    try:
+        t_mono_capture = time.perf_counter()
+        t_wall_capture = time.time()
+        frame = np.zeros((64, 64, 3), dtype=np.uint8)
+
+        detections, meta = scheduler.execute_sync(
+            camera_id=cam_id,
+            frame_id=101,
+            capture_wallclock=t_wall_capture,
+            frame=frame,
+            timeout=1.0,
+            capture_monotonic=t_mono_capture,
+        )
+
+        assert len(detections) == 1
+        assert "inference_duration_ms" in meta
+        assert "scheduler_wait_ms" in meta
+        assert "capture_to_result_ms" in meta
+        assert meta["inference_duration_ms"] >= 0.0
+        assert meta["scheduler_wait_ms"] >= 0.0
+        assert meta["capture_to_result_ms"] >= 0.0
+
+        telem = scheduler.get_telemetry(cam_id)
+        assert telem["total_submitted"] == 1
+        assert telem["total_dispatched"] == 1
+        assert telem["total_completed"] == 1
+        assert telem["total_failed"] == 0
+        assert telem["total_replaced_pending"] == 0
+        assert telem["mean_duration_ms"] >= 0.0
+        assert telem["mean_wait_ms"] >= 0.0
+    finally:
+        scheduler.stop()
+
+
+def test_camera_session_decoupled_accounting_and_metrics():
+    """Verify CameraSession distinguishes raw buffer overwrites from device read failures."""
+    from app.services.camera_session import CameraSession, CameraConfig, CameraSourceType
+
+    cfg = CameraConfig(
+        camera_id="cam_acct_test",
+        name="Accounting Test Cam",
+        source_type=CameraSourceType.FILE,
+        rtsp_url="data/uploads/vid_2e28e1e65a.mp4",
+        target_fps=25.0
+    )
+    session = CameraSession(config=cfg)
+
+    # Simulate 5 successful capture events into raw buffer without inference consuming
+    frame = np.zeros((100, 100, 3), dtype=np.uint8)
+    for i in range(5):
+        session._record_frame(frame, time.time(), time.perf_counter())
+
+    st = session.get_status()
+    # 5 captured, 1 in buffer -> 4 overwrites
+    assert st["frames_captured"] == 5
+    assert st["buffer_overwrites"] == 4
+    # Legacy frames_dropped alias must match buffer_overwrites
+    assert st["frames_dropped"] == 4
+    assert st["capture_failures"] == 0
+    assert st["capture_failure_rate_percent"] == 0.0
+
+    # Consume one frame
+    raw_data = session.get_latest_raw_frame(timeout=0.1)
+    assert raw_data is not None
+    fid, ts, mono_ts, f = raw_data
+    assert fid == 5
+    assert mono_ts > 0
+
+    st_after = session.get_status()
+    assert st_after["frames_consumed"] == 1

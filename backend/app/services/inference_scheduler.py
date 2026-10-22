@@ -12,8 +12,9 @@ class ScheduledInferenceRequest:
     __slots__ = (
         "camera_id",
         "frame_id",
-        "capture_timestamp",
-        "enqueued_timestamp",
+        "capture_wallclock",
+        "capture_monotonic",
+        "enqueued_monotonic",
         "frame",
         "imgsz",
         "conf_threshold",
@@ -30,16 +31,28 @@ class ScheduledInferenceRequest:
         imgsz: int = 640,
         conf_threshold: Optional[float] = None,
         callback: Optional[Callable[[List[Dict[str, Any]], Dict[str, Any]], None]] = None,
+        capture_monotonic: Optional[float] = None,
     ):
         self.camera_id = camera_id
         self.frame_id = frame_id
-        self.capture_timestamp = capture_timestamp
-        self.enqueued_timestamp = time.perf_counter()
+        self.capture_wallclock = float(capture_timestamp)
+        self.capture_monotonic = capture_monotonic if capture_monotonic is not None else time.perf_counter()
+        self.enqueued_monotonic = time.perf_counter()
         self.frame = frame
         self.imgsz = imgsz
         self.conf_threshold = conf_threshold
         self.callback = callback
         self.is_obsolete = False
+
+    @property
+    def capture_timestamp(self) -> float:
+        """Backward-compatibility property returning wallclock capture time."""
+        return self.capture_wallclock
+
+    @property
+    def enqueued_timestamp(self) -> float:
+        """Backward-compatibility property returning monotonic enqueue timestamp."""
+        return self.enqueued_monotonic
 
 
 class FairInferenceScheduler:
@@ -52,7 +65,8 @@ class FairInferenceScheduler:
     3. Freshness: Newer frames replace un-started older frames, eliminating queue lag.
     4. CPU stability: Serialized inference execution prevents PyTorch OpenMP thread thrashing.
     5. Isolation: Exceptions in one camera do not affect other active streams.
-    6. Performance Telemetry: Measures queue wait times, inference durations, and dropped frames.
+    6. Performance Telemetry: Unambiguous separate metrics for wait times, inference durations,
+       capture-to-result latencies, and pending-frame replacement accounting.
     """
 
     def __init__(self, shared_detector=None):
@@ -112,13 +126,17 @@ class FairInferenceScheduler:
                 self._registered_cameras.append(camera_id)
                 self._camera_order.append(camera_id)
                 self._telemetry[camera_id] = {
-                    "total_scheduled": 0,
-                    "total_executed": 0,
-                    "total_replaced_obsolete": 0,
+                    "total_submitted": 0,
+                    "total_dispatched": 0,
+                    "total_completed": 0,
+                    "total_failed": 0,
+                    "total_replaced_pending": 0,
                     "last_wait_ms": 0.0,
                     "last_duration_ms": 0.0,
+                    "last_capture_to_result_ms": 0.0,
                     "mean_wait_ms": 0.0,
                     "mean_duration_ms": 0.0,
+                    "mean_capture_to_result_ms": 0.0,
                 }
                 logger.debug(f"Registered camera {camera_id} in inference scheduler.")
 
@@ -127,7 +145,6 @@ class FairInferenceScheduler:
             if camera_id in self._registered_cameras:
                 self._registered_cameras.remove(camera_id)
             if camera_id in self._camera_order:
-                # Remove from deque
                 self._camera_order = deque([c for c in self._camera_order if c != camera_id])
             if camera_id in self._pending_slots:
                 req = self._pending_slots.pop(camera_id)
@@ -143,6 +160,7 @@ class FairInferenceScheduler:
         imgsz: int = 640,
         conf_threshold: Optional[float] = None,
         callback: Optional[Callable[[List[Dict[str, Any]], Dict[str, Any]], None]] = None,
+        capture_monotonic: Optional[float] = None,
     ) -> bool:
         """
         Enqueues a frame for inference. If a frame for this camera is already
@@ -159,7 +177,8 @@ class FairInferenceScheduler:
             frame=frame,
             imgsz=imgsz,
             conf_threshold=conf_threshold,
-            callback=callback
+            callback=callback,
+            capture_monotonic=capture_monotonic,
         )
 
         with self._lock:
@@ -167,23 +186,27 @@ class FairInferenceScheduler:
                 self._registered_cameras.append(camera_id)
                 self._camera_order.append(camera_id)
                 self._telemetry[camera_id] = {
-                    "total_scheduled": 0,
-                    "total_executed": 0,
-                    "total_replaced_obsolete": 0,
+                    "total_submitted": 0,
+                    "total_dispatched": 0,
+                    "total_completed": 0,
+                    "total_failed": 0,
+                    "total_replaced_pending": 0,
                     "last_wait_ms": 0.0,
                     "last_duration_ms": 0.0,
+                    "last_capture_to_result_ms": 0.0,
                     "mean_wait_ms": 0.0,
                     "mean_duration_ms": 0.0,
+                    "mean_capture_to_result_ms": 0.0,
                 }
 
             telem = self._telemetry[camera_id]
-            telem["total_scheduled"] += 1
+            telem["total_submitted"] += 1
 
-            # Bounded buffer replacement
+            # Bounded buffer replacement: un-started pending frame is replaced
             if camera_id in self._pending_slots:
                 prev_req = self._pending_slots[camera_id]
                 prev_req.is_obsolete = True
-                telem["total_replaced_obsolete"] += 1
+                telem["total_replaced_pending"] += 1
 
             self._pending_slots[camera_id] = req
             self._work_available.notify()
@@ -193,16 +216,21 @@ class FairInferenceScheduler:
         self,
         camera_id: str,
         frame_id: int,
-        capture_timestamp: float,
-        frame: np.ndarray,
+        capture_wallclock: Optional[float] = None,
+        frame: Optional[np.ndarray] = None,
         imgsz: int = 640,
         conf_threshold: Optional[float] = None,
         timeout: float = 1.0,
+        capture_monotonic: Optional[float] = None,
+        capture_timestamp: Optional[float] = None,
     ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
         """
         Synchronous scheduling helper: enqueues the request and blocks until
         completed or timeout occurs. Useful for synchronous camera loops.
         """
+        effective_wallclock = capture_wallclock if capture_wallclock is not None else (capture_timestamp or time.time())
+        if frame is None:
+            return [], {"error": "empty_or_none_frame"}
         result_holder: List[Any] = [None, None]
         done_event = threading.Event()
 
@@ -214,11 +242,12 @@ class FairInferenceScheduler:
         enqueued = self.schedule_inference(
             camera_id=camera_id,
             frame_id=frame_id,
-            capture_timestamp=capture_timestamp,
+            capture_timestamp=effective_wallclock,
             frame=frame,
             imgsz=imgsz,
             conf_threshold=conf_threshold,
-            callback=_on_complete
+            callback=_on_complete,
+            capture_monotonic=capture_monotonic,
         )
 
         if not enqueued:
@@ -234,25 +263,43 @@ class FairInferenceScheduler:
         with self._lock:
             telem = self._telemetry.get(camera_id)
             if telem:
-                return dict(telem)
+                submitted = max(1, telem.get("total_submitted", 0))
+                dispatched = max(1, telem.get("total_dispatched", 0))
+                replaced = telem.get("total_replaced_pending", 0)
+                failed = telem.get("total_failed", 0)
+                res = dict(telem)
+                res["pending_replacement_rate"] = round(replaced / submitted, 4)
+                res["inference_failure_rate"] = round(failed / dispatched, 4)
+                # Backward-compatibility aliases
+                res["total_replaced_obsolete"] = replaced
+                res["total_scheduled"] = telem.get("total_submitted", 0)
+                res["total_executed"] = telem.get("total_completed", 0)
+                return res
             return {
+                "total_submitted": 0,
+                "total_dispatched": 0,
+                "total_completed": 0,
+                "total_failed": 0,
+                "total_replaced_pending": 0,
                 "total_scheduled": 0,
                 "total_executed": 0,
                 "total_replaced_obsolete": 0,
+                "pending_replacement_rate": 0.0,
+                "inference_failure_rate": 0.0,
                 "last_wait_ms": 0.0,
                 "last_duration_ms": 0.0,
+                "last_capture_to_result_ms": 0.0,
                 "mean_wait_ms": 0.0,
                 "mean_duration_ms": 0.0,
+                "mean_capture_to_result_ms": 0.0,
             }
 
     def _worker_loop(self):
         """Worker thread executing round-robin dispatch among active camera slots."""
         while not self._stop_event.is_set():
             target_req: Optional[ScheduledInferenceRequest] = None
-            wait_ms: float = 0.0
 
             with self._lock:
-                # Find next camera with a pending frame in round-robin order
                 attempts = len(self._camera_order)
                 while attempts > 0:
                     cand_id = self._camera_order[0]
@@ -263,7 +310,6 @@ class FairInferenceScheduler:
                         req = self._pending_slots.pop(cand_id)
                         if not req.is_obsolete:
                             target_req = req
-                            wait_ms = (time.perf_counter() - req.enqueued_timestamp) * 1000.0
                             break
 
                 if target_req is None:
@@ -271,10 +317,14 @@ class FairInferenceScheduler:
                     self._work_available.wait(timeout=0.05)
                     continue
 
-            # Execute inference outside the lock
-            exec_t0 = time.perf_counter()
+            # Record exact monotonic start boundary
+            infer_start_monotonic = time.perf_counter()
+            wait_ms = (infer_start_monotonic - target_req.enqueued_monotonic) * 1000.0
+            capture_to_infer_ms = (infer_start_monotonic - target_req.capture_monotonic) * 1000.0
+
             detections: List[Dict[str, Any]] = []
             diag: Dict[str, Any] = {}
+            is_success = False
 
             try:
                 if self._detector is not None and target_req.frame is not None:
@@ -283,20 +333,29 @@ class FairInferenceScheduler:
                         imgsz=target_req.imgsz,
                         conf_threshold=target_req.conf_threshold
                     )
+                    is_success = True
             except Exception as e:
                 logger.warning(f"Inference exception on camera {target_req.camera_id}: {e}")
                 diag = {"error": str(e), "timestamp": time.time()}
 
-            duration_ms = (time.perf_counter() - exec_t0) * 1000.0
+            infer_end_monotonic = time.perf_counter()
+            duration_ms = (infer_end_monotonic - infer_start_monotonic) * 1000.0
+            capture_to_result_ms = (infer_end_monotonic - target_req.capture_monotonic) * 1000.0
 
-            # Update telemetry
+            # Update telemetry with distinct metrics
             with self._lock:
                 c_telem = self._telemetry.get(target_req.camera_id)
                 if c_telem:
-                    c_telem["total_executed"] += 1
+                    c_telem["total_dispatched"] += 1
+                    if is_success:
+                        c_telem["total_completed"] += 1
+                    else:
+                        c_telem["total_failed"] += 1
+
                     c_telem["last_wait_ms"] = round(wait_ms, 2)
                     c_telem["last_duration_ms"] = round(duration_ms, 2)
-                    # Exponential moving average for stability
+                    c_telem["last_capture_to_result_ms"] = round(capture_to_result_ms, 2)
+
                     alpha = 0.15
                     c_telem["mean_wait_ms"] = round(
                         c_telem["mean_wait_ms"] * (1 - alpha) + wait_ms * alpha, 2
@@ -304,11 +363,21 @@ class FairInferenceScheduler:
                     c_telem["mean_duration_ms"] = round(
                         c_telem["mean_duration_ms"] * (1 - alpha) + duration_ms * alpha, 2
                     )
+                    c_telem["mean_capture_to_result_ms"] = round(
+                        c_telem["mean_capture_to_result_ms"] * (1 - alpha) + capture_to_result_ms * alpha, 2
+                    )
 
+            # Diagnostic payload associated strictly with THIS frame
             diag["scheduler_wait_ms"] = round(wait_ms, 2)
-            diag["scheduler_duration_ms"] = round(duration_ms, 2)
+            diag["inference_duration_ms"] = round(duration_ms, 2)
+            diag["scheduler_duration_ms"] = round(duration_ms, 2) # Backward compatibility
+            diag["capture_to_inference_ms"] = round(capture_to_infer_ms, 2)
+            diag["capture_to_result_ms"] = round(capture_to_result_ms, 2)
             diag["scheduler_frame_id"] = target_req.frame_id
-            diag["capture_age_ms"] = round((time.time() - target_req.capture_timestamp) * 1000.0, 2)
+            diag["capture_wallclock"] = target_req.capture_wallclock
+            diag["capture_monotonic"] = target_req.capture_monotonic
+            diag["infer_start_monotonic"] = infer_start_monotonic
+            diag["infer_end_monotonic"] = infer_end_monotonic
 
             # Fire callback if requested
             if target_req.callback and not target_req.is_obsolete:

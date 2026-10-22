@@ -715,28 +715,56 @@ class EvaluationService:
                 per_camera_metrics = []
                 total_cap_fps = 0.0
                 total_inf_fps = 0.0
-                latencies = []
+                raw_ages = []
                 pipe_latencies = []
-                total_dropped = 0
+                cap_to_pub_latencies = []
+                inf_durations = []
+                sched_waits = []
+                total_attempts = 0
+                total_failures = 0
+                total_overwrites = 0
                 total_captured = 0
+                total_inferred = 0
+                has_preliminary = False
 
                 for s in current_sessions:
                     st = s.get_status()
                     c_fps = st.get("measured_fps", 0.0)
                     i_fps = st.get("processing_fps", 0.0)
-                    age = st.get("frame_age_seconds") or 0.0
+                    raw_age = st.get("raw_buffer_age_seconds") or st.get("frame_age_seconds") or 0.0
                     drp = st.get("frames_dropped", 0)
+                    overwrites = st.get("buffer_overwrites", drp)
                     cap_cnt = st.get("frames_captured", 0)
+                    att_cnt = st.get("capture_attempts", cap_cnt)
+                    fail_cnt = st.get("capture_failures", 0)
+                    inf_cnt = st.get("frames_inferred", 0)
                     p_lat = st.get("pipeline_latency_ms", 0.0)
+                    c_pub = st.get("capture_to_published_ms", 0.0)
+                    c_pub_mean = st.get("capture_to_published_mean_ms", c_pub)
+                    inf_dur = st.get("inference_duration_ms", 0.0)
+                    sched_wait = st.get("scheduler_wait_ms", 0.0)
+                    is_prelim = st.get("percentile_preliminary", False)
+                    if is_prelim:
+                        has_preliminary = True
 
                     total_cap_fps += c_fps
                     total_inf_fps += i_fps
-                    total_dropped += drp
+                    total_attempts += att_cnt
+                    total_failures += fail_cnt
+                    total_overwrites += overwrites
                     total_captured += cap_cnt
-                    if age > 0:
-                        latencies.append(age)
+                    total_inferred += inf_cnt
+
+                    if raw_age > 0:
+                        raw_ages.append(raw_age)
                     if p_lat > 0:
                         pipe_latencies.append(p_lat)
+                    if c_pub_mean > 0:
+                        cap_to_pub_latencies.append(c_pub_mean)
+                    if inf_dur > 0:
+                        inf_durations.append(inf_dur)
+                    if sched_wait >= 0:
+                        sched_waits.append(sched_wait)
 
                     per_camera_metrics.append({
                         "camera_id": s.camera_id,
@@ -745,34 +773,64 @@ class EvaluationService:
                         "state": st.get("state"),
                         "capture_fps": c_fps,
                         "inference_fps": i_fps,
-                        "frame_age_seconds": round(age, 3),
-                        "inference_duration_ms": st.get("inference_duration_ms", 0.0),
-                        "scheduler_wait_ms": st.get("scheduler_wait_ms", 0.0),
+                        "raw_buffer_age_seconds": round(raw_age, 3),
+                        "frame_age_seconds": round(raw_age, 3),
+                        "inference_duration_ms": inf_dur,
+                        "scheduler_wait_ms": sched_wait,
+                        "capture_to_result_ms": st.get("capture_to_result_ms", 0.0),
+                        "capture_to_published_ms": c_pub,
+                        "capture_to_published_mean_ms": c_pub_mean,
+                        "capture_to_published_p50_ms": st.get("capture_to_published_p50_ms", c_pub),
+                        "capture_to_published_p95_ms": st.get("capture_to_published_p95_ms", c_pub),
                         "pipeline_latency_ms": p_lat,
+                        "capture_attempts": att_cnt,
+                        "capture_failures": fail_cnt,
+                        "capture_failure_rate_percent": st.get("capture_failure_rate_percent", 0.0),
                         "frames_captured": cap_cnt,
                         "frames_consumed": st.get("frames_consumed", 0),
+                        "frames_inferred": inf_cnt,
+                        "frames_published": st.get("frames_published", 0),
+                        "buffer_overwrites": overwrites,
                         "frames_dropped": drp,
+                        "inference_coverage_percent": st.get("inference_coverage_percent", 0.0),
+                        "frames_replaced_pending": st.get("frames_replaced_pending", 0),
                         "frames_replaced_obsolete": st.get("frames_replaced_obsolete", 0)
                     })
 
                 mean_cpu = float(np.mean(cpu_samples)) if cpu_samples else 0.0
                 mean_mem = float(np.mean(mem_samples)) if mem_samples else 0.0
-                mean_lat = float(np.mean(latencies)) if latencies else 0.0
-                lat_p50 = float(np.percentile(latencies, 50)) if latencies else mean_lat
-                lat_p95 = float(np.percentile(latencies, 95)) if latencies else mean_lat
-                drop_rate = round((total_dropped / max(1, total_captured)) * 100.0, 1) if total_captured > 0 else 0.0
+                mean_raw_age = float(np.mean(raw_ages)) if raw_ages else 0.0
+                mean_cap_pub = float(np.mean(cap_to_pub_latencies)) if cap_to_pub_latencies else 0.0
+                p50_cap_pub = float(np.percentile(cap_to_pub_latencies, 50)) if cap_to_pub_latencies else mean_cap_pub
+                p95_cap_pub = float(np.percentile(cap_to_pub_latencies, 95)) if cap_to_pub_latencies else mean_cap_pub
+                mean_pipe = float(np.mean(pipe_latencies)) if pipe_latencies else 0.0
+
+                cap_fail_rate = round((total_failures / max(1, total_attempts)) * 100.0, 2)
+                overwrite_rate = round((total_overwrites / max(1, total_captured)) * 100.0, 1) if total_captured > 0 else 0.0
+                inf_coverage = round((total_inferred / max(1, total_captured)) * 100.0, 1) if total_captured > 0 else 0.0
 
                 benchmark_results.append({
                     "active_cameras": n_cams,
                     "mean_capture_fps": round(total_cap_fps / n_cams, 1) if n_cams else 0.0,
                     "mean_inference_fps": round(total_inf_fps / n_cams, 1) if n_cams else 0.0,
                     "aggregate_pipeline_fps": round(total_inf_fps, 1),
-                    "mean_frame_latency_seconds": round(mean_lat, 3),
-                    "latency_p50_seconds": round(lat_p50, 3),
-                    "latency_p95_seconds": round(lat_p95, 3),
-                    "mean_pipeline_latency_ms": round(float(np.mean(pipe_latencies)), 1) if pipe_latencies else 0.0,
-                    "total_frames_dropped": total_dropped,
-                    "frame_drop_rate_percent": drop_rate,
+                    "mean_capture_to_published_ms": round(mean_cap_pub, 2),
+                    "capture_to_published_p50_ms": round(p50_cap_pub, 2),
+                    "capture_to_published_p95_ms": round(p95_cap_pub, 2),
+                    "mean_frame_latency_seconds": round(mean_raw_age, 3),
+                    "latency_p50_seconds": round(mean_raw_age, 3),
+                    "latency_p95_seconds": round(mean_raw_age, 3),
+                    "mean_raw_buffer_age_seconds": round(mean_raw_age, 3),
+                    "mean_pipeline_latency_ms": round(mean_pipe, 1),
+                    "mean_inference_duration_ms": round(float(np.mean(inf_durations)), 2) if inf_durations else 0.0,
+                    "mean_scheduler_wait_ms": round(float(np.mean(sched_waits)), 2) if sched_waits else 0.0,
+                    "capture_failure_rate_percent": cap_fail_rate,
+                    "total_buffer_overwrites": total_overwrites,
+                    "total_frames_dropped": total_overwrites,
+                    "buffer_overwrite_rate_percent": overwrite_rate,
+                    "frame_drop_rate_percent": overwrite_rate,
+                    "inference_coverage_percent": inf_coverage,
+                    "percentile_warning": "Preliminary: Sample count < 20 per stream" if has_preliminary else None,
                     "mean_cpu_percent": round(mean_cpu, 1),
                     "mean_memory_working_set_mb": round(mean_mem, 1),
                     "cameras": per_camera_metrics
@@ -808,6 +866,8 @@ class EvaluationService:
 
         # Save to reports directory
         os.makedirs("data/reports", exist_ok=True)
+        with open("data/reports/verification_benchmark_results.json", "w", encoding="utf-8") as f:
+            json.dump(report, f, indent=2)
         with open("data/reports/optimized_benchmark_results.json", "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2)
         with open("data/reports/multicamera_benchmark_results.json", "w", encoding="utf-8") as f:
@@ -817,7 +877,9 @@ class EvaluationService:
 
     def get_latest_benchmark_report(self) -> Optional[Dict[str, Any]]:
         """Returns previously saved benchmark report, if available."""
-        report_path = "data/reports/optimized_benchmark_results.json"
+        report_path = "data/reports/verification_benchmark_results.json"
+        if not os.path.exists(report_path):
+            report_path = "data/reports/optimized_benchmark_results.json"
         if not os.path.exists(report_path):
             report_path = "data/reports/multicamera_benchmark_results.json"
         if os.path.exists(report_path):

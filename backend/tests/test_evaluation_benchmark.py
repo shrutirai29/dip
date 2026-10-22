@@ -270,3 +270,40 @@ def test_api_benchmark_dataset_validation():
     assert data["total_annotated_persons"] == 26
     assert "subgroup_sample_warnings" in data
     assert len(data["validation_errors"]) == 0
+
+
+def test_multicamera_benchmark_metric_integrity():
+    """Verify multicamera benchmark metrics schema and preservation of baseline results."""
+    import os
+    import json
+
+    # Baseline file must remain immutable
+    base_path = "data/reports/baseline_benchmark_results.json"
+    assert os.path.exists(base_path)
+    with open(base_path, "r", encoding="utf-8") as f:
+        baseline_content = json.load(f)
+    assert baseline_content["max_cameras_tested"] == 4
+    assert len(baseline_content["scaling_results"]) > 0
+
+    # Execute a lightweight 1-camera benchmark for 1.0 second
+    rep = evaluation_service.run_multicamera_benchmark(max_cameras=1, sample_duration_sec=1.0)
+    assert "scaling_results" in rep
+    assert len(rep["scaling_results"]) == 1
+    sr = rep["scaling_results"][0]
+
+    # Verify separated metric definitions
+    assert "mean_capture_fps" in sr
+    assert "mean_inference_fps" in sr
+    assert "mean_capture_to_published_ms" in sr
+    assert "capture_to_published_p50_ms" in sr
+    assert "capture_to_published_p95_ms" in sr
+    assert "capture_failure_rate_percent" in sr
+    assert "inference_coverage_percent" in sr
+    assert "buffer_overwrite_rate_percent" in sr
+    assert "cameras" in sr
+
+    # Verify verification report was generated and baseline untouched
+    assert os.path.exists("data/reports/verification_benchmark_results.json")
+    with open(base_path, "r", encoding="utf-8") as f:
+        baseline_recheck = json.load(f)
+    assert baseline_recheck["benchmark_run_at"] == baseline_content["benchmark_run_at"]

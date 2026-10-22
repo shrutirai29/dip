@@ -118,9 +118,18 @@ class CameraSession:
         self._latest_raw_frame: Optional[np.ndarray] = None
         self._latest_frame_id: int = 0
         self._latest_frame_timestamp: float = 0.0
+        self._latest_frame_mono: float = 0.0
+        self._frame_consumed: bool = True
+
+        # Decoupled capture vs inference accounting
+        self._capture_attempts: int = 0
+        self._capture_failures: int = 0
         self._frames_captured: int = 0
+        self._buffer_overwrites: int = 0
         self._frames_consumed: int = 0
-        self._frames_dropped: int = 0
+        self._frames_inferred: int = 0
+        self._frames_published: int = 0
+        self._frames_dropped: int = 0  # Preserved as backward-compatible alias to buffer_overwrites
         self._consecutive_failures: int = 0
         self._consecutive_successes: int = 0
         self._measured_fps: float = 0.0
@@ -152,7 +161,11 @@ class CameraSession:
         # Scheduler and performance telemetry
         self._last_inf_duration_ms: float = 0.0
         self._last_sched_wait_ms: float = 0.0
+        self._last_capture_to_result_ms: float = 0.0
+        self._last_capture_to_published_ms: float = 0.0
         self._last_pipeline_latency_ms: float = 0.0
+        self._latency_samples_capture_to_published: List[float] = []
+        self._latency_samples_pipeline: List[float] = []
         if self._shared_detector is not None:
             fair_inference_scheduler.set_detector(self._shared_detector)
 
@@ -290,8 +303,12 @@ class CameraSession:
 
             while not self._stop_event.is_set():
                 cycle_start = time.time()
+                with self._frame_lock:
+                    self._capture_attempts += 1
                 ret, frame = cap.read()
                 if not ret or frame is None or frame.size == 0:
+                    with self._frame_lock:
+                        self._capture_failures += 1
                     cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                     ret, frame = cap.read()
                     if not ret or frame is None or frame.size == 0:
@@ -299,10 +316,11 @@ class CameraSession:
                         continue
 
                 now = time.time()
+                mono_now = time.perf_counter()
                 if self.state != CameraState.CONNECTED:
                     self._set_state(CameraState.CONNECTED, None)
 
-                self._record_frame(frame, now)
+                self._record_frame(frame, now, mono_now)
                 fps_frame_counter += 1
                 fps_elapsed = now - fps_calc_start
                 if fps_elapsed >= 1.0:
@@ -343,8 +361,12 @@ class CameraSession:
 
             while not self._stop_event.is_set():
                 cycle_start = time.time()
+                with self._frame_lock:
+                    self._capture_attempts += 1
                 ret, frame = cap.read()
                 if not ret or frame is None or frame.size == 0:
+                    with self._frame_lock:
+                        self._capture_failures += 1
                     self._consecutive_failures += 1
                     if self._consecutive_failures >= self.MAX_CONSECUTIVE_FAILURES:
                         self._set_state(CameraState.DISCONNECTED, "Webcam disconnected or failed to read frames.")
@@ -355,11 +377,12 @@ class CameraSession:
                     continue
 
                 now = time.time()
+                mono_now = time.perf_counter()
                 self._consecutive_failures = 0
                 if self.state != CameraState.CONNECTED:
                     self._set_state(CameraState.CONNECTED, None)
 
-                self._record_frame(frame, now)
+                self._record_frame(frame, now, mono_now)
                 fps_frame_counter += 1
                 fps_elapsed = now - fps_calc_start
                 if fps_elapsed >= 1.0:
@@ -411,8 +434,12 @@ class CameraSession:
                 if not cap.isOpened():
                     raise ConnectionError(f"Failed to open RTSP stream at {self.config.sanitized_url}.")
 
+                with self._frame_lock:
+                    self._capture_attempts += 1
                 ret, frame = cap.read()
                 if not ret or frame is None or frame.size == 0:
+                    with self._frame_lock:
+                        self._capture_failures += 1
                     raise ConnectionError(f"RTSP stream opened at {self.config.sanitized_url} but returned no initial frame.")
 
                 self._cap = cap
@@ -420,14 +447,19 @@ class CameraSession:
                 self._consecutive_failures = 0
                 self._consecutive_successes = 1
                 now = time.time()
+                mono_now = time.perf_counter()
                 last_frame_rx_time = now
-                self._record_frame(frame, now)
+                self._record_frame(frame, now, mono_now)
 
                 while not self._stop_event.is_set():
                     cycle_start = time.time()
+                    with self._frame_lock:
+                        self._capture_attempts += 1
                     ret, frame = cap.read()
 
                     if not ret or frame is None or frame.size == 0:
+                        with self._frame_lock:
+                            self._capture_failures += 1
                         self._consecutive_failures += 1
                         time_since_last_frame = time.time() - last_frame_rx_time
                         if self._consecutive_failures >= self.MAX_CONSECUTIVE_FAILURES or time_since_last_frame >= self.STALL_TIMEOUT_SEC:
@@ -440,6 +472,7 @@ class CameraSession:
                         continue
 
                     now = time.time()
+                    mono_now = time.perf_counter()
                     last_frame_rx_time = now
                     self._consecutive_failures = 0
                     self._consecutive_successes += 1
@@ -450,7 +483,7 @@ class CameraSession:
                     if self.state != CameraState.CONNECTED:
                         self._set_state(CameraState.CONNECTED, None)
 
-                    self._record_frame(frame, now)
+                    self._record_frame(frame, now, mono_now)
                     fps_frame_counter += 1
                     fps_elapsed = now - fps_calc_start
                     if fps_elapsed >= 1.0:
@@ -497,17 +530,21 @@ class CameraSession:
         if not self._stop_event.is_set() and self.state not in (CameraState.DISCONNECTED, CameraState.ERROR):
             self._set_state(CameraState.DISCONNECTED, "RTSP stream session ended.")
 
-    def _record_frame(self, frame: np.ndarray, timestamp_sec: float):
+    def _record_frame(self, frame: np.ndarray, timestamp_sec: float, timestamp_mono: Optional[float] = None):
+        mono_ts = timestamp_mono if timestamp_mono is not None else time.perf_counter()
         with self._frame_lock:
-            if self._latest_raw_frame is not None:
+            if not self._frame_consumed and self._latest_raw_frame is not None:
+                self._buffer_overwrites += 1
                 self._frames_dropped += 1
             self._latest_raw_frame = frame
             self._latest_frame_id += 1
             self._latest_frame_timestamp = timestamp_sec
+            self._latest_frame_mono = mono_ts
+            self._frame_consumed = False
             self._frames_captured += 1
             self._frame_available.notify_all()
 
-    def get_latest_raw_frame(self, timeout: float = 0.5) -> Optional[Tuple[int, float, np.ndarray]]:
+    def get_latest_raw_frame(self, timeout: float = 0.5) -> Optional[Tuple[int, float, float, np.ndarray]]:
         with self._frame_lock:
             if self._latest_raw_frame is None:
                 if timeout > 0:
@@ -517,8 +554,10 @@ class CameraSession:
             frame = self._latest_raw_frame.copy()
             fid = self._latest_frame_id
             ts = self._latest_frame_timestamp
+            mono_ts = self._latest_frame_mono
+            self._frame_consumed = True
             self._frames_consumed += 1
-            return fid, ts, frame
+            return fid, ts, mono_ts, frame
 
     def _inference_worker(self):
         """Camera-specific inference loop executing isolated tracking, DIP, and risk calculations."""
@@ -534,7 +573,7 @@ class CameraSession:
                 time.sleep(0.01)
                 continue
 
-            frame_id, timestamp_sec, frame_bgr = frame_data
+            frame_id, timestamp_sec, capture_mono, frame_bgr = frame_data
             h, w = frame_bgr.shape[:2]
             width, height = w, h
             now_t = time.time()
@@ -556,11 +595,12 @@ class CameraSession:
                 raw_detections, sched_diag = fair_inference_scheduler.execute_sync(
                     camera_id=self.camera_id,
                     frame_id=frame_id,
-                    capture_timestamp=timestamp_sec,
+                    capture_wallclock=timestamp_sec,
                     frame=frame_bgr,
                     imgsz=self.config.inference_size,
                     conf_threshold=self.config.conf_threshold,
-                    timeout=1.0
+                    timeout=1.0,
+                    capture_monotonic=capture_mono,
                 )
                 if not raw_detections and self._shared_detector is not None and "error" in sched_diag:
                     # Direct fallback if scheduler is stopped
@@ -570,8 +610,12 @@ class CameraSession:
                         conf_threshold=self.config.conf_threshold
                     )
 
+                with self._frame_lock:
+                    self._frames_inferred += 1
+
                 self._last_sched_wait_ms = sched_diag.get("scheduler_wait_ms", 0.0)
-                self._last_inf_duration_ms = sched_diag.get("scheduler_duration_ms", 0.0)
+                self._last_inf_duration_ms = sched_diag.get("inference_duration_ms", sched_diag.get("scheduler_duration_ms", 0.0))
+                self._last_capture_to_result_ms = sched_diag.get("capture_to_result_ms", 0.0)
 
                 # 3. Tracking: per-camera isolated ByteTracker (Confirmed Tracks State Machine)
                 active_tracks = self.tracker.update(raw_detections, timestamp_sec, width, height)
@@ -691,7 +735,17 @@ class CameraSession:
                 success, encoded_jpeg = cv2.imencode(".jpg", annotated_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
                 jpeg_bytes = encoded_jpeg.tobytes() if success else None
 
-                self._last_pipeline_latency_ms = (time.perf_counter() - cycle_t0) * 1000.0
+                publish_mono = time.perf_counter()
+                self._last_pipeline_latency_ms = (publish_mono - cycle_t0) * 1000.0
+                self._last_capture_to_published_ms = (publish_mono - capture_mono) * 1000.0
+                with self._frame_lock:
+                    self._frames_published += 1
+                    self._latency_samples_capture_to_published.append(self._last_capture_to_published_ms)
+                    if len(self._latency_samples_capture_to_published) > 200:
+                        self._latency_samples_capture_to_published.pop(0)
+                    self._latency_samples_pipeline.append(self._last_pipeline_latency_ms)
+                    if len(self._latency_samples_pipeline) > 200:
+                        self._latency_samples_pipeline.pop(0)
 
                 # Assemble Telemetry Object
                 telemetry = {
@@ -724,6 +778,8 @@ class CameraSession:
                     "camera_state": self.state,
                     "inference_duration_ms": round(self._last_inf_duration_ms, 2),
                     "scheduler_wait_ms": round(self._last_sched_wait_ms, 2),
+                    "capture_to_result_ms": round(self._last_capture_to_result_ms, 2),
+                    "capture_to_published_ms": round(self._last_capture_to_published_ms, 2),
                     "pipeline_latency_ms": round(self._last_pipeline_latency_ms, 2),
                 }
 
@@ -752,9 +808,16 @@ class CameraSession:
             captured = self._frames_captured
             consumed = self._frames_consumed
             dropped = self._frames_dropped
+            buffer_overwrites = self._buffer_overwrites
+            capture_attempts = self._capture_attempts
+            capture_failures = self._capture_failures
+            frames_inferred = self._frames_inferred
+            frames_published = self._frames_published
             latest_id = self._latest_frame_id
             latest_ts = self._latest_frame_timestamp
             measured_fps = round(self._measured_fps, 1)
+            pub_samples = list(self._latency_samples_capture_to_published)
+            pipe_samples = list(self._latency_samples_pipeline)
 
         with self._telemetry_lock:
             proc_fps = round(self._processing_fps, 1)
@@ -762,8 +825,19 @@ class CameraSession:
             latest_telem = self._latest_telemetry
 
         uptime = round(now - self._started_at, 2) if (self._started_at and self.is_active) else 0.0
-        frame_age = round(now - latest_ts, 2) if latest_ts > 0 else None
+        raw_buffer_age = round(now - latest_ts, 3) if latest_ts > 0 else None
         sched_telem = fair_inference_scheduler.get_telemetry(self.camera_id)
+
+        mean_cap_pub = float(np.mean(pub_samples)) if pub_samples else self._last_capture_to_published_ms
+        p50_cap_pub = float(np.percentile(pub_samples, 50)) if pub_samples else mean_cap_pub
+        p95_cap_pub = float(np.percentile(pub_samples, 95)) if pub_samples else mean_cap_pub
+
+        mean_pipe = float(np.mean(pipe_samples)) if pipe_samples else self._last_pipeline_latency_ms
+        p50_pipe = float(np.percentile(pipe_samples, 50)) if pipe_samples else mean_pipe
+        p95_pipe = float(np.percentile(pipe_samples, 95)) if pipe_samples else mean_pipe
+
+        capture_failure_rate = round((capture_failures / max(1, capture_attempts)) * 100.0, 2)
+        inference_coverage = round((frames_inferred / max(1, captured)) * 100.0, 1) if captured > 0 else 0.0
 
         return {
             "camera_id": self.camera_id,
@@ -774,17 +848,36 @@ class CameraSession:
             "location": self.config.location,
             "state": self.state,
             "is_active": self.is_active,
+            "capture_attempts": capture_attempts,
+            "capture_failures": capture_failures,
+            "capture_failure_rate_percent": capture_failure_rate,
             "frames_captured": captured,
             "frames_consumed": consumed,
+            "buffer_overwrites": buffer_overwrites,
             "frames_dropped": dropped,
-            "frames_replaced_obsolete": sched_telem.get("total_replaced_obsolete", 0),
+            "frames_inferred": frames_inferred,
+            "frames_published": frames_published,
+            "inference_coverage_percent": inference_coverage,
+            "frames_replaced_pending": sched_telem.get("total_replaced_pending", 0),
+            "frames_replaced_obsolete": sched_telem.get("total_replaced_pending", 0),
             "latest_frame_id": latest_id,
             "latest_frame_timestamp": latest_ts,
             "last_inference_timestamp": round(last_inf_ts, 3) if last_inf_ts > 0 else None,
-            "frame_age_seconds": frame_age,
+            "raw_buffer_age_seconds": raw_buffer_age,
+            "frame_age_seconds": raw_buffer_age,
             "inference_duration_ms": round(self._last_inf_duration_ms, 2),
             "scheduler_wait_ms": round(self._last_sched_wait_ms, 2),
+            "capture_to_result_ms": round(self._last_capture_to_result_ms, 2),
+            "capture_to_published_ms": round(self._last_capture_to_published_ms, 2),
+            "capture_to_published_mean_ms": round(mean_cap_pub, 2),
+            "capture_to_published_p50_ms": round(p50_cap_pub, 2),
+            "capture_to_published_p95_ms": round(p95_cap_pub, 2),
             "pipeline_latency_ms": round(self._last_pipeline_latency_ms, 2),
+            "pipeline_latency_mean_ms": round(mean_pipe, 2),
+            "pipeline_latency_p50_ms": round(p50_pipe, 2),
+            "pipeline_latency_p95_ms": round(p95_pipe, 2),
+            "sample_count_latencies": len(pub_samples),
+            "percentile_preliminary": len(pub_samples) < 20,
             "measured_fps": measured_fps,
             "processing_fps": proc_fps,
             "uptime_seconds": uptime,
