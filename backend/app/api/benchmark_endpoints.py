@@ -6,10 +6,72 @@ from fastapi import APIRouter, HTTPException, Query, status
 from fastapi.responses import Response
 
 from app.services.evaluation_service import evaluation_service
+from app.services.inference_scheduler import fair_inference_scheduler
+from pydantic import BaseModel, Field
+
+class AdaptivePolicyUpdate(BaseModel):
+    policy: Optional[str] = Field(None, description="Scheduling policy: 'round_robin' or 'adaptive_risk'")
+    max_pending_age_sec: Optional[float] = Field(None, ge=0.5, le=10.0, description="Max age of pending frames in seconds before dropping")
 
 logger = logging.getLogger("crowdguard.benchmark_api")
 
 router = APIRouter()
+
+
+@router.get("/adaptive-policy")
+def get_adaptive_policy():
+    """
+    Returns current adaptive inference scheduler policy, max pending age, and scheduler status.
+    """
+    return {
+        "active_policy": fair_inference_scheduler.get_policy(),
+        "max_pending_age_sec": fair_inference_scheduler.get_max_pending_age(),
+        "status": fair_inference_scheduler.get_status()
+    }
+
+
+@router.post("/adaptive-policy")
+def update_adaptive_policy(update: AdaptivePolicyUpdate):
+    """
+    Updates adaptive inference scheduler policy ('round_robin' or 'adaptive_risk')
+    and/or max pending frame age in seconds.
+    """
+    if update.policy:
+        if update.policy not in ("round_robin", "adaptive_risk"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid policy '{update.policy}'. Allowed policies: 'round_robin', 'adaptive_risk'"
+            )
+        fair_inference_scheduler.set_policy(update.policy)
+
+    if update.max_pending_age_sec is not None:
+        fair_inference_scheduler.set_max_pending_age(update.max_pending_age_sec)
+
+    return {
+        "status": "success",
+        "active_policy": fair_inference_scheduler.get_policy(),
+        "max_pending_age_sec": fair_inference_scheduler.get_max_pending_age(),
+        "scheduler_status": fair_inference_scheduler.get_status()
+    }
+
+
+@router.get("/adaptive-report")
+def get_adaptive_report():
+    """
+    Returns the comprehensive Phase 4.7 Adaptive Inference & Crowd Monitoring Reliability report:
+    - Ground-truth IoU discrepancy resolution (Macro 93.81% vs Micro 93.08% vs documentation typo 78.4%)
+    - Empirical bottleneck profiling breakdown across DIP and CNN stages
+    - Adaptive fairness and starvation prevention contract
+    - Freshness, timestamp contracts, and staleness alert specifications
+    """
+    try:
+        return evaluation_service.get_adaptive_inference_report()
+    except Exception as e:
+        logger.exception("Failed to build adaptive inference report")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Adaptive report generation failed: {str(e)}"
+        )
 
 
 @router.get("/dataset")
@@ -234,15 +296,16 @@ def export_evaluation_report():
         experiments = evaluation_service.get_optimization_experiment_report()
 
         export_data = {
-            "title": "CROWDGUARD v2.0 - Detection Accuracy, Performance & Risk Validation Report",
-            "version": "4.6.2",
+            "title": "CROWDGUARD v2.0 - Detection Accuracy, Performance, Risk Validation & Adaptive Inference Report",
+            "version": "4.7.0",
             "export_timestamp": evaluation_service.load_manifest().get("created_at"),
             "detection_accuracy": accuracy,
             "confidence_sweep": sweep,
             "risk_validation": risk,
             "runtime_performance": perf,
             "sustained_performance": evaluation_service.get_latest_sustained_benchmark_report(),
-            "optimization_experiments": experiments
+            "optimization_experiments": experiments,
+            "adaptive_inference": evaluation_service.get_adaptive_inference_report()
         }
 
         json_bytes = json.dumps(export_data, indent=2).encode("utf-8")

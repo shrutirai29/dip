@@ -321,6 +321,18 @@ export const benchmarkApi = {
     });
     return res.data;
   },
+  getAdaptivePolicy: async (): Promise<any> => {
+    const res = await api.get('/benchmark/adaptive-policy');
+    return res.data;
+  },
+  updateAdaptivePolicy: async (data: { policy?: string; max_pending_age_sec?: number }): Promise<any> => {
+    const res = await api.post('/benchmark/adaptive-policy', data);
+    return res.data;
+  },
+  getAdaptiveReport: async (): Promise<any> => {
+    const res = await api.get('/benchmark/adaptive-report');
+    return res.data;
+  },
   getExportUrl: (): string => '/api/benchmark/export',
 };
 

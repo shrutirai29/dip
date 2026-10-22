@@ -74,6 +74,15 @@ class FairInferenceScheduler:
         self._lock = threading.Lock()
         self._work_available = threading.Condition(self._lock)
         
+        # Policy & Adaptive Prioritization
+        self._policy: str = "round_robin"  # "round_robin" or "adaptive_risk"
+        self._max_pending_age_sec: float = 2.5
+        self._priority_weights: Dict[str, float] = {}
+        self._dispatches_since_last_run: Dict[str, int] = {}
+        self._starvation_multiplier: int = 2
+        self._dropped_stale_total: int = 0
+        self._last_priority_reasons: Dict[str, str] = {}
+
         # Camera registration and round-robin order
         self._registered_cameras: List[str] = []
         self._camera_order: deque = deque()
@@ -93,6 +102,49 @@ class FairInferenceScheduler:
         with self._lock:
             self._detector = detector
 
+    def set_policy(self, policy: str):
+        with self._lock:
+            if policy not in ("round_robin", "adaptive_risk"):
+                raise ValueError(f"Invalid policy '{policy}'. Must be 'round_robin' or 'adaptive_risk'.")
+            self._policy = policy
+            logger.info(f"FairInferenceScheduler policy set to '{policy}'.")
+
+    def get_policy(self) -> str:
+        with self._lock:
+            return self._policy
+
+    def set_max_pending_age(self, age_sec: float):
+        with self._lock:
+            self._max_pending_age_sec = max(0.01, float(age_sec))
+
+    def get_max_pending_age(self) -> float:
+        with self._lock:
+            return self._max_pending_age_sec
+
+    def update_camera_risk(self, camera_id: str, risk_score: float, motion_anomaly: float = 0.0):
+        """
+        Dynamically updates camera scheduling priority based on risk and motion indicators.
+        Normalizes weight into bounded engineering range [1.0, 3.0].
+        """
+        with self._lock:
+            weight = 1.0 + min(2.0, max(0.0, (float(risk_score) / 50.0) + (float(motion_anomaly) / 20.0)))
+            self._priority_weights[camera_id] = round(weight, 3)
+
+    def get_status(self) -> Dict[str, Any]:
+        with self._lock:
+            return {
+                "running": self._running,
+                "policy": self._policy,
+                "max_pending_age_sec": self._max_pending_age_sec,
+                "registered_cameras_count": len(self._registered_cameras),
+                "pending_slots_count": len(self._pending_slots),
+                "total_dropped_stale": self._dropped_stale_total,
+                "camera_order": list(self._camera_order),
+                "priority_weights": dict(self._priority_weights),
+                "dispatches_since_last_run": dict(self._dispatches_since_last_run),
+                "last_priority_reasons": dict(self._last_priority_reasons),
+            }
+
     def start(self):
         with self._lock:
             if self._running:
@@ -105,7 +157,7 @@ class FairInferenceScheduler:
                 daemon=True
             )
             self._worker_thread.start()
-            logger.info("FairInferenceScheduler started successfully.")
+            logger.info(f"FairInferenceScheduler started successfully with policy='{self._policy}'.")
 
     def stop(self, timeout: float = 2.0):
         with self._lock:
@@ -125,15 +177,20 @@ class FairInferenceScheduler:
             if camera_id not in self._registered_cameras:
                 self._registered_cameras.append(camera_id)
                 self._camera_order.append(camera_id)
+                self._priority_weights[camera_id] = 1.0
+                self._dispatches_since_last_run[camera_id] = 0
+                self._last_priority_reasons[camera_id] = "registered"
                 self._telemetry[camera_id] = {
                     "total_submitted": 0,
                     "total_dispatched": 0,
                     "total_completed": 0,
                     "total_failed": 0,
                     "total_replaced_pending": 0,
+                    "total_dropped_stale": 0,
                     "last_wait_ms": 0.0,
                     "last_duration_ms": 0.0,
                     "last_capture_to_result_ms": 0.0,
+                    "last_capture_to_infer_ms": 0.0,
                     "mean_wait_ms": 0.0,
                     "mean_duration_ms": 0.0,
                     "mean_capture_to_result_ms": 0.0,
@@ -149,6 +206,9 @@ class FairInferenceScheduler:
             if camera_id in self._pending_slots:
                 req = self._pending_slots.pop(camera_id)
                 req.is_obsolete = True
+            self._priority_weights.pop(camera_id, None)
+            self._dispatches_since_last_run.pop(camera_id, None)
+            self._last_priority_reasons.pop(camera_id, None)
             logger.debug(f"Unregistered camera {camera_id} from inference scheduler.")
 
     def schedule_inference(
@@ -266,10 +326,16 @@ class FairInferenceScheduler:
                 submitted = max(1, telem.get("total_submitted", 0))
                 dispatched = max(1, telem.get("total_dispatched", 0))
                 replaced = telem.get("total_replaced_pending", 0)
+                stale_dropped = telem.get("total_dropped_stale", 0)
                 failed = telem.get("total_failed", 0)
                 res = dict(telem)
                 res["pending_replacement_rate"] = round(replaced / submitted, 4)
                 res["inference_failure_rate"] = round(failed / dispatched, 4)
+                res["stale_drop_rate"] = round(stale_dropped / submitted, 4)
+                res["priority_weight"] = self._priority_weights.get(camera_id, 1.0)
+                res["dispatches_since_last_run"] = self._dispatches_since_last_run.get(camera_id, 0)
+                res["last_priority_reason"] = self._last_priority_reasons.get(camera_id, "none")
+                res["active_policy"] = self._policy
                 # Backward-compatibility aliases
                 res["total_replaced_obsolete"] = replaced
                 res["total_scheduled"] = telem.get("total_submitted", 0)
@@ -281,39 +347,114 @@ class FairInferenceScheduler:
                 "total_completed": 0,
                 "total_failed": 0,
                 "total_replaced_pending": 0,
+                "total_dropped_stale": 0,
                 "total_scheduled": 0,
                 "total_executed": 0,
                 "total_replaced_obsolete": 0,
                 "pending_replacement_rate": 0.0,
                 "inference_failure_rate": 0.0,
+                "stale_drop_rate": 0.0,
+                "priority_weight": self._priority_weights.get(camera_id, 1.0),
+                "dispatches_since_last_run": self._dispatches_since_last_run.get(camera_id, 0),
+                "last_priority_reason": self._last_priority_reasons.get(camera_id, "none"),
+                "active_policy": self._policy,
                 "last_wait_ms": 0.0,
                 "last_duration_ms": 0.0,
                 "last_capture_to_result_ms": 0.0,
+                "last_capture_to_infer_ms": 0.0,
                 "mean_wait_ms": 0.0,
                 "mean_duration_ms": 0.0,
                 "mean_capture_to_result_ms": 0.0,
             }
 
-    def _worker_loop(self):
-        """Worker thread executing round-robin dispatch among active camera slots."""
-        while not self._stop_event.is_set():
-            target_req: Optional[ScheduledInferenceRequest] = None
+    def _select_next_request_locked(self) -> Tuple[Optional[ScheduledInferenceRequest], str]:
+        """
+        Selects next request implementing starvation prevention, adaptive priority, and stale frame rejection.
+        Must be called with self._lock held.
+        """
+        while self._pending_slots and not self._stop_event.is_set():
+            active_cams = [c for c in self._registered_cameras if c in self._pending_slots]
+            if not active_cams:
+                return None, "none"
 
-            with self._lock:
+            starvation_limit = max(2, self._starvation_multiplier * len(self._registered_cameras))
+            target_cid = None
+            reason = "round_robin_turn"
+
+            # 1. Starvation prevention: any pending camera with dispatches >= starvation_limit
+            starved = [c for c in active_cams if self._dispatches_since_last_run.get(c, 0) >= starvation_limit]
+            if starved:
+                starved.sort(key=lambda c: self._dispatches_since_last_run.get(c, 0), reverse=True)
+                target_cid = starved[0]
+                reason = "starvation_prevention"
+            elif self._policy == "adaptive_risk":
+                # 2. Adaptive risk prioritization with aging weight:
+                scored = []
+                for c in active_cams:
+                    w = self._priority_weights.get(c, 1.0)
+                    wait_count = self._dispatches_since_last_run.get(c, 0)
+                    score = w * (1.0 + 0.25 * wait_count)
+                    scored.append((score, c, w))
+                scored.sort(key=lambda x: x[0], reverse=True)
+                target_cid = scored[0][1]
+                top_weight = scored[0][2]
+                reason = "elevated_risk" if top_weight > 1.2 else "standard_priority"
+            else:
+                # 3. Round-robin turn
                 attempts = len(self._camera_order)
                 while attempts > 0:
-                    cand_id = self._camera_order[0]
-                    self._camera_order.rotate(-1)  # Move head to tail for fair rotation
+                    cand = self._camera_order[0]
+                    self._camera_order.rotate(-1)
                     attempts -= 1
+                    if cand in self._pending_slots:
+                        target_cid = cand
+                        reason = "round_robin_turn"
+                        break
 
-                    if cand_id in self._pending_slots:
-                        req = self._pending_slots.pop(cand_id)
-                        if not req.is_obsolete:
-                            target_req = req
-                            break
+            if target_cid is None or target_cid not in self._pending_slots:
+                return None, "none"
 
+            req = self._pending_slots.pop(target_cid)
+            if req.is_obsolete:
+                continue
+
+            # Check if frame is too stale (> max_pending_age_sec)
+            now_mono = time.perf_counter()
+            frame_age = now_mono - req.capture_monotonic
+            if frame_age > self._max_pending_age_sec:
+                req.is_obsolete = True
+                self._dropped_stale_total += 1
+                if target_cid in self._telemetry:
+                    self._telemetry[target_cid]["total_dropped_stale"] = (
+                        self._telemetry[target_cid].get("total_dropped_stale", 0) + 1
+                    )
+                if req.callback:
+                    try:
+                        req.callback([], {"error": "stale_frame_dropped", "age_sec": round(frame_age, 3)})
+                    except Exception:
+                        pass
+                continue
+
+            # Update starvation counters
+            self._dispatches_since_last_run[target_cid] = 0
+            for oc in self._registered_cameras:
+                if oc != target_cid:
+                    self._dispatches_since_last_run[oc] = self._dispatches_since_last_run.get(oc, 0) + 1
+
+            self._last_priority_reasons[target_cid] = reason
+            return req, reason
+
+        return None, "none"
+
+    def _worker_loop(self):
+        """Worker thread executing adaptive/round-robin dispatch among active camera slots."""
+        while not self._stop_event.is_set():
+            target_req: Optional[ScheduledInferenceRequest] = None
+            dispatch_reason: str = "none"
+
+            with self._lock:
+                target_req, dispatch_reason = self._select_next_request_locked()
                 if target_req is None:
-                    # No pending work; wait for signal
                     self._work_available.wait(timeout=0.05)
                     continue
 
@@ -355,6 +496,8 @@ class FairInferenceScheduler:
                     c_telem["last_wait_ms"] = round(wait_ms, 2)
                     c_telem["last_duration_ms"] = round(duration_ms, 2)
                     c_telem["last_capture_to_result_ms"] = round(capture_to_result_ms, 2)
+                    c_telem["last_capture_to_infer_ms"] = round(capture_to_infer_ms, 2)
+                    c_telem["last_priority_reason"] = dispatch_reason
 
                     alpha = 0.15
                     c_telem["mean_wait_ms"] = round(
@@ -373,6 +516,8 @@ class FairInferenceScheduler:
             diag["scheduler_duration_ms"] = round(duration_ms, 2) # Backward compatibility
             diag["capture_to_inference_ms"] = round(capture_to_infer_ms, 2)
             diag["capture_to_result_ms"] = round(capture_to_result_ms, 2)
+            diag["priority_reason"] = dispatch_reason
+            diag["active_policy"] = self._policy
             diag["scheduler_frame_id"] = target_req.frame_id
             diag["capture_wallclock"] = target_req.capture_wallclock
             diag["capture_monotonic"] = target_req.capture_monotonic

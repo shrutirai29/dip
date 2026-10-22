@@ -58,6 +58,7 @@ class CameraConfig:
         privacy_mode: str = "none",
         timeout_seconds: float = 5.0,
         max_retries: int = 5,
+        staleness_threshold_sec: float = 2.0,
     ):
         self.camera_id = camera_id
         self.name = (name or "").strip() or f"Camera {camera_id[:8]}"
@@ -74,6 +75,7 @@ class CameraConfig:
         self.privacy_mode = privacy_mode if privacy_mode in ("none", "face_blur", "full_anonymize") else "none"
         self.timeout_seconds = max(1.0, min(30.0, float(timeout_seconds)))
         self.max_retries = max(0, min(50, int(max_retries)))
+        self.staleness_threshold_sec = max(0.1, min(30.0, float(staleness_threshold_sec)))
         self.sanitized_url = sanitize_rtsp_url(self.rtsp_url) if self.rtsp_url else None
 
 
@@ -157,6 +159,18 @@ class CameraSession:
         self._latest_seq: int = 0
         self._processing_fps: float = 0.0
         self._last_inference_timestamp: float = 0.0
+
+        # Explicit timestamps and staleness tracking
+        self._staleness_threshold_sec: float = self.config.staleness_threshold_sec
+        self._latest_captured_timestamp: float = 0.0
+        self._latest_captured_monotonic: float = 0.0
+        self._latest_inference_start_monotonic: float = 0.0
+        self._latest_inference_end_monotonic: float = 0.0
+        self._latest_published_timestamp: float = 0.0
+        self._latest_published_monotonic: float = 0.0
+        self._latest_detection_timestamp: float = 0.0
+        self._latest_detection_monotonic: float = 0.0
+        self._last_capture_to_infer_ms: float = 0.0
 
         # Scheduler and performance telemetry
         self._last_inf_duration_ms: float = 0.0
@@ -546,6 +560,8 @@ class CameraSession:
             self._latest_frame_id += 1
             self._latest_frame_timestamp = timestamp_sec
             self._latest_frame_mono = mono_ts
+            self._latest_captured_timestamp = timestamp_sec
+            self._latest_captured_monotonic = mono_ts
             self._frame_consumed = False
             self._frames_captured += 1
             self._frame_available.notify_all()
@@ -597,7 +613,8 @@ class CameraSession:
                 flow_entropy = flow_data["directional_entropy"]
                 motion_var = flow_data["motion_variance"]
 
-                # 2. Fair Shared Inference Scheduling with Bounded Queue
+                # 2. Fair Shared Inference Scheduling with Adaptive Priority & Staleness Guard
+                sched_timeout = max(2.5, 0.8 * max(1, len(fair_inference_scheduler._registered_cameras)))
                 raw_detections, sched_diag = fair_inference_scheduler.execute_sync(
                     camera_id=self.camera_id,
                     frame_id=frame_id,
@@ -605,23 +622,22 @@ class CameraSession:
                     frame=frame_bgr,
                     imgsz=self.config.inference_size,
                     conf_threshold=self.config.conf_threshold,
-                    timeout=1.0,
+                    timeout=sched_timeout,
                     capture_monotonic=capture_mono,
                 )
-                if not raw_detections and self._shared_detector is not None and "error" in sched_diag:
-                    # Direct fallback if scheduler is stopped
-                    raw_detections = self._shared_detector.detect_persons(
-                        frame=frame_bgr,
-                        imgsz=self.config.inference_size,
-                        conf_threshold=self.config.conf_threshold
-                    )
 
-                with self._frame_lock:
-                    self._frames_inferred += 1
-
+                self._latest_inference_start_monotonic = sched_diag.get("infer_start_monotonic", 0.0)
+                self._latest_inference_end_monotonic = sched_diag.get("infer_end_monotonic", 0.0)
                 self._last_sched_wait_ms = sched_diag.get("scheduler_wait_ms", 0.0)
                 self._last_inf_duration_ms = sched_diag.get("inference_duration_ms", sched_diag.get("scheduler_duration_ms", 0.0))
                 self._last_capture_to_result_ms = sched_diag.get("capture_to_result_ms", 0.0)
+                self._last_capture_to_infer_ms = sched_diag.get("capture_to_inference_ms", 0.0)
+
+                if "error" not in sched_diag:
+                    with self._frame_lock:
+                        self._frames_inferred += 1
+                    self._latest_detection_timestamp = timestamp_sec
+                    self._latest_detection_monotonic = time.perf_counter()
 
                 # 3. Tracking: per-camera isolated ByteTracker (Confirmed Tracks State Machine)
                 active_tracks = self.tracker.update(raw_detections, timestamp_sec, width, height)
@@ -659,6 +675,13 @@ class CameraSession:
                     optical_flow_mag=flow_mag,
                     mean_speed=mean_speed,
                     grid_densities=grid_densities,
+                )
+
+                # Feed risk and motion dynamics back to adaptive scheduler
+                fair_inference_scheduler.update_camera_risk(
+                    camera_id=self.camera_id,
+                    risk_score=risk_data["smoothed_score"],
+                    motion_anomaly=flow_mag
                 )
 
                 # 7. Multi-Horizon Risk Forecast (+5s, +10s, +15s)
@@ -716,7 +739,11 @@ class CameraSession:
                         cv2.LINE_AA,
                     )
 
-                # 12. HUD Surveillance Header (include Camera Name & State)
+                # 12. HUD Surveillance Header with Explicit Freshness/Staleness Indicators
+                now_wall = time.time()
+                det_age = (now_wall - self._latest_detection_timestamp) if self._latest_detection_timestamp > 0 else 0.0
+                is_stale = (self._latest_detection_timestamp > 0) and (det_age > self._staleness_threshold_sec)
+
                 cv2.rectangle(annotated_frame, (0, 0), (width, 46), (10, 15, 24), -1)
                 score = risk_data["smoothed_score"]
                 risk_color = (
@@ -729,7 +756,14 @@ class CameraSession:
                     else (239, 68, 68)
                 )
 
-                hud_line1 = f"[{self.config.name}] CROWD: {person_count} | RISK: {score:.1f} ({risk_data['band']}) | +10s: {forecast_data['forecast_10s']:.1f}"
+                if is_stale:
+                    hud_line1 = f"[{self.config.name}] CROWD: {person_count} (PRESERVED) | RISK: {score:.1f} ({risk_data['band']}) [STALE: {det_age:.1f}s]"
+                    # Prominent orange staleness alert badge on HUD
+                    cv2.rectangle(annotated_frame, (width - 155, 5), (width - 35, 41), (15, 130, 245), 1)
+                    cv2.putText(annotated_frame, f"STALE {det_age:.1f}s", (width - 148, 27), cv2.FONT_HERSHEY_SIMPLEX, 0.40, (15, 160, 245), 1, cv2.LINE_AA)
+                else:
+                    hud_line1 = f"[{self.config.name}] CROWD: {person_count} | RISK: {score:.1f} ({risk_data['band']}) | +10s: {forecast_data['forecast_10s']:.1f}"
+
                 cv2.putText(annotated_frame, hud_line1, (12, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.46, (244, 247, 250), 1, cv2.LINE_AA)
 
                 hud_line2 = f"PATTERN: {detected_pattern} | ENTROPY: {flow_entropy:.2f} | OPT-FLOW: {flow_mag:.1f}px"
@@ -742,6 +776,8 @@ class CameraSession:
                 jpeg_bytes = encoded_jpeg.tobytes() if success else None
 
                 publish_mono = time.perf_counter()
+                self._latest_published_timestamp = time.time()
+                self._latest_published_monotonic = publish_mono
                 self._last_pipeline_latency_ms = (publish_mono - cycle_t0) * 1000.0
                 self._last_capture_to_published_ms = (publish_mono - capture_mono) * 1000.0
                 raw_age_ms = max(0.0, (time.time() - timestamp_sec) * 1000.0)
@@ -774,6 +810,17 @@ class CameraSession:
                     "camera_name": self.config.name,
                     "frame_index": frame_id,
                     "timestamp_sec": round(timestamp_sec, 3),
+                    "captured_timestamp": round(self._latest_captured_timestamp, 3) if self._latest_captured_timestamp > 0 else None,
+                    "captured_monotonic": round(capture_mono, 3) if capture_mono > 0 else None,
+                    "published_timestamp": round(self._latest_published_timestamp, 3),
+                    "published_monotonic": round(publish_mono, 3),
+                    "detection_timestamp": round(self._latest_detection_timestamp, 3) if self._latest_detection_timestamp > 0 else None,
+                    "detection_monotonic": round(self._latest_detection_monotonic, 3) if self._latest_detection_monotonic > 0 else None,
+                    "detection_age_seconds": round(det_age, 3),
+                    "staleness_threshold_sec": stale_threshold,
+                    "is_stale": is_stale,
+                    "priority_weight": round(current_weight, 2),
+                    "last_priority_reason": priority_reason,
                     "person_count": person_count,
                     "density_component": risk_data["density_comp"],
                     "growth_component": risk_data["growth_comp"],
@@ -823,8 +870,9 @@ class CameraSession:
                 logger.exception(f"Error in inference worker on camera {self.camera_id}: {e}")
 
     def get_status(self) -> Dict[str, Any]:
-        """Returns connection and performance metrics for this camera."""
+        """Returns connection, performance, freshness, and scheduling metrics for this camera."""
         now = time.time()
+        mono_now = time.perf_counter()
         with self._frame_lock:
             captured = self._frames_captured
             consumed = self._frames_consumed
@@ -839,15 +887,36 @@ class CameraSession:
             measured_fps = round(self._measured_fps, 1)
             pub_samples = list(self._latency_samples_capture_to_published)
             pipe_samples = list(self._latency_samples_pipeline)
+            cap_ts = self._latest_captured_timestamp
+            cap_mono = self._latest_captured_monotonic
 
         with self._telemetry_lock:
             proc_fps = round(self._processing_fps, 1)
             last_inf_ts = self._last_inference_timestamp
             latest_telem = self._latest_telemetry
+            det_ts = self._latest_detection_timestamp
+            det_mono = self._latest_detection_monotonic
+            pub_ts = self._latest_published_timestamp
+            pub_mono = self._latest_published_monotonic
+            inf_start_mono = self._latest_inference_start_monotonic
+            inf_end_mono = self._latest_inference_end_monotonic
 
         uptime = round(now - self._started_at, 2) if (self._started_at and self.is_active) else 0.0
         raw_buffer_age = round(now - latest_ts, 3) if latest_ts > 0 else None
         sched_telem = fair_inference_scheduler.get_telemetry(self.camera_id)
+
+        # Freshness and staleness calculation
+        det_age = round(mono_now - det_mono, 3) if det_mono > 0 else None
+        stale_thresh = self.config.staleness_threshold_sec
+        is_stale = (det_age is not None and det_age > stale_thresh)
+        if det_age is None:
+            staleness_status = "uninitialized"
+        elif det_age > stale_thresh:
+            staleness_status = "stale"
+        elif det_age > stale_thresh * 0.6:
+            staleness_status = "aging"
+        else:
+            staleness_status = "fresh"
 
         mean_cap_pub = float(np.mean(pub_samples)) if pub_samples else self._last_capture_to_published_ms
         p50_cap_pub = float(np.percentile(pub_samples, 50)) if pub_samples else mean_cap_pub
@@ -881,8 +950,26 @@ class CameraSession:
             "inference_coverage_percent": inference_coverage,
             "frames_replaced_pending": sched_telem.get("total_replaced_pending", 0),
             "frames_replaced_obsolete": sched_telem.get("total_replaced_pending", 0),
+            "total_dropped_stale": sched_telem.get("total_dropped_stale", 0),
+            "stale_drop_rate": sched_telem.get("stale_drop_rate", 0.0),
+            "active_policy": sched_telem.get("active_policy", "round_robin"),
+            "priority_weight": sched_telem.get("priority_weight", 1.0),
+            "dispatches_since_last_run": sched_telem.get("dispatches_since_last_run", 0),
+            "last_priority_reason": sched_telem.get("last_priority_reason", "initial"),
             "latest_frame_id": latest_id,
             "latest_frame_timestamp": latest_ts,
+            "latest_captured_timestamp": round(cap_ts, 3) if cap_ts > 0 else None,
+            "latest_captured_monotonic": round(cap_mono, 3) if cap_mono > 0 else None,
+            "latest_inference_start_monotonic": round(inf_start_mono, 3) if inf_start_mono > 0 else None,
+            "latest_inference_end_monotonic": round(inf_end_mono, 3) if inf_end_mono > 0 else None,
+            "latest_published_timestamp": round(pub_ts, 3) if pub_ts > 0 else None,
+            "latest_published_monotonic": round(pub_mono, 3) if pub_mono > 0 else None,
+            "latest_detection_timestamp": round(det_ts, 3) if det_ts > 0 else None,
+            "latest_detection_monotonic": round(det_mono, 3) if det_mono > 0 else None,
+            "detection_age_seconds": det_age,
+            "staleness_threshold_sec": stale_thresh,
+            "is_stale": is_stale,
+            "staleness_status": staleness_status,
             "last_inference_timestamp": round(last_inf_ts, 3) if last_inf_ts > 0 else None,
             "raw_buffer_age_seconds": raw_buffer_age,
             "frame_age_seconds": raw_buffer_age,
