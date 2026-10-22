@@ -166,6 +166,10 @@ class CameraSession:
         self._last_pipeline_latency_ms: float = 0.0
         self._latency_samples_capture_to_published: List[float] = []
         self._latency_samples_pipeline: List[float] = []
+        self._latency_samples_inference_duration: List[float] = []
+        self._latency_samples_scheduler_wait: List[float] = []
+        self._latency_samples_capture_to_result: List[float] = []
+        self._latency_samples_raw_buffer_age: List[float] = []
         if self._shared_detector is not None:
             fair_inference_scheduler.set_detector(self._shared_detector)
 
@@ -244,12 +248,14 @@ class CameraSession:
             with self._frame_available:
                 self._frame_available.notify_all()
 
-            if self._capture_thread and self._capture_thread.is_alive():
-                self._capture_thread.join(timeout=2.0)
+            if self._capture_thread:
+                if self._capture_thread.is_alive():
+                    self._capture_thread.join(timeout=2.0)
                 self._capture_thread = None
 
-            if self._inference_thread and self._inference_thread.is_alive():
-                self._inference_thread.join(timeout=2.0)
+            if self._inference_thread:
+                if self._inference_thread.is_alive():
+                    self._inference_thread.join(timeout=2.0)
                 self._inference_thread = None
 
             fair_inference_scheduler.unregister_camera(self.camera_id)
@@ -738,14 +744,29 @@ class CameraSession:
                 publish_mono = time.perf_counter()
                 self._last_pipeline_latency_ms = (publish_mono - cycle_t0) * 1000.0
                 self._last_capture_to_published_ms = (publish_mono - capture_mono) * 1000.0
+                raw_age_ms = max(0.0, (time.time() - timestamp_sec) * 1000.0)
                 with self._frame_lock:
                     self._frames_published += 1
                     self._latency_samples_capture_to_published.append(self._last_capture_to_published_ms)
-                    if len(self._latency_samples_capture_to_published) > 200:
-                        self._latency_samples_capture_to_published.pop(0)
                     self._latency_samples_pipeline.append(self._last_pipeline_latency_ms)
-                    if len(self._latency_samples_pipeline) > 200:
+                    self._latency_samples_inference_duration.append(self._last_inf_duration_ms)
+                    self._latency_samples_scheduler_wait.append(self._last_sched_wait_ms)
+                    self._latency_samples_capture_to_result.append(self._last_capture_to_result_ms)
+                    self._latency_samples_raw_buffer_age.append(raw_age_ms)
+
+                    MAX_SAMPLES = 5000
+                    if len(self._latency_samples_capture_to_published) > MAX_SAMPLES:
+                        self._latency_samples_capture_to_published.pop(0)
+                    if len(self._latency_samples_pipeline) > MAX_SAMPLES:
                         self._latency_samples_pipeline.pop(0)
+                    if len(self._latency_samples_inference_duration) > MAX_SAMPLES:
+                        self._latency_samples_inference_duration.pop(0)
+                    if len(self._latency_samples_scheduler_wait) > MAX_SAMPLES:
+                        self._latency_samples_scheduler_wait.pop(0)
+                    if len(self._latency_samples_capture_to_result) > MAX_SAMPLES:
+                        self._latency_samples_capture_to_result.pop(0)
+                    if len(self._latency_samples_raw_buffer_age) > MAX_SAMPLES:
+                        self._latency_samples_raw_buffer_age.pop(0)
 
                 # Assemble Telemetry Object
                 telemetry = {
@@ -897,3 +918,54 @@ class CameraSession:
     def get_latest_jpeg_with_sequence(self) -> Tuple[int, Optional[bytes]]:
         with self._telemetry_lock:
             return self._latest_seq, self._latest_jpeg
+
+    def reset_benchmark_metrics(self):
+        """Clears accumulated latency sample buffers for an isolated benchmark measurement window."""
+        with self._frame_lock:
+            self._latency_samples_capture_to_published.clear()
+            self._latency_samples_pipeline.clear()
+            self._latency_samples_inference_duration.clear()
+            self._latency_samples_scheduler_wait.clear()
+            self._latency_samples_capture_to_result.clear()
+            self._latency_samples_raw_buffer_age.clear()
+
+    def get_latency_distribution_summary(self) -> Dict[str, Any]:
+        """Returns statistical distribution summaries (count, mean, p50, p95, min, max, preliminary) for all latencies."""
+        with self._frame_lock:
+            pub_samples = list(self._latency_samples_capture_to_published)
+            pipe_samples = list(self._latency_samples_pipeline)
+            inf_samples = list(self._latency_samples_inference_duration)
+            wait_samples = list(self._latency_samples_scheduler_wait)
+            res_samples = list(self._latency_samples_capture_to_result)
+            age_samples = list(self._latency_samples_raw_buffer_age)
+
+        def _calc_dist(samples: List[float], fallback: float = 0.0) -> Dict[str, Any]:
+            n = len(samples)
+            if n == 0:
+                return {
+                    "count": 0,
+                    "mean_ms": fallback,
+                    "p50_ms": fallback,
+                    "p95_ms": fallback,
+                    "min_ms": fallback,
+                    "max_ms": fallback,
+                    "preliminary": True
+                }
+            return {
+                "count": n,
+                "mean_ms": round(float(np.mean(samples)), 2),
+                "p50_ms": round(float(np.percentile(samples, 50)), 2),
+                "p95_ms": round(float(np.percentile(samples, 95)), 2),
+                "min_ms": round(float(np.min(samples)), 2),
+                "max_ms": round(float(np.max(samples)), 2),
+                "preliminary": n < 20
+            }
+
+        return {
+            "capture_to_published": _calc_dist(pub_samples, self._last_capture_to_published_ms),
+            "pipeline_latency": _calc_dist(pipe_samples, self._last_pipeline_latency_ms),
+            "inference_duration": _calc_dist(inf_samples, self._last_inf_duration_ms),
+            "scheduler_wait": _calc_dist(wait_samples, self._last_sched_wait_ms),
+            "capture_to_result": _calc_dist(res_samples, self._last_capture_to_result_ms),
+            "raw_buffer_freshness": _calc_dist(age_samples, 0.0),
+        }

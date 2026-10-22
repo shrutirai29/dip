@@ -307,6 +307,20 @@ export const benchmarkApi = {
     });
     return res.data;
   },
+  getSustained: async (): Promise<any> => {
+    const res = await api.get('/benchmark/sustained');
+    return res.data;
+  },
+  runSustained: async (maxCameras = 4, measurementDurationSec = 60.0, warmupDurationSec = 10.0): Promise<any> => {
+    const res = await api.post('/benchmark/run-sustained', null, {
+      params: {
+        max_cameras: maxCameras,
+        measurement_duration_sec: measurementDurationSec,
+        warmup_duration_sec: warmupDurationSec,
+      }
+    });
+    return res.data;
+  },
   getExportUrl: (): string => '/api/benchmark/export',
 };
 

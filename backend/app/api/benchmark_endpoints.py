@@ -109,6 +109,45 @@ def run_performance_benchmark(
         )
 
 
+@router.get("/sustained")
+def get_sustained_benchmark():
+    """
+    Retrieves the latest Phase 4.6.2 sustained performance validation report.
+    """
+    report = evaluation_service.get_latest_sustained_benchmark_report()
+    if not report:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No sustained benchmark run found. Trigger a sustained benchmark run first."
+        )
+    return report
+
+
+@router.post("/run-sustained")
+def run_sustained_benchmark(
+    max_cameras: int = Query(4, ge=1, le=4),
+    measurement_duration_sec: float = Query(60.0, ge=5.0, le=600.0),
+    warmup_duration_sec: float = Query(10.0, ge=1.0, le=60.0),
+):
+    """
+    Triggers an active sustained multi-camera benchmark across 1 to max_cameras.
+    Features configurable warm-up, monotonic timing, differential frame accounting,
+    mathematical throughput agreement check, latency distributions, and CPU/memory trends.
+    """
+    try:
+        return evaluation_service.run_sustained_benchmark(
+            max_cameras=max_cameras,
+            warmup_duration_sec=warmup_duration_sec,
+            measurement_duration_sec=measurement_duration_sec
+        )
+    except Exception as e:
+        logger.exception("Error running sustained multi-camera performance benchmark")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Sustained benchmark execution failed: {str(e)}"
+        )
+
+
 @router.get("/experiments")
 def get_optimization_experiments():
     """
@@ -196,12 +235,13 @@ def export_evaluation_report():
 
         export_data = {
             "title": "CROWDGUARD v2.0 - Detection Accuracy, Performance & Risk Validation Report",
-            "version": "4.6.0",
+            "version": "4.6.2",
             "export_timestamp": evaluation_service.load_manifest().get("created_at"),
             "detection_accuracy": accuracy,
             "confidence_sweep": sweep,
             "risk_validation": risk,
             "runtime_performance": perf,
+            "sustained_performance": evaluation_service.get_latest_sustained_benchmark_report(),
             "optimization_experiments": experiments
         }
 
