@@ -237,3 +237,36 @@ def test_api_benchmark_export():
     assert "detection_accuracy" in data
     assert "runtime_performance" in data
     assert "risk_validation" in data
+
+
+
+def test_api_benchmark_experiments():
+    response = client.get("/api/benchmark/experiments")
+    assert response.status_code == 200
+    data = response.json()
+    assert "environment" in data
+    assert "optimizations_implemented" in data
+    assert "baseline_scaling" in data
+    assert "optimized_scaling" in data
+    assert "accuracy_verification" in data
+    assert data["accuracy_verification"]["precision"] >= 0.90
+    assert data["accuracy_verification"]["recall"] >= 0.95
+
+
+def test_api_benchmark_profiling():
+    response = client.get("/api/benchmark/profiling")
+    assert response.status_code == 200
+    data = response.json()
+    assert "components" in data
+    assert len(data["components"]) >= 5
+    assert "speedup_factor" in data
+
+
+def test_api_benchmark_dataset_validation():
+    response = client.get("/api/benchmark/dataset-validation")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "VALID"
+    assert data["total_annotated_persons"] == 26
+    assert "subgroup_sample_warnings" in data
+    assert len(data["validation_errors"]) == 0

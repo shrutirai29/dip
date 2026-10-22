@@ -289,6 +289,24 @@ export const benchmarkApi = {
     });
     return res.data;
   },
+  getExperiments: async (): Promise<any> => {
+    const res = await api.get('/benchmark/experiments');
+    return res.data;
+  },
+  getProfiling: async (): Promise<any> => {
+    const res = await api.get('/benchmark/profiling');
+    return res.data;
+  },
+  getDatasetValidation: async (): Promise<any> => {
+    const res = await api.get('/benchmark/dataset-validation');
+    return res.data;
+  },
+  runOptimizationComparison: async (maxCameras = 4, durationSec = 4.0): Promise<any> => {
+    const res = await api.post('/benchmark/run-optimization-comparison', null, {
+      params: { max_cameras: maxCameras, duration_sec: durationSec }
+    });
+    return res.data;
+  },
   getExportUrl: (): string => '/api/benchmark/export',
 };
 

@@ -94,7 +94,7 @@ def run_performance_benchmark(
 ):
     """
     Triggers an active multi-camera performance benchmark across 1 to max_cameras.
-    Measures Capture FPS, Inference FPS, Latency, CPU%, and Memory RSS.
+    Measures Capture FPS, Inference FPS, Latency (mean, p50, p95), CPU%, and Memory RSS.
     """
     try:
         return evaluation_service.run_multicamera_benchmark(
@@ -109,26 +109,100 @@ def run_performance_benchmark(
         )
 
 
+@router.get("/experiments")
+def get_optimization_experiments():
+    """
+    Returns the comprehensive Phase 4.6 Optimization Experiment report:
+    - Side-by-side Baseline vs Optimized Scaling (1, 2, 3, 4 streams)
+    - Ground-Truth Accuracy Verification (0% degradation)
+    - Bottleneck Profiling Breakdown
+    - System & Environment Details
+    - Scientific Disclaimers & Validation Limitations
+    """
+    try:
+        return evaluation_service.get_optimization_experiment_report()
+    except Exception as e:
+        logger.exception("Failed to build optimization experiment report")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Experiment report generation failed: {str(e)}"
+        )
+
+
+@router.get("/profiling")
+def get_profiling_breakdown():
+    """
+    Returns empirical component latency profiling breakdown (ms per frame).
+    """
+    try:
+        return evaluation_service.get_profiling_breakdown()
+    except Exception as e:
+        logger.exception("Failed to retrieve profiling breakdown")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Profiling retrieval failed: {str(e)}"
+        )
+
+
+@router.get("/dataset-validation")
+def get_dataset_validation():
+    """
+    Validates the dataset manifest bounding boxes, dimensions, and subgroup sample counts.
+    """
+    try:
+        return evaluation_service.validate_dataset_manifest()
+    except Exception as e:
+        logger.exception("Failed to validate dataset manifest")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Dataset validation failed: {str(e)}"
+        )
+
+
+@router.post("/run-optimization-comparison")
+def run_optimization_comparison(
+    max_cameras: int = Query(4, ge=1, le=4),
+    duration_sec: float = Query(4.0, ge=2.0, le=10.0)
+):
+    """
+    Executes a fresh multi-camera benchmark and returns the updated before-vs-after experiment report.
+    """
+    try:
+        _ = evaluation_service.run_multicamera_benchmark(
+            max_cameras=max_cameras,
+            sample_duration_sec=duration_sec
+        )
+        return evaluation_service.get_optimization_experiment_report()
+    except Exception as e:
+        logger.exception("Error running optimization comparison benchmark")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Comparison execution failed: {str(e)}"
+        )
+
+
 @router.get("/export")
 def export_evaluation_report():
     """
     Exports complete system benchmark report (accuracy metrics, scalability benchmarks,
-    risk validation, and environment metadata) as formatted JSON.
+    risk validation, optimization experiments, and environment metadata) as formatted JSON.
     """
     try:
         accuracy = evaluation_service.evaluate_detection_accuracy(conf_threshold=0.30)
         sweep = evaluation_service.evaluate_confidence_sweep()
         risk = evaluation_service.validate_heuristic_risk_scenarios()
         perf = evaluation_service.get_latest_benchmark_report()
+        experiments = evaluation_service.get_optimization_experiment_report()
 
         export_data = {
             "title": "CROWDGUARD v2.0 - Detection Accuracy, Performance & Risk Validation Report",
-            "version": "4.5.0",
+            "version": "4.6.0",
             "export_timestamp": evaluation_service.load_manifest().get("created_at"),
             "detection_accuracy": accuracy,
             "confidence_sweep": sweep,
             "risk_validation": risk,
-            "runtime_performance": perf
+            "runtime_performance": perf,
+            "optimization_experiments": experiments
         }
 
         json_bytes = json.dumps(export_data, indent=2).encode("utf-8")

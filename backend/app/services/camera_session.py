@@ -14,6 +14,7 @@ from app.services.density_service import DensityService
 from app.services.risk_engine import CrowdRiskEngine
 from app.services.dip_service import DIPProcessor
 from app.services.forecasting_service import PatternAndForecastingEngine
+from app.services.inference_scheduler import fair_inference_scheduler
 
 logger = logging.getLogger("crowdguard.camera_session")
 
@@ -32,6 +33,7 @@ class CameraState:
 class CameraSourceType:
     WEBCAM = "webcam"
     RTSP = "rtsp"
+    FILE = "file"
 
 
 class CameraConfig:
@@ -147,6 +149,13 @@ class CameraSession:
         self._processing_fps: float = 0.0
         self._last_inference_timestamp: float = 0.0
 
+        # Scheduler and performance telemetry
+        self._last_inf_duration_ms: float = 0.0
+        self._last_sched_wait_ms: float = 0.0
+        self._last_pipeline_latency_ms: float = 0.0
+        if self._shared_detector is not None:
+            fair_inference_scheduler.set_detector(self._shared_detector)
+
         # Reconnection accounting
         self._retry_count: int = 0
         self._next_retry_delay_sec: float = 0.0
@@ -190,6 +199,9 @@ class CameraSession:
             self._set_state(CameraState.CONNECTING, "Initializing camera stream...")
             self._started_at = time.time()
 
+            fair_inference_scheduler.start()
+            fair_inference_scheduler.register_camera(self.camera_id)
+
             # Launch capture worker
             self._capture_thread = threading.Thread(
                 target=self._capture_worker,
@@ -227,6 +239,7 @@ class CameraSession:
                 self._inference_thread.join(timeout=2.0)
                 self._inference_thread = None
 
+            fair_inference_scheduler.unregister_camera(self.camera_id)
             self._release_capture()
             self._set_state(CameraState.IDLE, None)
             logger.info(f"Stopped camera session {self.camera_id}.")
@@ -252,11 +265,64 @@ class CameraSession:
                 self._cap = None
 
     def _capture_worker(self):
-        """Per-camera acquisition worker supporting hardware webcam or RTSP feeds."""
+        """Per-camera acquisition worker supporting hardware webcam, RTSP feeds, or file loops."""
         if self.config.source_type == CameraSourceType.WEBCAM:
             self._webcam_capture_loop()
+        elif self.config.source_type == CameraSourceType.FILE:
+            self._file_capture_loop()
         else:
             self._rtsp_capture_loop()
+
+    def _file_capture_loop(self):
+        file_path = self.config.rtsp_url or "data/uploads/vid_2e28e1e65a.mp4"
+        interval = 1.0 / self.config.target_fps
+        fps_calc_start = time.time()
+        fps_frame_counter = 0
+
+        try:
+            cap = cv2.VideoCapture(file_path)
+            if not cap.isOpened():
+                raise RuntimeError(f"Unable to open video file at {file_path}")
+
+            self._cap = cap
+            self._set_state(CameraState.CONNECTED, None)
+            logger.info(f"File session {self.camera_id} connected to {file_path}.")
+
+            while not self._stop_event.is_set():
+                cycle_start = time.time()
+                ret, frame = cap.read()
+                if not ret or frame is None or frame.size == 0:
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                    ret, frame = cap.read()
+                    if not ret or frame is None or frame.size == 0:
+                        time.sleep(0.05)
+                        continue
+
+                now = time.time()
+                if self.state != CameraState.CONNECTED:
+                    self._set_state(CameraState.CONNECTED, None)
+
+                self._record_frame(frame, now)
+                fps_frame_counter += 1
+                fps_elapsed = now - fps_calc_start
+                if fps_elapsed >= 1.0:
+                    with self._frame_lock:
+                        self._measured_fps = fps_frame_counter / fps_elapsed
+                    fps_calc_start = now
+                    fps_frame_counter = 0
+
+                sleep_time = interval - (time.time() - cycle_start)
+                if sleep_time > 0.001:
+                    time.sleep(sleep_time)
+
+        except Exception as e:
+            err = f"File capture error on camera {self.camera_id}: {e}"
+            logger.warning(err)
+            self._set_state(CameraState.ERROR, err)
+        finally:
+            self._release_capture()
+            if not self._stop_event.is_set() and self.state not in (CameraState.DISCONNECTED, CameraState.ERROR):
+                self._set_state(CameraState.DISCONNECTED, "File stream stopped.")
 
     def _webcam_capture_loop(self):
         device_idx = self.config.device_index
@@ -462,6 +528,7 @@ class CameraSession:
         fps_counter = 0
 
         while not self._stop_event.is_set():
+            cycle_t0 = time.perf_counter()
             frame_data = self.get_latest_raw_frame(timeout=0.2)
             if frame_data is None:
                 time.sleep(0.01)
@@ -475,11 +542,8 @@ class CameraSession:
             last_time = now_t
 
             try:
-                # 1. DIP Preprocessing & Edge-Preserving Denoise
-                frame_clean = DIPProcessor.preprocess_frame(frame_bgr, apply_denoise=True)
-
-                # 2. Gunnar Farneback Dense Optical Flow & Directional Shannon Entropy
-                curr_gray = cv2.cvtColor(frame_clean, cv2.COLOR_BGR2GRAY)
+                # 1. Gunnar Farneback Optical Flow on 320x240 grayscale
+                curr_gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
                 curr_gray_small = cv2.resize(curr_gray, (320, 240))
                 flow_data = DIPProcessor.compute_optical_flow_dynamics(prev_gray, curr_gray_small)
                 prev_gray = curr_gray_small
@@ -488,17 +552,28 @@ class CameraSession:
                 flow_entropy = flow_data["directional_entropy"]
                 motion_var = flow_data["motion_variance"]
 
-                # 3. Detection: run person inference (thread-safe shared detector)
-                if self._shared_detector is not None:
+                # 2. Fair Shared Inference Scheduling with Bounded Queue
+                raw_detections, sched_diag = fair_inference_scheduler.execute_sync(
+                    camera_id=self.camera_id,
+                    frame_id=frame_id,
+                    capture_timestamp=timestamp_sec,
+                    frame=frame_bgr,
+                    imgsz=self.config.inference_size,
+                    conf_threshold=self.config.conf_threshold,
+                    timeout=1.0
+                )
+                if not raw_detections and self._shared_detector is not None and "error" in sched_diag:
+                    # Direct fallback if scheduler is stopped
                     raw_detections = self._shared_detector.detect_persons(
-                        frame=frame_clean,
+                        frame=frame_bgr,
                         imgsz=self.config.inference_size,
                         conf_threshold=self.config.conf_threshold
                     )
-                else:
-                    raw_detections = []
 
-                # 4. Tracking: per-camera isolated ByteTracker (Confirmed Tracks State Machine)
+                self._last_sched_wait_ms = sched_diag.get("scheduler_wait_ms", 0.0)
+                self._last_inf_duration_ms = sched_diag.get("scheduler_duration_ms", 0.0)
+
+                # 3. Tracking: per-camera isolated ByteTracker (Confirmed Tracks State Machine)
                 active_tracks = self.tracker.update(raw_detections, timestamp_sec, width, height)
                 confirmed_detections = [
                     {
@@ -516,19 +591,19 @@ class CameraSession:
                 mean_speed = float(np.mean(speeds)) if speeds else 0.0
                 mean_accel = float(np.mean(accels)) if accels else 0.0
 
-                # 5. Spatial 3x3 Quadrant Inflow/Outflow Telemetry (Confirmed Persons Only)
+                # 4. Spatial 3x3 Quadrant Inflow/Outflow Telemetry (Confirmed Persons Only)
                 grid_cells = self.density_service.compute_zone_telemetry(
                     width, height, confirmed_detections, active_tracks, flow_data, self.config.perspective_weight
                 )
                 grid_densities = [c["normalized_density"] for c in grid_cells]
 
-                # 6. Crowd Pattern Recognition
+                # 5. Crowd Pattern Recognition
                 pattern_data = self.forecasting_engine.detect_crowd_patterns(
                     active_tracks, grid_cells, flow_entropy, mean_speed, person_count
                 )
                 detected_pattern = pattern_data["pattern"]
 
-                # 7. Heuristic Explainable Risk Index
+                # 6. Heuristic Explainable Risk Index
                 risk_data = self.risk_engine.compute_risk(
                     current_count=person_count,
                     optical_flow_mag=flow_mag,
@@ -536,7 +611,7 @@ class CameraSession:
                     grid_densities=grid_densities,
                 )
 
-                # 8. Multi-Horizon Risk Forecast (+5s, +10s, +15s)
+                # 7. Multi-Horizon Risk Forecast (+5s, +10s, +15s)
                 forecast_data = self.forecasting_engine.compute_short_term_forecast(
                     current_risk=risk_data["smoothed_score"],
                     current_density_comp=risk_data["density_comp"],
@@ -546,26 +621,29 @@ class CameraSession:
                     sample_interval_sec=sample_interval,
                 )
 
-                # 9. Perspective Density Heatmap Splatting (Confirmed Persons Only)
-                heatmap_overlay = DIPProcessor.generate_density_heatmap(
-                    (height, width),
-                    confirmed_detections,
-                    kernel_size=61,
-                    sigma_base=14.0,
-                    perspective_weight=self.config.perspective_weight,
-                )
-                annotated_frame = DIPProcessor.blend_heatmap_on_frame(frame_clean, heatmap_overlay, alpha=0.45)
+                # 8. Perspective Density Heatmap Splatting (Optimized: only compute/blend when crowd present)
+                if person_count > 0:
+                    heatmap_overlay = DIPProcessor.generate_density_heatmap(
+                        (height, width),
+                        confirmed_detections,
+                        kernel_size=61,
+                        sigma_base=14.0,
+                        perspective_weight=self.config.perspective_weight,
+                    )
+                    annotated_frame = DIPProcessor.blend_heatmap_on_frame(frame_bgr, heatmap_overlay, alpha=0.45)
+                else:
+                    annotated_frame = frame_bgr.copy()
 
-                # 10. Privacy Anonymization Filter (Face Blur or Silhouette on Confirmed Persons)
-                if self.config.privacy_mode != "none":
+                # 9. Privacy Anonymization Filter (Face Blur or Silhouette on Confirmed Persons)
+                if self.config.privacy_mode != "none" and person_count > 0:
                     annotated_frame = DIPProcessor.apply_privacy_filter(
                         annotated_frame, confirmed_detections, mode=self.config.privacy_mode
                     )
 
-                # 11. Spatial Grid Overlay
+                # 10. Spatial Grid Overlay
                 annotated_frame = self.density_service.draw_grid_overlay(annotated_frame, grid_cells, alpha=0.22)
 
-                # 12. Draw Confirmed Tracks & Velocity Vectors with Class & Confidence
+                # 11. Draw Confirmed Tracks & Velocity Vectors with Class & Confidence
                 for trk in active_tracks:
                     bx1, by1, bx2, by2 = [int(v) for v in trk["bbox"]]
                     tid = trk["id"]
@@ -588,7 +666,7 @@ class CameraSession:
                         cv2.LINE_AA,
                     )
 
-                # 13. HUD Surveillance Header (include Camera Name & State)
+                # 12. HUD Surveillance Header (include Camera Name & State)
                 cv2.rectangle(annotated_frame, (0, 0), (width, 46), (10, 15, 24), -1)
                 score = risk_data["smoothed_score"]
                 risk_color = (
@@ -612,6 +690,8 @@ class CameraSession:
                 # Encode JPEG in-memory
                 success, encoded_jpeg = cv2.imencode(".jpg", annotated_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
                 jpeg_bytes = encoded_jpeg.tobytes() if success else None
+
+                self._last_pipeline_latency_ms = (time.perf_counter() - cycle_t0) * 1000.0
 
                 # Assemble Telemetry Object
                 telemetry = {
@@ -642,6 +722,9 @@ class CameraSession:
                     "detected_pattern": detected_pattern,
                     "grid_density": grid_cells,
                     "camera_state": self.state,
+                    "inference_duration_ms": round(self._last_inf_duration_ms, 2),
+                    "scheduler_wait_ms": round(self._last_sched_wait_ms, 2),
+                    "pipeline_latency_ms": round(self._last_pipeline_latency_ms, 2),
                 }
 
                 # Update published state thread-safely
@@ -680,6 +763,7 @@ class CameraSession:
 
         uptime = round(now - self._started_at, 2) if (self._started_at and self.is_active) else 0.0
         frame_age = round(now - latest_ts, 2) if latest_ts > 0 else None
+        sched_telem = fair_inference_scheduler.get_telemetry(self.camera_id)
 
         return {
             "camera_id": self.camera_id,
@@ -693,9 +777,14 @@ class CameraSession:
             "frames_captured": captured,
             "frames_consumed": consumed,
             "frames_dropped": dropped,
+            "frames_replaced_obsolete": sched_telem.get("total_replaced_obsolete", 0),
             "latest_frame_id": latest_id,
             "latest_frame_timestamp": latest_ts,
+            "last_inference_timestamp": round(last_inf_ts, 3) if last_inf_ts > 0 else None,
             "frame_age_seconds": frame_age,
+            "inference_duration_ms": round(self._last_inf_duration_ms, 2),
+            "scheduler_wait_ms": round(self._last_sched_wait_ms, 2),
+            "pipeline_latency_ms": round(self._last_pipeline_latency_ms, 2),
             "measured_fps": measured_fps,
             "processing_fps": proc_fps,
             "uptime_seconds": uptime,

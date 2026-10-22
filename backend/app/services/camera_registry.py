@@ -94,7 +94,7 @@ class CameraRegistryService:
                 raise ValueError(f"Maximum registered camera limit reached ({self.max_registered}). Remove an unused camera first.")
 
             source_type_clean = source_type.lower().strip()
-            if source_type_clean not in (CameraSourceType.WEBCAM, CameraSourceType.RTSP):
+            if source_type_clean not in (CameraSourceType.WEBCAM, CameraSourceType.RTSP, CameraSourceType.FILE):
                 raise ValueError(f"Invalid source_type '{source_type}'. Must be 'webcam' or 'rtsp'.")
 
             # Validate RTSP parameters if source is RTSP
