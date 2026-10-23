@@ -221,19 +221,22 @@ export const MultiCameraPage: React.FC = () => {
 
   return (
     <div className="space-y-6 w-full">
-      {/* 1. Header with Add Camera Action */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-[#E2E8EA] dark:border-[#1F3538] gap-4">
+      {/* 1. Architectural Header with Add Camera Action */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-[#E2DBD1] dark:border-[#1F3538] gap-4">
         <div>
           <div className="flex items-center space-x-2.5">
-            <h2 className="text-xl font-bold tracking-tight text-[#1C3334] dark:text-[#EDF4F5]">
-              MULTI-CAMERA COMMAND CENTER
-            </h2>
+            <span className="text-[10px] font-mono font-bold tracking-widest text-[#376E6F] dark:text-[#6EB5B6] uppercase">
+              CROWDGUARD // 02 • MULTI-CAMERA FLEET
+            </span>
             <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#376E6F]/10 dark:bg-[#376E6F]/25 text-[#376E6F] dark:text-[#6EB5B6] border border-[#376E6F]/30 font-semibold">
               CONCURRENT SESSIONS
             </span>
           </div>
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight text-[#1C3334] dark:text-[#EDF4F5] mt-1">
+            Multi-Camera Command Center
+          </h1>
           <p className="text-xs text-[#5D757E] dark:text-[#A0B7BC] mt-1 max-w-2xl leading-relaxed">
-            Manage, ingest, and analyze multiple CCTV surveillance nodes simultaneously. Each camera maintains an independent capture pipeline, isolated ByteTrack tracking IDs, perspective-aware density calculations, and heuristic disaster risk scoring.
+            Manage, ingest, and analyze multiple CCTV surveillance nodes simultaneously with isolated capture pipelines and perspective risk scoring.
           </p>
         </div>
 
@@ -257,59 +260,46 @@ export const MultiCameraPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Aggregate Fleet Telemetry Ribbon */}
+      {/* 2. Restrained Fleet Telemetry Horizon Ribbon (Anti-Card Wall) */}
       {health && (
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-[11px] font-mono text-[#5D757E] dark:text-[#A0B7BC] px-1">
-            <span className="font-semibold tracking-wider uppercase">SURVEILLANCE FLEET TELEMETRY</span>
-            <span className="tabular-nums font-semibold text-[#376E6F] dark:text-[#6EC4C6]">
-              {health.connected_count} CONNECTED • {health.active_streams} ACTIVE
+        <div className="w-full bg-[#FAF8F5] dark:bg-[#0E1A1B] border-y border-[#E2DBD1] dark:border-[#1F3538] px-4 py-2.5 flex flex-wrap items-center justify-between gap-y-2 text-xs font-mono select-none">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-1 divide-x-0 sm:divide-x divide-[#E2DBD1] dark:divide-[#1F3538]">
+            <div className="flex items-center space-x-2 pr-0 sm:pr-4">
+              <span className="text-[10px] uppercase font-semibold tracking-wider text-[#5D757E] dark:text-[#A0B7BC]">Capacity</span>
+              <span className="font-bold text-[#1C3334] dark:text-[#EDF4F5] tabular-nums">{health.total_registered} / {health.max_registered_limit} slots</span>
+            </div>
+            <div className="flex items-center space-x-2 pl-0 sm:pl-4 pr-0 sm:pr-4">
+              <span className="text-[10px] uppercase font-semibold tracking-wider text-[#5D757E] dark:text-[#A0B7BC]">Active</span>
+              <span className="font-bold text-[#376E6F] dark:text-[#6EC4C6] tabular-nums">{health.active_streams} / {health.max_active_limit} live</span>
+              <span className={`inline-block w-1.5 h-1.5 rounded-full ${health.active_streams > 0 ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+            </div>
+            <div className="flex items-center space-x-2 pl-0 sm:pl-4 pr-0 sm:pr-4">
+              <span className="text-[10px] uppercase font-semibold tracking-wider text-[#5D757E] dark:text-[#A0B7BC]">Connected</span>
+              <span className="font-bold text-[#2F4454] dark:text-[#88A8C0] tabular-nums">{health.connected_count} online</span>
+            </div>
+            <div className="flex items-center space-x-2 pl-0 sm:pl-4 pr-0 sm:pr-4">
+              <span className="text-[10px] uppercase font-semibold tracking-wider text-[#5D757E] dark:text-[#A0B7BC]">Recovery</span>
+              <span className={`font-bold tabular-nums ${health.reconnecting_count > 0 ? 'text-amber-600 animate-pulse' : 'text-[#5D757E] dark:text-[#A0B7BC]'}`}>
+                {health.reconnecting_count} retrying
+              </span>
+            </div>
+            <div className="flex items-center space-x-2 pl-0 sm:pl-4 pr-0 sm:pr-4">
+              <span className="text-[10px] uppercase font-semibold tracking-wider text-[#5D757E] dark:text-[#A0B7BC]">Fleet Crowd</span>
+              <span className="font-bold text-[#1C3334] dark:text-[#EDF4F5] tabular-nums">{health.total_observed_persons} persons</span>
+            </div>
+            <div className="flex items-center space-x-2 pl-0 sm:pl-4">
+              <span className="text-[10px] uppercase font-semibold tracking-wider text-[#5D757E] dark:text-[#A0B7BC]">Peak Risk</span>
+              <span className={`font-bold tabular-nums ${health.highest_risk_score >= 70 ? 'text-[#2E151B] dark:text-rose-400' : health.highest_risk_score >= 40 ? 'text-[#DA7B93]' : 'text-[#376E6F] dark:text-[#6EC4C6]'}`}>
+                {health.highest_risk_score.toFixed(1)} / 100
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2 text-[10px]">
+            <span className="text-[#5D757E] dark:text-[#A0B7BC]">SCHEDULER:</span>
+            <span className="font-semibold text-[#376E6F] dark:text-[#6EC4C6] uppercase">
+              {health.system_status}
             </span>
           </div>
-          <MetricStrip>
-            <MetricItem
-              label="Registered Slots"
-              value={`${health.total_registered} / ${health.max_registered_limit}`}
-              unit="nodes"
-              subtext="Capacity Allocation"
-              tone="slate"
-            />
-            <MetricItem
-              label="Active Streams"
-              value={`${health.active_streams} / ${health.max_active_limit}`}
-              unit="active"
-              subtext="Ingestion Channels"
-              tone="teal"
-            />
-            <MetricItem
-              label="Connected Feeds"
-              value={health.connected_count}
-              unit="online"
-              subtext="Synchronized Capture"
-              tone="emerald"
-            />
-            <MetricItem
-              label="Nodes In Recovery"
-              value={health.reconnecting_count}
-              unit="retrying"
-              subtext={health.reconnecting_count > 0 ? 'Backoff Retrying' : 'Zero Failures'}
-              tone={health.reconnecting_count > 0 ? 'amber' : 'neutral'}
-            />
-            <MetricItem
-              label="Fleet Observed Crowd"
-              value={health.total_observed_persons}
-              unit="persons"
-              subtext="Multi-Zone Aggregate"
-              tone="teal"
-            />
-            <MetricItem
-              label="Peak Fleet Risk"
-              value={health.highest_risk_score.toFixed(1)}
-              unit="/ 100"
-              subtext={`Status: ${health.system_status}`}
-              tone={health.highest_risk_score >= 70 ? 'burgundy' : health.highest_risk_score >= 40 ? 'amber' : 'emerald'}
-            />
-          </MetricStrip>
         </div>
       )}
 
@@ -336,7 +326,12 @@ export const MultiCameraPage: React.FC = () => {
           icon={Camera}
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className={`grid gap-6 ${
+          cameras.length === 1 ? 'grid-cols-1 max-w-4xl mx-auto' :
+          cameras.length === 2 ? 'grid-cols-1 lg:grid-cols-2' :
+          cameras.length <= 4 ? 'grid-cols-1 md:grid-cols-2' :
+          'grid-cols-1 md:grid-cols-2 xl:grid-cols-3'
+        }`}>
           {cameras.map((cam) => {
             const camId = cam.camera_id || '';
             const isActing = actionLoading[camId];
@@ -348,10 +343,10 @@ export const MultiCameraPage: React.FC = () => {
             return (
               <div
                 key={camId}
-                className="bg-white dark:bg-[#152729] border border-[#E2E8EA] dark:border-[#233C3F] rounded-2xl overflow-hidden flex flex-col justify-between hover:border-[#CBD5D8] dark:hover:border-[#376E6F]/50 transition-all shadow-xs"
+                className="bg-white dark:bg-[#122123] border border-[#E2DBD1] dark:border-[#203638] rounded-xl overflow-hidden flex flex-col justify-between hover:border-[#CBD5D8] dark:hover:border-[#376E6F]/50 transition-all shadow-xs"
               >
                 {/* Card Header */}
-                <div className="p-4 border-b border-[#E2E8EA] dark:border-[#233C3F] flex items-center justify-between">
+                <div className="p-3.5 bg-[#FAF8F5] dark:bg-[#0E1A1B] border-b border-[#E2DBD1] dark:border-[#203638] flex items-center justify-between">
                   <div className="flex items-center space-x-2.5 truncate">
                     {cam.source_type === 'rtsp' ? (
                       <Radio className="w-4 h-4 text-[#376E6F] dark:text-[#6EB5B6] shrink-0" />
@@ -359,29 +354,35 @@ export const MultiCameraPage: React.FC = () => {
                       <Camera className="w-4 h-4 text-[#376E6F] dark:text-[#6EB5B6] shrink-0" />
                     )}
                     <div className="truncate">
-                      <h3 className="text-sm font-bold text-[#1C3334] dark:text-[#EDF4F5] tracking-wide truncate">
-                        {cam.camera_name || 'Unnamed Camera'}
+                      <h3 className="text-xs font-bold font-mono text-[#1C3334] dark:text-[#EDF4F5] tracking-wide uppercase truncate">
+                        {cam.camera_name || 'Unnamed Node'}
                       </h3>
                       <p className="text-[10px] font-mono text-[#5D757E] dark:text-[#A0B7BC] truncate">
-                        {cam.location || cam.sanitized_url || `Device #${cam.device_index}`}
+                        {cam.location || cam.sanitized_url || `Hardware #${cam.device_index}`}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center space-x-1.5 shrink-0">
                     {isStale && (
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-medium border bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 animate-pulse">
+                      <span className="px-2 py-0.5 rounded text-[9px] font-mono font-medium border bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 animate-pulse">
                         STALE
                       </span>
                     )}
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-medium border ${stateColors[cam.state] || stateColors.IDLE}`}>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-medium border ${stateColors[cam.state] || stateColors.IDLE}`}>
                       {cam.state}
                     </span>
                   </div>
                 </div>
 
-                {/* Card Viewport Preview */}
-                <div className="aspect-video bg-black/95 relative flex items-center justify-center overflow-hidden border-b border-[#E2E8EA] dark:border-[#233C3F]">
+                {/* Tactical CCTV Viewport with Precision Corner Reticles */}
+                <div className="aspect-video bg-black relative flex items-center justify-center overflow-hidden border-b border-[#E2DBD1] dark:border-[#203638]">
+                  {/* Tactical Reticles */}
+                  <div className="absolute top-2 left-2 w-2.5 h-2.5 border-t-2 border-l-2 border-white/50 pointer-events-none z-10" />
+                  <div className="absolute top-2 right-2 w-2.5 h-2.5 border-t-2 border-r-2 border-white/50 pointer-events-none z-10" />
+                  <div className="absolute bottom-2 left-2 w-2.5 h-2.5 border-b-2 border-l-2 border-white/50 pointer-events-none z-10" />
+                  <div className="absolute bottom-2 right-2 w-2.5 h-2.5 border-b-2 border-r-2 border-white/50 pointer-events-none z-10" />
+
                   {cam.state === 'CONNECTED' ? (
                     <>
                       <img
@@ -471,7 +472,7 @@ export const MultiCameraPage: React.FC = () => {
                 )}
 
                 {/* Card Action Controls */}
-                <div className="p-3 bg-white dark:bg-[#152729] flex items-center justify-between gap-2">
+                <div className="p-3 bg-[#FAF8F5] dark:bg-[#0E1A1B] border-t border-[#E2DBD1] dark:border-[#203638] flex items-center justify-between gap-2">
                   <div className="flex items-center space-x-2">
                     {cam.is_active ? (
                       <button

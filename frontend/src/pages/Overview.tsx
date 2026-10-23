@@ -41,6 +41,7 @@ import {
   ErrorState, 
   LoadingBlock 
 } from '../components/UIComponents';
+import { SpatialDensity3D } from '../components/SpatialDensity3D';
 import { useSystem } from '../context/SystemContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -73,6 +74,21 @@ export const Overview: React.FC = () => {
   const [partialErrors, setPartialErrors] = useState<PartialEndpointErrors>({});
 
   const overviewRequestIdRef = useRef<number>(0);
+
+  const [startingCam, setStartingCam] = useState<boolean>(false);
+
+  const handleStartWebcam = async () => {
+    setStartingCam(true);
+    try {
+      const res = await cameraApi.start({ device_index: 0 });
+      setCameraStatus(res);
+      await loadOverviewData(true);
+    } catch (e) {
+      console.error('Failed to engage webcam:', e);
+    } finally {
+      setStartingCam(false);
+    }
+  };
 
   const loadOverviewData = useCallback(async (isSilentRefresh = false) => {
     const currentRequestId = ++overviewRequestIdRef.current;
@@ -252,14 +268,14 @@ export const Overview: React.FC = () => {
       {/* -------------------------------------------------------------------------
           1. EDITORIAL HEADER & WORKSTATION ACTIONS
           ------------------------------------------------------------------------- */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-[#E2E8EA] dark:border-[#203638] gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-[#E2DBD1] dark:border-[#203638] gap-4">
         <div>
           <div className="flex items-center space-x-2.5">
-            <h1 className="text-xl font-bold tracking-tight text-[#1C3334] dark:text-[#EDF4F5]">
-              CROWD SURVEILLANCE & FORECAST WORKSTATION
-            </h1>
+            <span className="text-[10px] font-mono font-bold tracking-widest text-[#376E6F] dark:text-[#6EB5B6] uppercase">
+              CROWDGUARD // 01 • SPATIAL PLATFORM
+            </span>
             <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-[#376E6F]/10 dark:bg-[#376E6F]/25 text-[#376E6F] dark:text-[#6EB5B6] border border-[#376E6F]/30">
-              DIP OPS v2.0
+              {fleetHealth?.system_status || 'OPERATIONAL'}
             </span>
             {refreshing && (
               <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-mono bg-[#DA7B93]/15 text-[#B34D66] dark:text-[#DA7B93] border border-[#DA7B93]/30 animate-pulse">
@@ -268,9 +284,11 @@ export const Overview: React.FC = () => {
               </span>
             )}
           </div>
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight text-[#1C3334] dark:text-[#EDF4F5] mt-1">
+            Crowd Intelligence, In Space
+          </h1>
           <p className="text-xs text-[#5D757E] dark:text-[#A0B7BC] mt-1 max-w-2xl leading-relaxed">
-            Multi-stage Digital Image Processing surveillance system evaluating Farneback optical flow velocity fields,
-            directional Shannon entropy disorder, 2D continuous Gaussian density splatting, and +10s risk projections.
+            Perspective-aware spatial density projection and heuristic disaster risk assessment.
           </p>
         </div>
 
@@ -327,262 +345,231 @@ export const Overview: React.FC = () => {
       )}
 
       {/* -------------------------------------------------------------------------
-          2. UNIFIED OPERATIONAL STATUS CONSOLE STRIP (Anti-Template Refinement)
+          2. RESTRAINED OPERATIONAL TELEMETRY HORIZON BAND (Anti-Card Wall)
           ------------------------------------------------------------------------- */}
-      <MetricStrip>
-        <MetricItem
-          label="Fleet Connectivity"
-          value={
-            fleetHealth
-              ? `${fleetHealth.active_streams} / ${fleetHealth.total_registered}`
-              : cameraStatus?.is_active
-              ? '1 Active'
-              : '0 Active'
-          }
-          unit="streams"
-          subtext={fleetHealth?.system_status || (cameraStatus?.is_active ? 'WEBCAM_ACTIVE' : 'STANDBY')}
-          tone={fleetHealth?.active_streams || cameraStatus?.is_active ? 'teal' : 'neutral'}
-          icon={Radio}
-        />
-        <MetricItem
-          label="Pipeline Engine"
-          value={
-            cameraStatus?.is_active
-              ? cameraStatus.processing_fps.toFixed(1)
-              : summary?.total_videos
-              ? `${summary.total_videos}`
-              : '24.0'
-          }
-          unit={cameraStatus?.is_active ? 'FPS inf' : summary?.total_videos ? 'clips' : 'FPS cap'}
-          subtext={cameraStatus?.is_active ? `Capture: ${cameraStatus.measured_fps.toFixed(1)} FPS` : 'Computer vision engine'}
-          tone="slate"
-          icon={Activity}
-        />
-        <MetricItem
-          label="Instantaneous Density"
-          value={
-            latestFrame && typeof latestFrame.person_count === 'number'
-              ? latestFrame.person_count
-              : latestAnalysis && typeof latestAnalysis.peak_count === 'number'
-              ? latestAnalysis.peak_count
-              : '—'
-          }
-          unit="persons"
-          subtext={latestFrame?.risk_band ? `Band: ${latestFrame.risk_band}` : 'YOLOv8 Class 0'}
-          tone="deepteal"
-          icon={Users}
-        />
-        <MetricItem
-          label="Peak Risk Index"
-          value={
-            latestFrame && typeof latestFrame.smoothed_risk_score === 'number'
-              ? latestFrame.smoothed_risk_score.toFixed(1)
-              : latestAnalysis && typeof latestAnalysis.max_risk_score === 'number'
-              ? latestAnalysis.max_risk_score.toFixed(1)
-              : '0.0'
-          }
-          unit="/ 100"
-          subtext="Heuristic 4-factor composite"
-          tone={
-            (latestFrame?.smoothed_risk_score || latestAnalysis?.max_risk_score || 0) >= 70 ? 'burgundy' :
-            (latestFrame?.smoothed_risk_score || latestAnalysis?.max_risk_score || 0) >= 40 ? 'rose' : 'teal'
-          }
-          icon={TrendingUp}
-        />
-        <MetricItem
-          label="Incident Alerts"
-          value={recentIncidents ? recentIncidents.length : '0'}
-          unit="logged"
-          subtext="Automated threshold audit"
-          tone={recentIncidents && recentIncidents.length > 0 ? 'burgundy' : 'neutral'}
-          icon={ShieldAlert}
-        />
-      </MetricStrip>
-
-      {/* -------------------------------------------------------------------------
-          3. PRIMARY SURVEILLANCE & SPATIAL DENSITY COMMAND CENTER
-          ------------------------------------------------------------------------- */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column (7 cols): Surveillance Viewport & Interactive Spatial Grid */}
-        <div className="lg:col-span-7 space-y-4">
-          <div className="bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl p-4 shadow-xs">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E2E8EA] dark:border-[#203638] mb-3">
-              <div className="flex items-center space-x-2">
-                <span className={`w-2.5 h-2.5 rounded-full ${cameraStatus?.is_active ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
-                <h2 className="text-xs font-bold text-[#1C3334] dark:text-[#EDF4F5] uppercase tracking-wider">
-                  {cameraStatus?.is_active
-                    ? `Live Surveillance Feed • ${cameraStatus.source_type === 'rtsp' ? cameraStatus.camera_name || 'RTSP' : 'Hardware Camera #0'}`
-                    : latestAnalysis
-                    ? `Forensic Replay Preview • ${analysisVideo?.original_filename || analysisVideo?.filename || latestAnalysis.id.slice(0, 14)}`
-                    : 'Surveillance Video Viewport'}
-                </h2>
-              </div>
-              <div className="flex items-center space-x-2 text-[11px] font-mono text-[#5D757E] dark:text-[#A0B7BC]">
-                {cameraStatus?.is_active ? (
-                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold tabular-nums">
-                    {cameraStatus.measured_fps.toFixed(1)} FPS
-                  </span>
-                ) : latestAnalysis ? (
-                  <StatusPill status={latestAnalysis.status} />
-                ) : null}
-              </div>
-            </div>
-
-            {/* Video Viewport: Stays Pure Dark for Optical Contrast */}
-            <div className="aspect-video bg-black rounded-lg overflow-hidden border border-[#CBD5D8] dark:border-[#203638] relative flex items-center justify-center shadow-inner">
-              {cameraStatus?.is_active ? (
-                <img
-                  src={cameraApi.getStreamUrl()}
-                  alt="Live Surveillance Stream"
-                  className="w-full h-full object-contain"
-                />
-              ) : latestAnalysis?.annotated_video_path ? (
-                <div className="relative w-full h-full flex items-center justify-center">
-                  <div className="text-center p-6 space-y-3">
-                    <Video className="w-10 h-10 text-slate-500 mx-auto" />
-                    <div>
-                      <p className="text-xs font-semibold text-white">Processed Surveillance Session Available</p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">Session ID: {latestAnalysis.id}</p>
-                    </div>
-                    <Link
-                      to={`/monitoring?analysisId=${latestAnalysis.id}`}
-                      className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-[#2F4454] hover:bg-[#1C3334] text-white dark:bg-[#376E6F] dark:hover:bg-[#4A8E8F] rounded-lg text-xs font-semibold transition"
-                    >
-                      <PlayCircle className="w-3.5 h-3.5" />
-                      <span>Launch Synchronized Replay</span>
-                    </Link>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center p-8 space-y-3">
-                  <Camera className="w-8 h-8 text-slate-500 mx-auto" />
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold text-white">Live Monitoring Inactive</p>
-                    <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
-                      Connect your local webcam or register RTSP streams to view real-time YOLOv8 bounding boxes and optical flow fields.
-                    </p>
-                  </div>
-                  <div className="pt-1 flex items-center justify-center space-x-2">
-                    <Link
-                      to="/monitoring?source=webcam"
-                      className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-[#2F4454] hover:bg-[#1C3334] text-white dark:bg-[#376E6F] dark:hover:bg-[#4A8E8F] rounded-lg text-xs font-semibold transition shadow-xs"
-                    >
-                      <Camera className="w-3.5 h-3.5" />
-                      <span>Connect Webcam</span>
-                    </Link>
-                    <Link
-                      to="/cameras"
-                      className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-medium transition"
-                    >
-                      <Radio className="w-3.5 h-3.5" />
-                      <span>RTSP Cameras</span>
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Viewport Micro Metadata Bar */}
-            <div className="mt-3 pt-2.5 border-t border-[#E2E8EA] dark:border-[#203638] flex flex-wrap items-center justify-between text-[11px] text-[#5D757E] dark:text-[#A0B7BC] gap-2">
-              <div className="flex items-center space-x-3 font-mono tabular-nums">
-                <span>Observed: <strong className="text-[#1C3334] dark:text-[#EDF4F5]">{latestFrame?.person_count ?? '0'} persons</strong></span>
-                <span>•</span>
-                <span>Risk: <strong className="text-[#376E6F] dark:text-[#6EB5B6]">{latestFrame?.smoothed_risk_score?.toFixed(1) ?? '0.0'} / 100</strong></span>
-                {cameraStatus?.is_active && (
-                  <>
-                    <span>•</span>
-                    <span>Uptime: <strong className="text-[#1C3334] dark:text-[#EDF4F5]">{cameraStatus.uptime_seconds}s</strong></span>
-                  </>
-                )}
-              </div>
-              <Link
-                to={cameraStatus?.is_active ? '/monitoring?source=webcam' : latestAnalysis ? `/monitoring?analysisId=${latestAnalysis.id}` : '/video-analysis'}
-                className="text-xs font-semibold text-[#376E6F] dark:text-[#6EB5B6] hover:text-[#2F4454] dark:hover:text-white inline-flex items-center space-x-1"
-              >
-                <span>Full Telemetry View</span>
-                <ArrowRight className="w-3 h-3" />
-              </Link>
-            </div>
+      <div className="w-full bg-[#FAF8F5] dark:bg-[#0E1A1B] border-y border-[#E2DBD1] dark:border-[#1F3538] px-4 py-2.5 flex flex-wrap items-center justify-between gap-y-2 text-xs font-mono select-none">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 divide-x-0 sm:divide-x divide-[#E2DBD1] dark:divide-[#1F3538]">
+          {/* Active Streams */}
+          <div className="flex items-center space-x-2 pr-0 sm:pr-4">
+            <span className="text-[10px] uppercase font-semibold tracking-wider text-[#5D757E] dark:text-[#A0B7BC]">
+              Streams
+            </span>
+            <span className="font-bold text-[#1C3334] dark:text-[#EDF4F5] tabular-nums">
+              {fleetHealth ? `${fleetHealth.active_streams} / ${fleetHealth.total_registered}` : cameraStatus?.is_active ? '1 Active' : '0 Active'}
+            </span>
+            <span className={`inline-block w-1.5 h-1.5 rounded-full ${fleetHealth?.active_streams || cameraStatus?.is_active ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
           </div>
 
-          {/* 3×3 Density Quadrant Breakdown */}
-          <div className="bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl p-4 shadow-xs">
-            <div className="flex items-center justify-between pb-2.5 border-b border-[#E2E8EA] dark:border-[#203638] mb-3">
-              <div className="flex items-center space-x-2">
-                <Grid3X3 className="w-4 h-4 text-[#376E6F] dark:text-[#6EB5B6]" />
-                <h3 className="text-xs font-bold text-[#1C3334] dark:text-[#EDF4F5] uppercase tracking-wider">
-                  Spatial 3×3 Density Matrix
-                </h3>
-              </div>
-              <span className="text-[10px] font-mono text-[#5D757E] dark:text-[#A0B7BC]">
-                {latestFrame ? `Frame #${latestFrame.frame_index} • t=${latestFrame.timestamp_sec.toFixed(1)}s` : '9 Quadrant Sectors (A1–C3)'}
-              </span>
-            </div>
+          {/* Engine Processing FPS */}
+          <div className="flex items-center space-x-2 pl-0 sm:pl-4 pr-0 sm:pr-4">
+            <span className="text-[10px] uppercase font-semibold tracking-wider text-[#5D757E] dark:text-[#A0B7BC]">
+              CV Engine
+            </span>
+            <span className="font-bold text-[#2F4454] dark:text-[#88A8C0] tabular-nums">
+              {cameraStatus?.is_active ? `${cameraStatus.processing_fps.toFixed(1)} FPS` : '24.0 FPS'}
+            </span>
+            <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC]">inf</span>
+          </div>
 
-            {zoneCells !== null ? (
-              <div className="grid grid-cols-3 gap-2">
-                {zoneCells.map((zone) => {
-                  const isCritical = zone.density_level === 'Critical';
-                  const isHigh = zone.density_level === 'High';
-                  const isMod = zone.density_level === 'Moderate';
-                  return (
-                    <div
-                      key={zone.name}
-                      className={`rounded-lg border p-2 flex flex-col justify-between transition-colors shadow-2xs ${
-                        isCritical
-                          ? 'border-[#2E151B]/40 dark:border-rose-500/40 bg-[#FAF0F2] dark:bg-rose-950/20 text-[#2E151B] dark:text-rose-300'
-                          : isHigh
-                          ? 'border-amber-400 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-950/20 text-amber-900 dark:text-amber-200'
-                          : isMod
-                          ? 'border-amber-200 dark:border-amber-500/20 bg-amber-50/50 dark:bg-[#121C2B] text-amber-800 dark:text-amber-300'
-                          : 'border-[#E2E8EA] dark:border-[#203638] bg-[#F8F9FA] dark:bg-[#0E1622] text-[#1C3334] dark:text-[#EDF4F5]'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono font-bold">{zone.name}</span>
-                        <span className={`w-2 h-2 rounded-full ${
-                          isCritical ? 'bg-rose-500 animate-pulse' :
-                          isHigh ? 'bg-orange-500' :
-                          isMod ? 'bg-amber-500' : 'bg-emerald-500'
-                        }`} />
-                      </div>
-                      <div className="my-1">
-                        <div className="text-base font-bold font-mono text-[#1C3334] dark:text-[#EDF4F5] tabular-nums">
-                          {zone.population}
-                        </div>
-                        <span className="text-[9px] text-[#5D757E] dark:text-[#A0B7BC] font-mono block">
-                          {(zone.normalized_density * 100).toFixed(0)}% cap
-                        </span>
-                      </div>
-                      <div className="text-[9px] font-mono text-[#5D757E] dark:text-[#A0B7BC] border-t border-[#E2E8EA] dark:border-[#203638] pt-1 flex justify-between tabular-nums">
-                        <span>v: {zone.avg_velocity.toFixed(0)} px/s</span>
-                        {zone.pattern && zone.pattern !== 'NORMAL' && (
-                          <span className="text-[#DA7B93] font-bold uppercase truncate max-w-[50px]">{zone.pattern}</span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="py-6 rounded-lg border border-dashed border-[#CBD5D8] dark:border-[#203638] bg-[#F8F9FA] dark:bg-[#0E1622] text-center text-[#5D757E] dark:text-[#A0B7BC] space-y-1">
-                <Grid3X3 className="w-5 h-5 mx-auto text-slate-400" />
-                <p className="text-xs font-semibold text-[#1C3334] dark:text-[#EDF4F5]">Spatial Matrix Standing By</p>
-                <p className="text-[10px] max-w-xs mx-auto">Start a camera feed or replay to view 3×3 quadrant density distribution.</p>
-              </div>
-            )}
+          {/* Observed Population */}
+          <div className="flex items-center space-x-2 pl-0 sm:pl-4 pr-0 sm:pr-4">
+            <span className="text-[10px] uppercase font-semibold tracking-wider text-[#5D757E] dark:text-[#A0B7BC]">
+              Observed
+            </span>
+            <span className="font-bold text-[#1C3334] dark:text-[#EDF4F5] tabular-nums">
+              {latestFrame && typeof latestFrame.person_count === 'number'
+                ? latestFrame.person_count
+                : latestAnalysis && typeof latestAnalysis.peak_count === 'number'
+                ? latestAnalysis.peak_count
+                : '—'}
+            </span>
+            <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC]">persons</span>
+          </div>
+
+          {/* Peak Risk Index */}
+          <div className="flex items-center space-x-2 pl-0 sm:pl-4 pr-0 sm:pr-4">
+            <span className="text-[10px] uppercase font-semibold tracking-wider text-[#5D757E] dark:text-[#A0B7BC]">
+              Peak Risk
+            </span>
+            <span className={`font-bold tabular-nums ${
+              (latestFrame?.smoothed_risk_score || latestAnalysis?.max_risk_score || 0) >= 70 ? 'text-[#2E151B] dark:text-rose-400' :
+              (latestFrame?.smoothed_risk_score || latestAnalysis?.max_risk_score || 0) >= 40 ? 'text-[#DA7B93]' : 'text-[#376E6F] dark:text-[#6EC4C6]'
+            }`}>
+              {latestFrame && typeof latestFrame.smoothed_risk_score === 'number'
+                ? latestFrame.smoothed_risk_score.toFixed(1)
+                : latestAnalysis && typeof latestAnalysis.max_risk_score === 'number'
+                ? latestAnalysis.max_risk_score.toFixed(1)
+                : '0.0'}
+            </span>
+            <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC]">/ 100</span>
+          </div>
+
+          {/* Incident Warnings */}
+          <div className="flex items-center space-x-2 pl-0 sm:pl-4">
+            <span className="text-[10px] uppercase font-semibold tracking-wider text-[#5D757E] dark:text-[#A0B7BC]">
+              Incidents
+            </span>
+            <span className={`font-bold tabular-nums ${recentIncidents && recentIncidents.length > 0 ? 'text-[#2E151B] dark:text-[#DA7B93]' : 'text-[#376E6F] dark:text-[#6EC4C6]'}`}>
+              {recentIncidents ? recentIncidents.length : '0'}
+            </span>
+            <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC]">logged</span>
           </div>
         </div>
 
-        {/* Right Column (5 cols): Temporal Risk Trajectory & Incident Feed */}
-        <div className="lg:col-span-5 space-y-4">
-          {/* Temporal Risk Trajectory Chart */}
-          <div className="bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl p-4 shadow-xs">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E2E8EA] dark:border-[#203638] mb-3">
+        <div className="flex items-center space-x-2 text-[10px]">
+          <span className="text-[#5D757E] dark:text-[#A0B7BC]">STATUS:</span>
+          <span className="font-semibold text-[#376E6F] dark:text-[#6EC4C6] uppercase">
+            {fleetHealth?.system_status || 'NOMINAL'}
+          </span>
+        </div>
+      </div>
+
+      {/* -------------------------------------------------------------------------
+          3. HERO SPATIAL & INTEGRATED SURVEILLANCE MATRIX (65% / 35% Split)
+          ------------------------------------------------------------------------- */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        {/* Region B: Main 3D Spatial Environment (65% Visual Focus) */}
+        <div className="lg:col-span-7 xl:col-span-8 flex flex-col">
+          <SpatialDensity3D
+            gridData={zoneCells}
+            cameraName={cameraStatus?.is_active ? cameraStatus.camera_name || 'Hardware Camera #0' : 'Surveillance Plaza Node'}
+            heightClassName="h-[440px] sm:h-[480px] lg:h-[520px]"
+            className="flex-1"
+          />
+        </div>
+
+        {/* Region C: Integrated Surveillance Optical Region (35% Focus) */}
+        <div className="lg:col-span-5 xl:col-span-4 flex flex-col justify-between bg-white dark:bg-[#122123] border border-[#E2DBD1] dark:border-[#203638] rounded-xl overflow-hidden shadow-xs">
+          {/* Tactical Viewfinder Header */}
+          <div className="p-3 bg-[#FAF8F5] dark:bg-[#0E1A1B] border-b border-[#E2DBD1] dark:border-[#203638] flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <span className={`w-2 h-2 rounded-full ${cameraStatus?.is_active ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+              <span className="text-xs font-bold font-mono tracking-wider text-[#1C3334] dark:text-[#EDF4F5] uppercase">
+                {cameraStatus?.is_active
+                  ? `LIVE FEED • ${cameraStatus.source_type === 'rtsp' ? cameraStatus.camera_name || 'RTSP' : 'Hardware #0'}`
+                  : latestAnalysis
+                  ? `REPLAY • ${analysisVideo?.filename || latestAnalysis.id.slice(0, 12)}`
+                  : 'SURVEILLANCE HUD'}
+              </span>
+            </div>
+            <div className="flex items-center space-x-2 text-[10px] font-mono">
+              {cameraStatus?.is_active ? (
+                <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/30 tabular-nums">
+                  {cameraStatus.measured_fps.toFixed(1)} FPS
+                </span>
+              ) : latestAnalysis ? (
+                <StatusPill status={latestAnalysis.status} />
+              ) : (
+                <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 font-mono">
+                  STANDBY
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* High-Contrast Video Viewport with Precision Corner Reticles */}
+          <div className="relative flex-1 min-h-[280px] bg-black flex items-center justify-center overflow-hidden">
+            {/* Tactical Corner Reticles */}
+            <div className="absolute top-2.5 left-2.5 w-3 h-3 border-t-2 border-l-2 border-white/50 pointer-events-none z-10" />
+            <div className="absolute top-2.5 right-2.5 w-3 h-3 border-t-2 border-r-2 border-white/50 pointer-events-none z-10" />
+            <div className="absolute bottom-2.5 left-2.5 w-3 h-3 border-b-2 border-l-2 border-white/50 pointer-events-none z-10" />
+            <div className="absolute bottom-2.5 right-2.5 w-3 h-3 border-b-2 border-r-2 border-white/50 pointer-events-none z-10" />
+
+            {/* Viewport Header Watermark */}
+            <div className="absolute top-3 left-6 pointer-events-none z-10 flex items-center space-x-1.5 text-[9px] font-mono text-white/70">
+              <span className={`w-1.5 h-1.5 rounded-full ${cameraStatus?.is_active ? 'bg-rose-500 animate-ping' : 'bg-slate-400'} inline-block`} />
+              <span>{cameraStatus?.is_active ? 'LIVE OPTICAL SENSOR' : 'STANDBY SENSOR'}</span>
+            </div>
+
+            {cameraStatus?.is_active ? (
+              <img
+                src={cameraApi.getStreamUrl()}
+                alt="Live Surveillance Stream"
+                className="w-full h-full object-contain"
+              />
+            ) : latestAnalysis?.annotated_video_path ? (
+              <div className="relative w-full h-full flex items-center justify-center p-6 text-center space-y-3 z-10">
+                <div className="space-y-2">
+                  <Video className="w-9 h-9 text-slate-400 mx-auto" />
+                  <div>
+                    <p className="text-xs font-semibold text-white">Processed Surveillance Session Available</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5 font-mono">Session: {latestAnalysis.id}</p>
+                  </div>
+                  <Link
+                    to={`/monitoring?analysisId=${latestAnalysis.id}`}
+                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-[#2F4454] hover:bg-[#1C3334] text-white dark:bg-[#376E6F] dark:hover:bg-[#4A8E8F] rounded-lg text-xs font-semibold transition"
+                  >
+                    <PlayCircle className="w-3.5 h-3.5" />
+                    <span>Launch Synchronized Replay</span>
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center p-6 space-y-3 z-10">
+                <Camera className="w-8 h-8 text-slate-500 mx-auto" />
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-white">Live Monitoring Standby</p>
+                  <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
+                    Connect local webcam or select fleet cameras to observe real-time YOLOv8 detections and flow.
+                  </p>
+                </div>
+                <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
+                  <button
+                    onClick={handleStartWebcam}
+                    disabled={startingCam}
+                    className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 bg-[#376E6F] hover:bg-[#4A8E8F] text-white rounded-lg text-xs font-semibold transition cursor-pointer shadow-xs"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>{startingCam ? 'Engaging...' : 'Engage Hardware Cam'}</span>
+                  </button>
+                  <Link
+                    to="/cameras"
+                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-medium transition"
+                  >
+                    <Radio className="w-3.5 h-3.5" />
+                    <span>Fleet Nodes</span>
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Viewport Docked Metadata Strip */}
+          <div className="p-3 bg-[#FAF8F5] dark:bg-[#0E1A1B] border-t border-[#E2DBD1] dark:border-[#203638] flex items-center justify-between text-[11px] font-mono text-[#5D757E] dark:text-[#A0B7BC]">
+            <div className="flex items-center space-x-3 tabular-nums">
+              <span>Observed: <strong className="text-[#1C3334] dark:text-[#EDF4F5]">{latestFrame?.person_count ?? '0'}</strong></span>
+              <span>•</span>
+              <span>Risk: <strong className="text-[#376E6F] dark:text-[#6EB5B6]">{latestFrame?.smoothed_risk_score?.toFixed(1) ?? '0.0'}</strong></span>
+              {cameraStatus?.is_active && (
+                <>
+                  <span>•</span>
+                  <span>Uptime: <strong className="text-[#1C3334] dark:text-[#EDF4F5]">{cameraStatus.uptime_seconds}s</strong></span>
+                </>
+              )}
+            </div>
+            <Link
+              to={cameraStatus?.is_active ? '/monitoring?source=webcam' : latestAnalysis ? `/monitoring?analysisId=${latestAnalysis.id}` : '/video-analysis'}
+              className="text-[#376E6F] dark:text-[#6EB5B6] hover:underline font-semibold flex items-center space-x-1"
+            >
+              <span>Full Studio</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* -------------------------------------------------------------------------
+          4. SECONDARY OPERATIONAL ANALYTICS & AUDIT TRAJECTORIES
+          ------------------------------------------------------------------------- */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* Temporal Risk Trajectory Chart (7 cols) */}
+        <div className="lg:col-span-7 space-y-4">
+          <div className="bg-white dark:bg-[#122123] border border-[#E2DBD1] dark:border-[#203638] rounded-xl p-4 shadow-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E2DBD1] dark:border-[#203638] mb-3">
               <div className="flex items-center space-x-2">
                 <Activity className="w-4 h-4 text-[#376E6F] dark:text-[#6EB5B6]" />
-                <h3 className="text-xs font-bold text-[#1C3334] dark:text-[#EDF4F5] uppercase tracking-wider">
-                  Temporal Risk & Predictive Projection
+                <h3 className="text-xs font-bold text-[#1C3334] dark:text-[#EDF4F5] uppercase tracking-wider font-mono">
+                  Temporal Risk Trajectory & Forecast (+10s)
                 </h3>
               </div>
               <div className="flex items-center space-x-2 text-[10px] font-mono">
@@ -668,21 +655,23 @@ export const Overview: React.FC = () => {
               </div>
             )}
 
-            <div className="mt-2.5 pt-2 border-t border-[#E2E8EA] dark:border-[#203638] flex items-center justify-between text-[10px] text-[#5D757E] dark:text-[#A0B7BC]">
+            <div className="mt-2.5 pt-2 border-t border-[#E2DBD1] dark:border-[#203638] flex items-center justify-between text-[10px] text-[#5D757E] dark:text-[#A0B7BC]">
               <span>Heuristic decision-support indicator (Farneback + Shannon)</span>
               <Link to="/analytics" className="text-[#376E6F] dark:text-[#6EB5B6] hover:underline font-semibold">
                 Explore Analytics →
               </Link>
             </div>
           </div>
+        </div>
 
-          {/* Recent Audit Incidents Feed */}
-          <div className="bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl p-4 shadow-xs">
-            <div className="flex items-center justify-between pb-2.5 border-b border-[#E2E8EA] dark:border-[#203638] mb-3">
+        {/* Right: Recent Audit Incidents Feed (5 cols) */}
+        <div className="lg:col-span-5 space-y-4">
+          <div className="bg-white dark:bg-[#122123] border border-[#E2DBD1] dark:border-[#203638] rounded-xl p-4 shadow-xs">
+            <div className="flex items-center justify-between pb-2.5 border-b border-[#E2DBD1] dark:border-[#203638] mb-3">
               <div className="flex items-center space-x-2">
                 <ShieldAlert className="w-4 h-4 text-[#2E151B] dark:text-[#DA7B93]" />
-                <h3 className="text-xs font-bold text-[#1C3334] dark:text-[#EDF4F5] uppercase tracking-wider">
-                  Automated Incident Feed
+                <h3 className="text-xs font-bold text-[#1C3334] dark:text-[#EDF4F5] uppercase tracking-wider font-mono">
+                  Hazard Incident Log
                 </h3>
               </div>
               <Link to="/incidents" className="text-[10px] font-semibold text-[#376E6F] dark:text-[#6EB5B6] hover:underline">
@@ -695,7 +684,7 @@ export const Overview: React.FC = () => {
                 {recentIncidents.slice(0, 4).map((inc) => (
                   <div
                     key={inc.id}
-                    className="p-2.5 rounded-lg border border-[#E2E8EA] dark:border-[#203638] bg-[#F8F9FA] dark:bg-[#0E1622] flex items-start justify-between gap-2 transition-colors hover:border-[#CBD5D8] dark:hover:border-[#376E6F]/40"
+                    className="p-2.5 rounded-lg border border-[#E2DBD1] dark:border-[#203638] bg-[#F8F9FA] dark:bg-[#0E1622] flex items-start justify-between gap-2 transition-colors hover:border-[#CBD5D8] dark:hover:border-[#376E6F]/40"
                   >
                     <div className="space-y-0.5 min-w-0 flex-1">
                       <div className="flex items-center space-x-1.5">

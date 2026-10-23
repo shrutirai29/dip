@@ -33,21 +33,21 @@ const navGroups: NavGroup[] = [
   {
     groupName: 'MONITORING & SURVEILLANCE',
     items: [
-      { name: 'Command Overview', shortName: 'Overview', path: '/', icon: LayoutDashboard },
-      { name: 'Multi-Camera Fleet', shortName: 'Cameras', path: '/cameras', icon: Radio }, 
-      { name: 'Telemetry & Replay', shortName: 'Telemetry', path: '/monitoring', icon: Activity },
-      { name: 'Dynamics & Forecasts', shortName: 'Forecasts', path: '/analytics', icon: BarChart3 },
-      { name: 'Incident Warnings', shortName: 'Incidents', path: '/incidents', icon: AlertTriangle },
+      { name: 'Overview', shortName: 'Overview', path: '/', icon: LayoutDashboard },
+      { name: 'Live Monitoring', shortName: 'Live', path: '/monitoring', icon: Activity },
+      { name: 'Multi-Camera', shortName: 'Cameras', path: '/cameras', icon: Radio }, 
+      { name: 'Video Analysis', shortName: 'Analysis', path: '/video-analysis', icon: VideoIcon },
+      { name: 'Analytics', shortName: 'Analytics', path: '/analytics', icon: BarChart3 },
     ],
   },
   {
-    groupName: 'STUDIO & FORENSICS',
+    groupName: 'FORENSICS & AUDIT',
     items: [
-      { name: 'Video Ingestion Studio', shortName: 'Studio', path: '/video-analysis', icon: VideoIcon },
-      { name: 'Audit Session History', shortName: 'History', path: '/history', icon: History },
-      { name: 'Model & Scalability Benchmarks', shortName: 'Benchmarks', path: '/benchmarks', icon: Cpu },
-      { name: 'DIP Methodology', shortName: 'Methodology', path: '/docs', icon: FileText },
-      { name: 'Engine Calibration', shortName: 'Settings', path: '/settings', icon: Settings },
+      { name: 'Incidents', shortName: 'Incidents', path: '/incidents', icon: AlertTriangle },
+      { name: 'Session History', shortName: 'History', path: '/history', icon: History },
+      { name: 'Benchmarks', shortName: 'Benchmarks', path: '/benchmarks', icon: Cpu },
+      { name: 'Settings', shortName: 'Settings', path: '/settings', icon: Settings },
+      { name: 'Documentation', shortName: 'Docs', path: '/docs', icon: FileText },
     ],
   },
 ];
@@ -90,10 +90,10 @@ export const Navbar: React.FC = () => {
                 <div className="flex items-center space-x-1.5">
                   <span className="text-xs font-bold tracking-wider text-[#1C3334] dark:text-[#EEF4F5]">CROWDGUARD</span>
                   <span className="text-[9px] px-1 py-0.2 rounded bg-[#DA7B93]/15 text-[#B34D66] dark:text-[#DA7B93] font-mono border border-[#DA7B93]/30 font-semibold">
-                    DIP
+                    v2.0
                   </span>
                 </div>
-                <p className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] font-mono truncate">Surveillance & Risk</p>
+                <p className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] font-mono truncate">Crowd Intelligence Platform</p>
               </div>
             )}
           </div>
@@ -109,11 +109,11 @@ export const Navbar: React.FC = () => {
         </div>
 
         {/* Navigation list */}
-        <div className="flex-1 overflow-y-auto px-2 py-3 space-y-5">
+        <div className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
           {navGroups.map((group) => (
             <div key={group.groupName} className="space-y-1">
               {!sidebarCollapsed && (
-                <div className="px-2.5 pb-1 text-[10px] font-bold tracking-wider text-[#5D757E] dark:text-[#6C868B] uppercase">
+                <div className="px-2.5 pb-1 text-[9px] font-bold tracking-widest text-[#5D757E] dark:text-[#6C868B] uppercase">
                   {group.groupName}
                 </div>
               )}
@@ -128,8 +128,8 @@ export const Navbar: React.FC = () => {
                     className={({ isActive }) =>
                       `flex items-center space-x-2.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-colors ${
                         isActive
-                          ? 'bg-[#EEF5F5] dark:bg-[#182E30] text-[#1C3334] dark:text-[#EEF4F5] border border-[#376E6F]/30 dark:border-[#4A8E8F]/40 font-semibold shadow-2xs'
-                          : 'text-[#2F4454] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-white hover:bg-[#F1F4F5] dark:hover:bg-[#152729] border border-transparent'
+                          ? 'bg-[#FAF3F5] dark:bg-[#1F171C] text-[#1C3334] dark:text-[#EEF4F5] border-l-2 border-[#DA7B93] font-semibold shadow-2xs'
+                          : 'text-[#2F4454] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-white hover:bg-[#F2ECE6] dark:hover:bg-[#152729] border-l-2 border-transparent'
                       } ${sidebarCollapsed ? 'justify-center px-0' : ''}`
                     }
                   >

@@ -41,6 +41,7 @@ import {
   ErrorState, 
   LoadingBlock 
 } from '../components/UIComponents';
+import { SpatialDensity3D } from '../components/SpatialDensity3D';
 import { useSystem } from '../context/SystemContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -65,6 +66,8 @@ export const LiveMonitoring: React.FC = () => {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [selectedFrameIndex, setSelectedFrameIndex] = useState<number>(0);
   const [selectedZone, setSelectedZone] = useState<GridDensityCell | null>(null);
+  const [liveSpatialMode, setLiveSpatialMode] = useState<'3d' | '2d'>('3d');
+  const [replaySpatialMode, setReplaySpatialMode] = useState<'3d' | '2d'>('3d');
 
   const [loadingList, setLoadingList] = useState<boolean>(true);
   const [loadingDetails, setLoadingDetails] = useState<boolean>(false);
@@ -437,13 +440,12 @@ export const LiveMonitoring: React.FC = () => {
       {/* -------------------------------------------------------------------------
           1. HEADER WITH FEED SOURCE SWITCHER & TELEMETRY CONTROLS
           ------------------------------------------------------------------------- */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-4 border-b border-[#E2E8EA] dark:border-[#203638] gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-4 border-b border-[#E2DBD1] dark:border-[#203638] gap-4">
         <div>
           <div className="flex items-center space-x-2.5">
-            <h1 className="text-xl font-bold text-[#1C3334] dark:text-[#EDF4F5] tracking-tight">
-              {activeSource === 'webcam' ? 'LIVE HARDWARE WEBCAM MONITORING' : 'TELEMETRY & SPATIAL REPLAY'}
-            </h1>
-
+            <span className="text-[10px] font-mono font-bold tracking-widest text-[#376E6F] dark:text-[#6EB5B6] uppercase">
+              CROWDGUARD // 03 • LIVE SURVEILLANCE & SPATIAL REPLAY
+            </span>
             {activeSource === 'webcam' ? (
               isBackendOffline ? (
                 <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-500/30">
@@ -486,6 +488,9 @@ export const LiveMonitoring: React.FC = () => {
             )}
           </div>
 
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight text-[#1C3334] dark:text-[#EDF4F5] mt-1">
+            {activeSource === 'webcam' ? 'Live Surveillance & Tracking' : 'Forensic Replay & Spatial Telemetry'}
+          </h1>
           <p className="text-xs text-[#5D757E] dark:text-[#A0B7BC] mt-1">
             {activeSource === 'webcam'
               ? 'Real-time local hardware webcam video acquisition, YOLOv8 ByteTrack multi-object tracking, and continuous Farneback velocity telemetry'
@@ -776,16 +781,39 @@ export const LiveMonitoring: React.FC = () => {
                 <div className="flex items-center justify-between pb-3 border-b border-[#E2E8EA] dark:border-[#203638]">
                   <div>
                     <h3 className="text-sm font-semibold text-[#1C3334] dark:text-white tracking-wide">
-                      Live 3×3 Grid Matrix
+                      Spatial Quadrant Intelligence
                     </h3>
                     <p className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC]">Interactive localized quadrant telemetry</p>
                   </div>
-                  <span className="text-[10px] font-mono text-[#376E6F] dark:text-[#6EB5B6] px-2 py-0.5 rounded bg-[#376E6F]/10 border border-[#376E6F]/30">
-                    9 Sectors (A1–C3)
-                  </span>
+                  <div className="flex items-center space-x-1 p-0.5 rounded-lg bg-[#EDE8E1] dark:bg-[#0B1415] border border-[#CBD5D8] dark:border-[#233C3F] text-[10px] font-mono">
+                    <button
+                      onClick={() => setLiveSpatialMode('3d')}
+                      className={`px-2 py-0.5 rounded transition cursor-pointer ${
+                        liveSpatialMode === '3d' ? 'bg-white dark:bg-[#183133] text-[#376E6F] dark:text-[#6EC4C6] font-bold shadow-2xs' : 'text-[#5D757E] dark:text-[#A0B7BC]'
+                      }`}
+                    >
+                      3D Plaza
+                    </button>
+                    <button
+                      onClick={() => setLiveSpatialMode('2d')}
+                      className={`px-2 py-0.5 rounded transition cursor-pointer ${
+                        liveSpatialMode === '2d' ? 'bg-white dark:bg-[#183133] text-[#376E6F] dark:text-[#6EC4C6] font-bold shadow-2xs' : 'text-[#5D757E] dark:text-[#A0B7BC]'
+                      }`}
+                    >
+                      2D Grid
+                    </button>
+                  </div>
                 </div>
 
-                {/* 3x3 Matrix Grid */}
+                {liveSpatialMode === '3d' ? (
+                  <SpatialDensity3D
+                    gridData={liveTelemetry?.grid_density}
+                    onSelectZone={setSelectedLiveZone}
+                    selectedZoneName={selectedLiveZone?.name}
+                    cameraName={cameraStatus?.camera_name || 'HARDWARE WEBCAM'}
+                  />
+                ) : (
+                /* 3x3 Matrix Grid */
                 <div className="grid grid-cols-3 gap-2">
                   {liveTelemetry?.grid_density && liveTelemetry.grid_density.length > 0 ? (
                     liveTelemetry.grid_density.map((zone) => {
@@ -847,6 +875,7 @@ export const LiveMonitoring: React.FC = () => {
                     </div>
                   )}
                 </div>
+                )}
 
                 {/* Selected Sector Telemetry Detail */}
                 {selectedLiveZone ? (
@@ -1324,16 +1353,39 @@ export const LiveMonitoring: React.FC = () => {
                 <div className="flex items-center justify-between pb-3 border-b border-[#E2E8EA] dark:border-[#203638]">
                   <div>
                     <h3 className="text-sm font-semibold text-[#1C3334] dark:text-white tracking-wide">
-                      Spatial 3×3 Grid Matrix
+                      Spatial Quadrant Intelligence
                     </h3>
                     <p className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC]">Select any quadrant to inspect localized telemetry</p>
                   </div>
-                  <span className="text-[10px] font-mono text-[#376E6F] dark:text-[#6EB5B6] px-2 py-0.5 rounded bg-[#376E6F]/10 border border-[#376E6F]/30">
-                    9 Sectors (A1–C3)
-                  </span>
+                  <div className="flex items-center space-x-1 p-0.5 rounded-lg bg-[#EDE8E1] dark:bg-[#0B1415] border border-[#CBD5D8] dark:border-[#233C3F] text-[10px] font-mono">
+                    <button
+                      onClick={() => setReplaySpatialMode('3d')}
+                      className={`px-2 py-0.5 rounded transition cursor-pointer ${
+                        replaySpatialMode === '3d' ? 'bg-white dark:bg-[#183133] text-[#376E6F] dark:text-[#6EC4C6] font-bold shadow-2xs' : 'text-[#5D757E] dark:text-[#A0B7BC]'
+                      }`}
+                    >
+                      3D Plaza
+                    </button>
+                    <button
+                      onClick={() => setReplaySpatialMode('2d')}
+                      className={`px-2 py-0.5 rounded transition cursor-pointer ${
+                        replaySpatialMode === '2d' ? 'bg-white dark:bg-[#183133] text-[#376E6F] dark:text-[#6EC4C6] font-bold shadow-2xs' : 'text-[#5D757E] dark:text-[#A0B7BC]'
+                      }`}
+                    >
+                      2D Grid
+                    </button>
+                  </div>
                 </div>
 
-                {/* 3x3 Interactive Grid HUD */}
+                {replaySpatialMode === '3d' ? (
+                  <SpatialDensity3D
+                    gridData={currentFrame?.grid_density}
+                    onSelectZone={setSelectedZone}
+                    selectedZoneName={selectedZone?.name}
+                    cameraName={selectedAnalysis?.id || 'REPLAY SESSION'}
+                  />
+                ) : (
+                /* 3x3 Interactive Grid HUD */
                 <div className="grid grid-cols-3 gap-2">
                   {currentFrame?.grid_density && currentFrame.grid_density.length > 0 ? (
                     currentFrame.grid_density.map((zone) => {
@@ -1394,6 +1446,7 @@ export const LiveMonitoring: React.FC = () => {
                     </div>
                   )}
                 </div>
+                )}
 
                 {/* Selected Zone Deep Dive */}
                 {selectedZone ? (
