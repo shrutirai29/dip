@@ -51,6 +51,18 @@ def test_box_iou_zero_area_guard():
     assert compute_box_iou(box1, box2) == 0.0
 
 
+def test_box_iou_inverted_and_non_finite_guards():
+    # Inverted coordinates [x2, y2, x1, y1] must be rejected as invalid degenerate boxes (IoU = 0.0)
+    box1 = [50.0, 50.0, 10.0, 10.0]
+    box2 = [10.0, 10.0, 50.0, 50.0]
+    assert compute_box_iou(box1, box2) == 0.0
+
+    # Non-finite values (NaN, inf) must return 0.0 without throwing exceptions
+    assert compute_box_iou([float('nan'), 10.0, 50.0, 50.0], [10.0, 10.0, 50.0, 50.0]) == 0.0
+    assert compute_box_iou([float('inf'), 10.0, 50.0, 50.0], [10.0, 10.0, 50.0, 50.0]) == 0.0
+    assert compute_box_iou([], [10.0, 10.0, 50.0, 50.0]) == 0.0
+
+
 def test_precision_recall_f1_zero_division():
     # Zero detections and zero ground truths
     p, r, f1 = compute_precision_recall_f1(tp=0, fp=0, fn=0)
@@ -154,7 +166,7 @@ def test_confidence_threshold_sweep():
 def test_risk_model_validation_scenarios():
     val = evaluation_service.validate_heuristic_risk_scenarios()
     assert val["validation_status"] == "PASSED"
-    assert val["scenarios_evaluated"] == 7
+    assert val["scenarios_evaluated"] == 8
     for sc in val["outcomes"]:
         assert sc["status"] == "PASSED"
         assert 0.0 <= sc["observed_score"] <= 100.0
@@ -186,6 +198,107 @@ def test_risk_engine_session_isolation():
     assert res_b["smoothed_score"] == 0.0 # Absolutely isolated
 
 
+def test_risk_engine_deescalation_and_decay():
+    """Verify that when crowd disperses, risk score decays back to baseline via EMA without oscillating."""
+    engine = CrowdRiskEngine(alpha_ema=0.3)
+
+    # Surge phase: 5 frames of dense crowding and high flow
+    peak_score = 0.0
+    for _ in range(5):
+        res = engine.compute_risk(
+            current_count=30,
+            optical_flow_mag=10.0,
+            mean_speed=15.0,
+            grid_densities=[0.8] * 9
+        )
+        peak_score = res["smoothed_score"]
+
+    assert peak_score > 40.0, "Expected peak score to reflect high crowd conditions"
+
+    # Dissipation phase: 15 frames of empty room
+    scores_during_decay = []
+    for _ in range(15):
+        res = engine.compute_risk(
+            current_count=0,
+            optical_flow_mag=0.0,
+            mean_speed=0.0,
+            grid_densities=[0.0] * 9
+        )
+        scores_during_decay.append(res["smoothed_score"])
+
+    # Score must strictly non-increase towards zero
+    for i in range(1, len(scores_during_decay)):
+        assert scores_during_decay[i] <= scores_during_decay[i - 1]
+
+    # After 15 frames, score should decay to Low band (< 2.0)
+    assert scores_during_decay[-1] < 2.0
+    assert engine.compute_risk(0, 0.0, 0.0, [0.0]*9)["band"] == "Low"
+
+
+def test_risk_engine_bounds_and_nan_resilience():
+    """Verify risk engine cleanly handles out-of-bounds, negative, NaN, and infinite inputs."""
+    # Extreme high values
+    engine_inf = CrowdRiskEngine()
+    res_inf = engine_inf.compute_risk(
+        current_count=100000,
+        optical_flow_mag=float('inf'),
+        mean_speed=float('inf'),
+        grid_densities=[float('inf')] * 9
+    )
+    assert 0.0 <= res_inf["raw_score"] <= 100.0
+    assert 0.0 <= res_inf["smoothed_score"] <= 100.0
+    assert res_inf["band"] in ("High", "Critical")
+
+    # NaN and negative values on fresh engine
+    engine_nan = CrowdRiskEngine()
+    res_nan = engine_nan.compute_risk(
+        current_count=-50,
+        optical_flow_mag=float('nan'),
+        mean_speed=float('nan'),
+        grid_densities=[float('nan')] * 9
+    )
+    assert 0.0 <= res_nan["raw_score"] <= 100.0
+    assert 0.0 <= res_nan["smoothed_score"] <= 100.0
+    assert res_nan["band"] == "Low"
+
+
+def test_frame_drop_counter_semantics():
+    """Verify single-frame bounded buffer accounting identity: frames_captured == frames_consumed + buffer_overwrites."""
+    import numpy as np
+    from app.services.camera_session import CameraSession, CameraConfig, CameraSourceType
+
+    config = CameraConfig(
+        camera_id="test_cam_counters",
+        name="Counter Test",
+        source_type=CameraSourceType.WEBCAM,
+        device_index=0
+    )
+    session = CameraSession(config)
+
+    dummy_frame = np.zeros((100, 100, 3), dtype=np.uint8)
+
+    # Record 5 frames without consuming
+    for i in range(5):
+        session._record_frame(dummy_frame, timestamp_sec=float(i))
+
+    # Captured: 5. Overwritten/dropped: 4. Unconsumed waiting in buffer: 1. Consumed: 0.
+    status = session.get_status()
+    assert status["frames_captured"] == 5
+    assert status["frames_consumed"] == 0
+    assert status["buffer_overwrites"] == 4
+    assert status["frames_dropped"] == 4
+    # Accounting invariant: captured == consumed + buffer_overwrites + (1 if unconsumed else 0)
+    assert status["frames_captured"] == status["frames_consumed"] + status["buffer_overwrites"] + 1
+
+    # Now consume the frame
+    frame_data = session.get_latest_raw_frame(timeout=0.1)
+    assert frame_data is not None
+    status_post_consume = session.get_status()
+    assert status_post_consume["frames_consumed"] == 1
+    # Now that the latest frame was consumed: captured == consumed + buffer_overwrites
+    assert status_post_consume["frames_captured"] == status_post_consume["frames_consumed"] + status_post_consume["buffer_overwrites"]
+
+
 # ---------------------------------------------------------------------------
 # 4. API Endpoints Integration Tests
 # ---------------------------------------------------------------------------
@@ -212,7 +325,7 @@ def test_api_benchmark_risk_validation():
     assert response.status_code == 200
     data = response.json()
     assert data["validation_status"] == "PASSED"
-    assert data["scenarios_evaluated"] == 7
+    assert data["scenarios_evaluated"] == 8
 
 
 def test_api_benchmark_performance_report():

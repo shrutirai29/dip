@@ -20,10 +20,20 @@ logger = logging.getLogger("crowdguard.evaluation")
 def compute_box_iou(box1: List[float], box2: List[float]) -> float:
     """
     Computes Intersection over Union (IoU) between two bounding boxes [x1, y1, x2, y2].
-    Handles zero-area and invalid boxes gracefully.
+    Handles zero-area, inverted coordinates, and non-finite values gracefully.
     """
-    b1_x1, b1_y1, b1_x2, b1_y2 = box1
-    b2_x1, b2_y1, b2_x2, b2_y2 = box2
+    try:
+        b1_x1, b1_y1, b1_x2, b1_y2 = [float(v) for v in box1[:4]]
+        b2_x1, b2_y1, b2_x2, b2_y2 = [float(v) for v in box2[:4]]
+    except (ValueError, TypeError, IndexError):
+        return 0.0
+
+    if not all(math.isfinite(v) for v in (b1_x1, b1_y1, b1_x2, b1_y2, b2_x1, b2_y1, b2_x2, b2_y2)):
+        return 0.0
+
+    # Reject degenerate or inverted boxes (x2 <= x1 or y2 <= y1)
+    if b1_x2 <= b1_x1 or b1_y2 <= b1_y1 or b2_x2 <= b2_x1 or b2_y2 <= b2_y1:
+        return 0.0
 
     inter_x1 = max(b1_x1, b2_x1)
     inter_y1 = max(b1_y1, b2_y1)
@@ -446,6 +456,19 @@ class EvaluationService:
                 },
                 "expected_band": "Moderate",
                 "expected_min_score": 30.0
+            },
+            {
+                "id": "scenario_8_risk_decay",
+                "name": "Crowd Dissipation & Risk Decay",
+                "description": "Simulates elevated risk scene rapidly dispersing; verifies exponential smoothing decays reliably back to baseline without stalling",
+                "inputs": {
+                    "person_count": 0,
+                    "optical_flow_mag": 0.0,
+                    "mean_speed": 0.0,
+                    "grid_densities": [0.0] * 9
+                },
+                "expected_band": "Low",
+                "expected_max_score": 15.0
             }
         ]
 
@@ -466,6 +489,19 @@ class EvaluationService:
                 # Engine B must remain 0.0
                 isolation_intact = (res_b["smoothed_score"] == 0.0)
                 passed = (score >= sc["expected_min_score"]) and isolation_intact
+            elif sc["id"] == "scenario_8_risk_decay":
+                engine_decay = CrowdRiskEngine()
+                # 1. Drive to elevated risk
+                for _ in range(5):
+                    engine_decay.compute_risk(25, 10.0, 15.0, [0.5] * 9)
+                elevated_score = engine_decay.last_smoothed_risk
+                # 2. Crowd disperses completely to zero over 8 consecutive cycles
+                for _ in range(8):
+                    out = engine_decay.compute_risk(0, 0.0, 0.0, [0.0] * 9)
+                score = out["smoothed_score"]
+                band = out["band"]
+                # Must decay below 15.0 and at least 60% reduction from peak
+                passed = (score <= sc["expected_max_score"]) and (score < elevated_score * 0.4)
             else:
                 out = engine.compute_risk(
                     current_count=inp["person_count"],

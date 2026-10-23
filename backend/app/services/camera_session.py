@@ -805,6 +805,9 @@ class CameraSession:
                         self._latency_samples_raw_buffer_age.pop(0)
 
                 # Assemble Telemetry Object
+                sched_telem = fair_inference_scheduler.get_telemetry(self.camera_id)
+                current_weight = sched_telem.get("priority_weight", 1.0)
+                priority_reason = sched_telem.get("last_priority_reason", "initial")
                 telemetry = {
                     "camera_id": self.camera_id,
                     "camera_name": self.config.name,
@@ -817,7 +820,7 @@ class CameraSession:
                     "detection_timestamp": round(self._latest_detection_timestamp, 3) if self._latest_detection_timestamp > 0 else None,
                     "detection_monotonic": round(self._latest_detection_monotonic, 3) if self._latest_detection_monotonic > 0 else None,
                     "detection_age_seconds": round(det_age, 3),
-                    "staleness_threshold_sec": stale_threshold,
+                    "staleness_threshold_sec": self._staleness_threshold_sec,
                     "is_stale": is_stale,
                     "priority_weight": round(current_weight, 2),
                     "last_priority_reason": priority_reason,
