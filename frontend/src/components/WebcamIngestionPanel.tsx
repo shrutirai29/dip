@@ -76,8 +76,8 @@ export const WebcamIngestionPanel: React.FC = () => {
   const currentState = status?.state || 'IDLE';
 
   const stateColors: Record<string, string> = {
-    IDLE: 'bg-slate-800 text-slate-300 border-slate-700',
-    CONNECTING: 'bg-cyan-950/40 text-cyan-300 border-cyan-500/30 animate-pulse',
+    IDLE: 'bg-slate-800 text-[#2F4454] dark:text-slate-300 border-slate-700',
+    CONNECTING: 'bg-cyan-950/40 text-[#376E6F] dark:text-cyan-300 border-cyan-500/30 animate-pulse',
     CONNECTED: 'bg-emerald-950/40 text-emerald-300 border-emerald-500/30',
     DEGRADED: 'bg-amber-950/40 text-amber-300 border-amber-500/30',
     RECONNECTING: 'bg-amber-950/40 text-amber-300 border-amber-500/30 animate-pulse',
@@ -88,15 +88,15 @@ export const WebcamIngestionPanel: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Configuration & Controls Strip */}
-      <div className="rounded-xl border border-[#192638] bg-[#0A1018] p-5 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#192638] gap-3">
+      <div className="rounded-xl border border-[#E2E8EA] dark:border-[#203638] bg-white dark:bg-[#122123] shadow-xs p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#E2E8EA] dark:border-[#203638] gap-3">
           <div className="flex items-center space-x-2.5">
-            <Camera className="w-5 h-5 text-cyan-400" />
+            <Camera className="w-5 h-5 text-[#376E6F] dark:text-cyan-400" />
             <div>
-              <h3 className="text-sm font-semibold text-white tracking-wide">
+              <h3 className="text-sm font-semibold text-[#1C3334] dark:text-white tracking-wide">
                 Local Hardware Webcam Ingestion
               </h3>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-[#5D757E] dark:text-[#A0B7BC]">
                 Direct OpenCV VideoCapture ingestion with bounded latest-frame buffering & live DIP telemetry
               </p>
             </div>
@@ -124,7 +124,7 @@ export const WebcamIngestionPanel: React.FC = () => {
               <p className="text-[11px] text-rose-300 leading-relaxed">
                 {actionError || status?.error_message}
               </p>
-              <p className="text-[10px] text-slate-400 pt-1">
+              <p className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] pt-1">
                 Tip: Ensure your webcam is securely connected, not in use by Zoom/Teams/OBS, and that Windows Camera permissions allow desktop apps.
               </p>
             </div>
@@ -135,7 +135,7 @@ export const WebcamIngestionPanel: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
           {/* Device Index */}
           <div className="space-y-1.5">
-            <label className="text-[10px] uppercase font-mono tracking-wider text-slate-400 block">
+            <label className="text-[10px] uppercase font-mono tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block">
               Webcam Device Index
             </label>
             <select
@@ -152,7 +152,7 @@ export const WebcamIngestionPanel: React.FC = () => {
 
           {/* Target Capture Rate */}
           <div className="space-y-1.5">
-            <label className="text-[10px] uppercase font-mono tracking-wider text-slate-400 block">
+            <label className="text-[10px] uppercase font-mono tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block">
               Capture Pacing
             </label>
             <select
@@ -169,7 +169,7 @@ export const WebcamIngestionPanel: React.FC = () => {
 
           {/* Privacy Filtering */}
           <div className="space-y-1.5">
-            <label className="text-[10px] uppercase font-mono tracking-wider text-slate-400 block">
+            <label className="text-[10px] uppercase font-mono tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block">
               Privacy Mode
             </label>
             <select
@@ -186,7 +186,7 @@ export const WebcamIngestionPanel: React.FC = () => {
 
           {/* Action Button */}
           <div className="space-y-1.5 flex flex-col justify-end">
-            <label className="text-[10px] uppercase font-mono tracking-wider text-slate-400 block invisible">
+            <label className="text-[10px] uppercase font-mono tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block invisible">
               Action
             </label>
             {isActive ? (
@@ -202,7 +202,7 @@ export const WebcamIngestionPanel: React.FC = () => {
               <button
                 onClick={handleStart}
                 disabled={loading}
-                className="w-full inline-flex items-center justify-center space-x-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-medium transition cursor-pointer disabled:opacity-50 shadow-sm"
+                className="w-full inline-flex items-center justify-center space-x-2 px-4 py-2 bg-[#2F4454] hover:bg-[#1C3334] text-white dark:bg-[#376E6F] dark:hover:bg-[#4A8E8F] text-white rounded-lg text-xs font-medium transition cursor-pointer disabled:opacity-50 shadow-sm"
               >
                 <Play className="w-3.5 h-3.5 fill-current" />
                 <span>{loading ? 'Initializing...' : 'Start Webcam Ingestion'}</span>
@@ -215,8 +215,8 @@ export const WebcamIngestionPanel: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-[#192638] text-xs">
           <div className="space-y-1">
             <div className="flex justify-between text-[11px] font-mono">
-              <span className="text-slate-400">Detection Confidence:</span>
-              <span className="text-cyan-400 font-bold">{(confThreshold * 100).toFixed(0)}%</span>
+              <span className="text-[#5D757E] dark:text-[#A0B7BC]">Detection Confidence:</span>
+              <span className="text-[#376E6F] dark:text-cyan-400 font-bold">{(confThreshold * 100).toFixed(0)}%</span>
             </div>
             <input
               type="range"
@@ -226,14 +226,14 @@ export const WebcamIngestionPanel: React.FC = () => {
               value={confThreshold}
               onChange={(e) => setConfThreshold(parseFloat(e.target.value))}
               disabled={isActive || loading}
-              className="w-full accent-cyan-500 cursor-pointer disabled:opacity-50"
+              className="w-full accent-[#376E6F] cursor-pointer disabled:opacity-50"
             />
           </div>
 
           <div className="space-y-1">
             <div className="flex justify-between text-[11px] font-mono">
-              <span className="text-slate-400">Perspective Weighting:</span>
-              <span className="text-cyan-400 font-bold">{perspectiveWeight.toFixed(1)}x</span>
+              <span className="text-[#5D757E] dark:text-[#A0B7BC]">Perspective Weighting:</span>
+              <span className="text-[#376E6F] dark:text-cyan-400 font-bold">{perspectiveWeight.toFixed(1)}x</span>
             </div>
             <input
               type="range"
@@ -243,7 +243,7 @@ export const WebcamIngestionPanel: React.FC = () => {
               value={perspectiveWeight}
               onChange={(e) => setPerspectiveWeight(parseFloat(e.target.value))}
               disabled={isActive || loading}
-              className="w-full accent-cyan-500 cursor-pointer disabled:opacity-50"
+              className="w-full accent-[#376E6F] cursor-pointer disabled:opacity-50"
             />
           </div>
         </div>
@@ -252,7 +252,7 @@ export const WebcamIngestionPanel: React.FC = () => {
       {/* Live Stream Viewport & Telemetry HUD */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left 2 Cols: Live Video Display */}
-        <div className="lg:col-span-2 rounded-xl border border-[#192638] bg-[#0A1018] p-5 space-y-4">
+        <div className="lg:col-span-2 rounded-xl border border-[#E2E8EA] dark:border-[#203638] bg-white dark:bg-[#122123] shadow-xs p-5 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <span className={`w-2.5 h-2.5 rounded-full ${isActive ? 'bg-cyan-400 animate-pulse' : 'bg-slate-600'}`} />
@@ -260,15 +260,15 @@ export const WebcamIngestionPanel: React.FC = () => {
                 Webcam Stream Viewport
               </h4>
               {isActive && (
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950/40 text-cyan-300 border border-cyan-500/30">
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950/40 text-[#376E6F] dark:text-cyan-300 border border-cyan-500/30">
                   LIVE MJPEG FEED
                 </span>
               )}
             </div>
 
             {status?.latest_frame_timestamp ? (
-              <div className="flex items-center space-x-2 text-[10px] font-mono text-slate-400">
-                <Clock className="w-3 h-3 text-cyan-400" />
+              <div className="flex items-center space-x-2 text-[10px] font-mono text-[#5D757E] dark:text-[#A0B7BC]">
+                <Clock className="w-3 h-3 text-[#376E6F] dark:text-cyan-400" />
                 <span>Frame #{status.latest_frame_id}</span>
                 <span>•</span>
                 <span>{new Date(status.latest_frame_timestamp * 1000).toLocaleTimeString()}</span>
@@ -295,7 +295,7 @@ export const WebcamIngestionPanel: React.FC = () => {
                 </div>
                 <div className="space-y-1">
                   <h5 className="text-xs font-semibold text-white">Camera Feed Offline</h5>
-                  <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
+                  <p className="text-[11px] text-[#5D757E] dark:text-[#A0B7BC] max-w-sm mx-auto">
                     Select your local webcam index above and click &quot;Start Webcam Ingestion&quot; to initiate live video acquisition.
                   </p>
                 </div>
@@ -305,20 +305,20 @@ export const WebcamIngestionPanel: React.FC = () => {
         </div>
 
         {/* Right Col: Ingestion Telemetry & Drop Accounting */}
-        <div className="rounded-xl border border-[#192638] bg-[#0A1018] p-5 space-y-4 flex flex-col justify-between">
+        <div className="rounded-xl border border-[#E2E8EA] dark:border-[#203638] bg-white dark:bg-[#122123] shadow-xs p-5 space-y-4 flex flex-col justify-between">
           <div className="space-y-4">
-            <div className="pb-3 border-b border-[#192638]">
+            <div className="pb-3 border-b border-[#E2E8EA] dark:border-[#203638]">
               <h4 className="text-xs font-semibold text-white tracking-wide uppercase">
                 Ingestion Health & Frame Accounting
               </h4>
-              <p className="text-[10px] text-slate-400 mt-0.5">
+              <p className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] mt-0.5">
                 Real-time capture pacing, drop counters, and worker telemetry
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3 font-mono">
               <div className="p-3 rounded-lg bg-[#111923] border border-[#192638]">
-                <span className="text-[10px] text-slate-400 block font-sans">Captured Frames</span>
+                <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] block font-sans">Captured Frames</span>
                 <span className="text-lg font-bold text-white mt-1 block">
                   {status?.frames_captured ?? 0}
                 </span>
@@ -326,9 +326,9 @@ export const WebcamIngestionPanel: React.FC = () => {
               </div>
 
               <div className="p-3 rounded-lg bg-[#111923] border border-[#192638]">
-                <span className="text-[10px] text-slate-400 block font-sans">Dropped Frames</span>
+                <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] block font-sans">Dropped Frames</span>
                 <span className={`text-lg font-bold mt-1 block ${
-                  (status?.frames_dropped || 0) > 0 ? 'text-amber-400' : 'text-slate-300'
+                  (status?.frames_dropped || 0) > 0 ? 'text-amber-400' : 'text-[#2F4454] dark:text-slate-300'
                 }`}>
                   {status?.frames_dropped ?? 0}
                 </span>
@@ -336,15 +336,15 @@ export const WebcamIngestionPanel: React.FC = () => {
               </div>
 
               <div className="p-3 rounded-lg bg-[#111923] border border-[#192638]">
-                <span className="text-[10px] text-slate-400 block font-sans">Capture FPS</span>
-                <span className="text-lg font-bold text-cyan-400 mt-1 block">
+                <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] block font-sans">Capture FPS</span>
+                <span className="text-lg font-bold text-[#376E6F] dark:text-cyan-400 mt-1 block">
                   {status?.measured_fps?.toFixed(1) ?? '0.0'}
                 </span>
                 <span className="text-[9px] text-slate-500 block font-sans mt-0.5">Camera hardware</span>
               </div>
 
               <div className="p-3 rounded-lg bg-[#111923] border border-[#192638]">
-                <span className="text-[10px] text-slate-400 block font-sans">Inference FPS</span>
+                <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] block font-sans">Inference FPS</span>
                 <span className="text-lg font-bold text-emerald-400 mt-1 block">
                   {status?.processing_fps?.toFixed(1) ?? '0.0'}
                 </span>
@@ -353,19 +353,19 @@ export const WebcamIngestionPanel: React.FC = () => {
             </div>
 
             <div className="p-3 rounded-lg bg-[#111923] border border-[#192638] space-y-1 text-[11px]">
-              <div className="flex justify-between text-slate-400 font-mono">
+              <div className="flex justify-between text-[#5D757E] dark:text-[#A0B7BC] font-mono">
                 <span>Active Device:</span>
                 <span className="text-white font-bold">
                   {status?.device_index !== null ? `Device Index #${status?.device_index}` : 'None'}
                 </span>
               </div>
-              <div className="flex justify-between text-slate-400 font-mono">
+              <div className="flex justify-between text-[#5D757E] dark:text-[#A0B7BC] font-mono">
                 <span>Session Uptime:</span>
-                <span className="text-cyan-300">{status?.uptime_seconds ?? 0}s</span>
+                <span className="text-[#376E6F] dark:text-cyan-300">{status?.uptime_seconds ?? 0}s</span>
               </div>
-              <div className="flex justify-between text-slate-400 font-mono">
+              <div className="flex justify-between text-[#5D757E] dark:text-[#A0B7BC] font-mono">
                 <span>Queue Strategy:</span>
-                <span className="text-slate-300">Bounded Latest-Frame</span>
+                <span className="text-[#2F4454] dark:text-slate-300">Bounded Latest-Frame</span>
               </div>
             </div>
           </div>
@@ -373,10 +373,10 @@ export const WebcamIngestionPanel: React.FC = () => {
           <div className="pt-3 border-t border-[#192638]">
             <Link
               to="/monitoring?source=webcam"
-              className="w-full inline-flex items-center justify-center space-x-1.5 px-3 py-2 rounded-lg bg-[#141E2B] hover:bg-[#1E2D40] text-slate-200 hover:text-white border border-[#192638] transition text-xs font-medium cursor-pointer"
+              className="w-full inline-flex items-center justify-center space-x-1.5 px-3 py-2 rounded-lg bg-[#141E2B] hover:bg-[#1E2D40] text-[#1C3334] dark:text-slate-200 hover:text-white border border-[#192638] transition text-xs font-medium cursor-pointer"
             >
               <span>View Live Feed & Telemetry</span>
-              <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
+              <ExternalLink className="w-3.5 h-3.5 text-[#376E6F] dark:text-cyan-400" />
             </Link>
           </div>
         </div>

@@ -67,7 +67,7 @@ export const Navbar: React.FC = () => {
       {/* Mobile Backdrop */}
       {mobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-black/70 backdrop-blur-xs z-40 md:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 md:hidden"
           onClick={() => setMobileMenuOpen(false)}
           aria-hidden="true"
         />
@@ -75,32 +75,32 @@ export const Navbar: React.FC = () => {
 
       {/* Main Sidebar Container */}
       <aside 
-        className={`fixed top-0 bottom-0 left-0 z-40 flex flex-col justify-between bg-[#0A1018] border-r border-[#192638] transition-all duration-200 select-none ${
+        className={`fixed top-0 bottom-0 left-0 z-40 flex flex-col justify-between bg-white dark:bg-[#0E1A1B] border-r border-[#E2E8EA] dark:border-[#1F3538] transition-all duration-200 select-none ${
           mobileMenuOpen ? 'translate-x-0 w-64' : '-translate-x-full md:translate-x-0'
         } ${sidebarCollapsed ? 'md:w-16' : 'md:w-64'}`}
       >
         {/* Brand Header */}
-        <div className="h-14 px-3.5 border-b border-[#192638] flex items-center justify-between bg-[#070B11]/80">
+        <div className="h-14 px-3.5 border-b border-[#E2E8EA] dark:border-[#1F3538] flex items-center justify-between bg-[#F8F9FA]/80 dark:bg-[#0B1415]/80">
           <div className="flex items-center space-x-2.5 overflow-hidden">
-            <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0 shadow-inner">
-              <ShieldAlert className="w-4 h-4 text-cyan-400" />
+            <div className="w-8 h-8 rounded-lg bg-[#2F4454]/10 dark:bg-[#376E6F]/20 border border-[#2F4454]/25 dark:border-[#376E6F]/40 flex items-center justify-center text-[#2F4454] dark:text-[#6EB5B6] shrink-0 shadow-2xs">
+              <ShieldAlert className="w-4 h-4 text-[#2F4454] dark:text-[#6EB5B6]" />
             </div>
             {!sidebarCollapsed && (
               <div className="truncate">
                 <div className="flex items-center space-x-1.5">
-                  <span className="text-xs font-bold tracking-wider text-white">CROWDGUARD</span>
-                  <span className="text-[9px] px-1 py-0.2 rounded bg-cyan-500/15 text-cyan-300 font-mono border border-cyan-500/30">
+                  <span className="text-xs font-bold tracking-wider text-[#1C3334] dark:text-[#EEF4F5]">CROWDGUARD</span>
+                  <span className="text-[9px] px-1 py-0.2 rounded bg-[#DA7B93]/15 text-[#B34D66] dark:text-[#DA7B93] font-mono border border-[#DA7B93]/30 font-semibold">
                     DIP
                   </span>
                 </div>
-                <p className="text-[10px] text-slate-400 font-mono truncate">Surveillance & Risk</p>
+                <p className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] font-mono truncate">Surveillance & Risk</p>
               </div>
             )}
           </div>
 
           {/* Close button on mobile */}
           <button 
-            className="md:hidden text-slate-400 hover:text-white p-1 rounded cursor-pointer"
+            className="md:hidden text-[#5D757E] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-white p-1 rounded cursor-pointer"
             onClick={() => setMobileMenuOpen(false)}
             aria-label="Close menu"
           >
@@ -113,7 +113,7 @@ export const Navbar: React.FC = () => {
           {navGroups.map((group) => (
             <div key={group.groupName} className="space-y-1">
               {!sidebarCollapsed && (
-                <div className="px-2.5 pb-1 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
+                <div className="px-2.5 pb-1 text-[10px] font-bold tracking-wider text-[#5D757E] dark:text-[#6C868B] uppercase">
                   {group.groupName}
                 </div>
               )}
@@ -128,12 +128,12 @@ export const Navbar: React.FC = () => {
                     className={({ isActive }) =>
                       `flex items-center space-x-2.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-colors ${
                         isActive
-                          ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-semibold'
-                          : 'text-slate-400 hover:text-slate-100 hover:bg-[#121C2B] border border-transparent'
+                          ? 'bg-[#EEF5F5] dark:bg-[#182E30] text-[#1C3334] dark:text-[#EEF4F5] border border-[#376E6F]/30 dark:border-[#4A8E8F]/40 font-semibold shadow-2xs'
+                          : 'text-[#2F4454] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-white hover:bg-[#F1F4F5] dark:hover:bg-[#152729] border border-transparent'
                       } ${sidebarCollapsed ? 'justify-center px-0' : ''}`
                     }
                   >
-                    <Icon className="w-4 h-4 shrink-0" />
+                    <Icon className="w-4 h-4 shrink-0 text-[#376E6F] dark:text-[#6EB5B6]" />
                     {!sidebarCollapsed && <span className="truncate">{item.name}</span>}
                   </NavLink>
                 );
@@ -143,10 +143,10 @@ export const Navbar: React.FC = () => {
         </div>
 
         {/* Desktop Collapse Toggle Button */}
-        <div className="hidden md:flex items-center justify-end px-3 py-2 border-t border-[#192638] bg-[#070B11]/40">
+        <div className="hidden md:flex items-center justify-end px-3 py-2 border-t border-[#E2E8EA] dark:border-[#1F3538] bg-[#F8F9FA]/40 dark:bg-[#0B1415]/40">
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="w-full flex items-center justify-center space-x-2 py-1.5 text-xs text-slate-400 hover:text-white hover:bg-[#121C2B] rounded border border-transparent hover:border-[#1E2D40] transition-colors cursor-pointer"
+            className="w-full flex items-center justify-center space-x-2 py-1.5 text-xs text-[#5D757E] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-white hover:bg-[#F1F4F5] dark:hover:bg-[#152729] rounded border border-transparent hover:border-[#CBD5D8] dark:hover:border-[#2C4B4E] transition-colors cursor-pointer"
             aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {sidebarCollapsed ? (
@@ -161,27 +161,27 @@ export const Navbar: React.FC = () => {
         </div>
 
         {/* Footer Hardware & Engine Telemetry Status */}
-        <div className="p-3 border-t border-[#192638] bg-[#070B11]/80">
+        <div className="p-3 border-t border-[#E2E8EA] dark:border-[#1F3538] bg-[#F8F9FA]/80 dark:bg-[#0B1415]/80">
           {sidebarCollapsed ? (
             <div className="flex justify-center" title={`Engine Status: ${systemHealth.toUpperCase()}`}>
               <span className={`w-2 h-2 rounded-full ${
-                systemHealth === 'operational' ? (pipelineActive ? 'bg-cyan-400 animate-pulse' : 'bg-emerald-400') :
-                systemHealth === 'degraded' ? 'bg-amber-400' :
-                systemHealth === 'checking' ? 'bg-slate-500 animate-pulse' : 'bg-rose-500'
+                systemHealth === 'operational' ? (pipelineActive ? 'bg-[#376E6F] dark:bg-[#6EB5B6] animate-pulse' : 'bg-emerald-500') :
+                systemHealth === 'degraded' ? 'bg-amber-500' :
+                systemHealth === 'checking' ? 'bg-slate-400 animate-pulse' : 'bg-[#2E151B] dark:bg-rose-500'
               }`} />
             </div>
           ) : (
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-[11px]">
-                <span className="flex items-center space-x-1.5 text-slate-300">
+                <span className="flex items-center space-x-1.5 text-[#1C3334] dark:text-[#EDF4F5]">
                   <Radio className={`w-3 h-3 ${
                     systemHealth === 'operational'
-                      ? (pipelineActive ? 'text-cyan-400 animate-pulse' : 'text-emerald-400')
+                      ? (pipelineActive ? 'text-[#376E6F] dark:text-[#6EB5B6] animate-pulse' : 'text-emerald-500')
                       : systemHealth === 'degraded'
-                      ? 'text-amber-400'
+                      ? 'text-amber-500'
                       : systemHealth === 'checking'
-                      ? 'text-slate-500 animate-pulse'
-                      : 'text-rose-500'
+                      ? 'text-slate-400 animate-pulse'
+                      : 'text-[#2E151B] dark:text-rose-400'
                   }`} />
                   <span className="font-medium text-[11px]">
                     {pipelineActive
@@ -195,11 +195,11 @@ export const Navbar: React.FC = () => {
                       : 'Server Offline'}
                   </span>
                 </span>
-                <span className="text-[10px] bg-[#121C2B] border border-[#1E2D40] px-1.5 py-0.2 rounded text-cyan-300 font-mono">
+                <span className="text-[10px] bg-white dark:bg-[#152729] border border-[#CBD5D8] dark:border-[#2C4B4E] px-1.5 py-0.2 rounded text-[#2F4454] dark:text-[#A0B7BC] font-mono">
                   v2.0-CV
                 </span>
               </div>
-              <div className="flex items-center space-x-1 text-[10px] text-slate-400 font-mono truncate">
+              <div className="flex items-center space-x-1 text-[10px] text-[#5D757E] dark:text-[#6C868B] font-mono truncate">
                 <Cpu className="w-3 h-3 shrink-0" />
                 <span className="truncate">Farneback • 2D Gaussian • YOLO</span>
               </div>

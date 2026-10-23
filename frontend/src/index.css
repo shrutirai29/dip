@@ -1,10 +1,67 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-slate-blue: #2F4454;
+  --color-deep-burgundy: #2E151B;
+  --color-dusty-rose: #DA7B93;
+  --color-muted-teal: #376E6F;
+  --color-deep-teal: #1C3334;
+
+  --color-brand-slate: #2F4454;
+  --color-brand-burgundy: #2E151B;
+  --color-brand-rose: #DA7B93;
+  --color-brand-mutedteal: #376E6F;
+  --color-brand-deepteal: #1C3334;
+}
+
 @layer base {
   :root {
-    --bg-main: #070B11;
-    --bg-surface: #0B111A;
-    --bg-card: #0E1622;
-    --border-subtle: #192638;
+    /* Warm Light Theme (Default) */
+    --cg-bg-base: #F8F9FA;
+    --cg-bg-surface: #FFFFFF;
+    --cg-bg-panel: #F1F4F5;
+    --cg-bg-card: #FFFFFF;
+    --cg-bg-card-hover: #F6F8F9;
+    --cg-border-subtle: #E2E8EA;
+    --cg-border-accent: #CBD5D8;
+    --cg-text-primary: #1C3334;
+    --cg-text-secondary: #2F4454;
+    --cg-text-muted: #5D757E;
+    
+    --cg-brand-slate: #2F4454;
+    --cg-brand-burgundy: #2E151B;
+    --cg-brand-rose: #DA7B93;
+    --cg-brand-muted-teal: #376E6F;
+    --cg-brand-deep-teal: #1C3334;
+
+    --cg-shadow-sm: 0 1px 2px 0 rgba(28, 51, 52, 0.04);
+    --cg-shadow-md: 0 4px 6px -1px rgba(28, 51, 52, 0.07), 0 2px 4px -2px rgba(28, 51, 52, 0.05);
+    --cg-shadow-lg: 0 10px 15px -3px rgba(28, 51, 52, 0.08), 0 4px 6px -4px rgba(28, 51, 52, 0.04);
+  }
+
+  .dark {
+    /* Deep Teal Charcoal Dark Theme */
+    --cg-bg-base: #0B1415;
+    --cg-bg-surface: #112022;
+    --cg-bg-panel: #16292B;
+    --cg-bg-card: #152729;
+    --cg-bg-card-hover: #1B3235;
+    --cg-border-subtle: #233C3F;
+    --cg-border-accent: #315357;
+    --cg-text-primary: #EEF4F5;
+    --cg-text-secondary: #A0B7BC;
+    --cg-text-muted: #6B858B;
+    
+    --cg-brand-slate: #527189;
+    --cg-brand-burgundy: #381920;
+    --cg-brand-rose: #DA7B93;
+    --cg-brand-muted-teal: #4A8E8F;
+    --cg-brand-deep-teal: #244243;
+
+    --cg-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+    --cg-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+    --cg-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
   }
 }

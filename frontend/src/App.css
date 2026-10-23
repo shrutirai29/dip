@@ -1,26 +1,17 @@
 /* CROWDGUARD Command Center Base Styling
-   Deep charcoal/navy palette, restrained cyan/teal accents, high readability
+   Harmonious Warm Light Mode (Default) + Deep Teal Charcoal Dark Mode
+   Exact Brand Palette:
+   - Slate Blue: #2F4454
+   - Deep Burgundy: #2E151B
+   - Dusty Rose: #DA7B93
+   - Muted Teal: #376E6F
+   - Deep Teal: #1C3334
 */
-
-:root {
-  --cg-bg-base: #070B11;
-  --cg-bg-surface: #0B111A;
-  --cg-bg-panel: #0E1622;
-  --cg-bg-card: #121C2B;
-  --cg-bg-card-hover: #162234;
-  --cg-border-subtle: #192638;
-  --cg-border-accent: #22354E;
-  --cg-text-primary: #F0F4F8;
-  --cg-text-secondary: #94A3B8;
-  --cg-text-muted: #627285;
-  --cg-accent-cyan: #06B6D4;
-  --cg-accent-teal: #14B8A6;
-}
 
 @layer base {
   * {
     scrollbar-width: thin;
-    scrollbar-color: #1E2D40 #0B111A;
+    scrollbar-color: var(--cg-border-accent) var(--cg-bg-base);
   }
 
   *::-webkit-scrollbar {
@@ -29,16 +20,16 @@
   }
 
   *::-webkit-scrollbar-track {
-    background: #0B111A;
+    background: var(--cg-bg-base);
   }
 
   *::-webkit-scrollbar-thumb {
-    background: #1E2D40;
+    background: var(--cg-border-accent);
     border-radius: 3px;
   }
 
   *::-webkit-scrollbar-thumb:hover {
-    background: #2D415A;
+    background: var(--cg-text-muted);
   }
 
   body {
@@ -48,11 +39,12 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   ::selection {
-    background-color: rgba(6, 182, 212, 0.25);
-    color: #F0F4F8;
+    background-color: rgba(218, 123, 147, 0.35); /* Dusty Rose selection highlight */
+    color: var(--cg-text-primary);
   }
 }
 

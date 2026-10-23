@@ -141,8 +141,8 @@ export const RtspIngestionPanel: React.FC = () => {
   const currentState = status?.state || 'IDLE';
 
   const stateColors: Record<string, string> = {
-    IDLE: 'bg-slate-800 text-slate-300 border-slate-700',
-    CONNECTING: 'bg-cyan-950/40 text-cyan-300 border-cyan-500/30 animate-pulse',
+    IDLE: 'bg-slate-800 text-[#2F4454] dark:text-slate-300 border-slate-700',
+    CONNECTING: 'bg-cyan-950/40 text-[#376E6F] dark:text-cyan-300 border-cyan-500/30 animate-pulse',
     CONNECTED: 'bg-emerald-950/40 text-emerald-300 border-emerald-500/30',
     DEGRADED: 'bg-amber-950/40 text-amber-300 border-amber-500/30',
     RECONNECTING: 'bg-amber-950/60 text-amber-200 border-amber-500/40 animate-pulse',
@@ -153,15 +153,15 @@ export const RtspIngestionPanel: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Configuration & Controls Strip */}
-      <div className="rounded-xl border border-[#192638] bg-[#0A1018] p-5 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#192638] gap-3">
+      <div className="rounded-xl border border-[#E2E8EA] dark:border-[#203638] bg-white dark:bg-[#122123] shadow-xs p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#E2E8EA] dark:border-[#203638] gap-3">
           <div className="flex items-center space-x-2.5">
-            <Radio className="w-5 h-5 text-cyan-400" />
+            <Radio className="w-5 h-5 text-[#376E6F] dark:text-cyan-400" />
             <div>
-              <h3 className="text-sm font-semibold text-white tracking-wide">
+              <h3 className="text-sm font-semibold text-[#1C3334] dark:text-white tracking-wide">
                 Network CCTV (RTSP) Ingestion
               </h3>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-[#5D757E] dark:text-[#A0B7BC]">
                 Secure IP camera ingestion with SSRF destination validation, credential masking, and exponential reconnect backoff
               </p>
             </div>
@@ -237,7 +237,7 @@ export const RtspIngestionPanel: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
           {/* Camera Name */}
           <div className="space-y-1.5">
-            <label className="text-[10px] uppercase font-mono tracking-wider text-slate-400 block">
+            <label className="text-[10px] uppercase font-mono tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block">
               Camera Label / Identifier
             </label>
             <input
@@ -246,13 +246,13 @@ export const RtspIngestionPanel: React.FC = () => {
               onChange={(e) => setCameraName(e.target.value)}
               disabled={isRtspActive || loading}
               placeholder="e.g. North Gate CCTV"
-              className="w-full bg-[#111A26] border border-[#1E2D40] rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-cyan-400 font-mono disabled:opacity-50"
+              className="w-full bg-[#111A26] border border-[#1E2D40] rounded px-2.5 py-1.5 text-[#1C3334] dark:text-slate-200 focus:outline-none focus:border-cyan-400 font-mono disabled:opacity-50"
             />
           </div>
 
           {/* RTSP Source URL */}
           <div className="space-y-1.5 sm:col-span-2">
-            <label className="text-[10px] uppercase font-mono tracking-wider text-slate-400 block">
+            <label className="text-[10px] uppercase font-mono tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block">
               RTSP Stream URL (Authorized Camera Subnet)
             </label>
             <input
@@ -261,13 +261,13 @@ export const RtspIngestionPanel: React.FC = () => {
               onChange={(e) => setRtspUrl(e.target.value)}
               disabled={isRtspActive || loading}
               placeholder="rtsp://192.168.1.120:554/live/ch0"
-              className="w-full bg-[#111A26] border border-[#1E2D40] rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-cyan-400 font-mono disabled:opacity-50"
+              className="w-full bg-[#111A26] border border-[#1E2D40] rounded px-2.5 py-1.5 text-[#1C3334] dark:text-slate-200 focus:outline-none focus:border-cyan-400 font-mono disabled:opacity-50"
             />
           </div>
 
           {/* Location / Zone */}
           <div className="space-y-1.5">
-            <label className="text-[10px] uppercase font-mono tracking-wider text-slate-400 block">
+            <label className="text-[10px] uppercase font-mono tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block">
               Physical Location / Sector
             </label>
             <input
@@ -276,13 +276,13 @@ export const RtspIngestionPanel: React.FC = () => {
               onChange={(e) => setLocation(e.target.value)}
               disabled={isRtspActive || loading}
               placeholder="Sector 4 - Perimeter North"
-              className="w-full bg-[#111A26] border border-[#1E2D40] rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-cyan-400 font-mono disabled:opacity-50"
+              className="w-full bg-[#111A26] border border-[#1E2D40] rounded px-2.5 py-1.5 text-[#1C3334] dark:text-slate-200 focus:outline-none focus:border-cyan-400 font-mono disabled:opacity-50"
             />
           </div>
 
           {/* Credentials: Username */}
           <div className="space-y-1.5">
-            <label className="text-[10px] uppercase font-mono tracking-wider text-slate-400 flex items-center justify-between">
+            <label className="text-[10px] uppercase font-mono tracking-wider text-[#5D757E] dark:text-[#A0B7BC] flex items-center justify-between">
               <span>Stream Username</span>
               <Lock className="w-3 h-3 text-slate-500" />
             </label>
@@ -293,13 +293,13 @@ export const RtspIngestionPanel: React.FC = () => {
               disabled={isRtspActive || loading}
               placeholder="Optional"
               autoComplete="off"
-              className="w-full bg-[#111A26] border border-[#1E2D40] rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-cyan-400 font-mono disabled:opacity-50"
+              className="w-full bg-[#111A26] border border-[#1E2D40] rounded px-2.5 py-1.5 text-[#1C3334] dark:text-slate-200 focus:outline-none focus:border-cyan-400 font-mono disabled:opacity-50"
             />
           </div>
 
           {/* Credentials: Password */}
           <div className="space-y-1.5">
-            <label className="text-[10px] uppercase font-mono tracking-wider text-slate-400 flex items-center justify-between">
+            <label className="text-[10px] uppercase font-mono tracking-wider text-[#5D757E] dark:text-[#A0B7BC] flex items-center justify-between">
               <span>Stream Password</span>
               <Lock className="w-3 h-3 text-slate-500" />
             </label>
@@ -310,20 +310,20 @@ export const RtspIngestionPanel: React.FC = () => {
               disabled={isRtspActive || loading}
               placeholder="••••••••"
               autoComplete="new-password"
-              className="w-full bg-[#111A26] border border-[#1E2D40] rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-cyan-400 font-mono disabled:opacity-50"
+              className="w-full bg-[#111A26] border border-[#1E2D40] rounded px-2.5 py-1.5 text-[#1C3334] dark:text-slate-200 focus:outline-none focus:border-cyan-400 font-mono disabled:opacity-50"
             />
           </div>
 
           {/* Target Capture FPS */}
           <div className="space-y-1.5">
-            <label className="text-[10px] uppercase font-mono tracking-wider text-slate-400 block">
+            <label className="text-[10px] uppercase font-mono tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block">
               Pacing Rate
             </label>
             <select
               disabled={isRtspActive || loading}
               value={targetFps}
               onChange={(e) => setTargetFps(Number(e.target.value))}
-              className="w-full bg-[#111A26] border border-[#1E2D40] rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-cyan-400 font-mono disabled:opacity-50"
+              className="w-full bg-[#111A26] border border-[#1E2D40] rounded px-2.5 py-1.5 text-[#1C3334] dark:text-slate-200 focus:outline-none focus:border-cyan-400 font-mono disabled:opacity-50"
             >
               <option value={15}>15 FPS (Conserves Bandwidth)</option>
               <option value={20}>20 FPS (Standard Security)</option>
@@ -334,14 +334,14 @@ export const RtspIngestionPanel: React.FC = () => {
 
           {/* Privacy Preserving Mode */}
           <div className="space-y-1.5">
-            <label className="text-[10px] uppercase font-mono tracking-wider text-slate-400 block">
+            <label className="text-[10px] uppercase font-mono tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block">
               Privacy Surveillance Mode
             </label>
             <select
               disabled={isRtspActive || loading}
               value={privacyMode}
               onChange={(e) => setPrivacyMode(e.target.value)}
-              className="w-full bg-[#111A26] border border-[#1E2D40] rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-cyan-400 font-mono disabled:opacity-50"
+              className="w-full bg-[#111A26] border border-[#1E2D40] rounded px-2.5 py-1.5 text-[#1C3334] dark:text-slate-200 focus:outline-none focus:border-cyan-400 font-mono disabled:opacity-50"
             >
               <option value="none">Standard Surveillance (No Anonymization)</option>
               <option value="face_blur">Facial Region Gaussian Blurring</option>
@@ -355,8 +355,8 @@ export const RtspIngestionPanel: React.FC = () => {
           {/* Confidence Slider */}
           <div className="space-y-1">
             <div className="flex justify-between text-[11px] font-mono">
-              <span className="text-slate-400">Detection Confidence:</span>
-              <span className="text-cyan-400 font-bold">{confThreshold.toFixed(2)}</span>
+              <span className="text-[#5D757E] dark:text-[#A0B7BC]">Detection Confidence:</span>
+              <span className="text-[#376E6F] dark:text-cyan-400 font-bold">{confThreshold.toFixed(2)}</span>
             </div>
             <input
               type="range"
@@ -374,8 +374,8 @@ export const RtspIngestionPanel: React.FC = () => {
           {/* Perspective Weight */}
           <div className="space-y-1">
             <div className="flex justify-between text-[11px] font-mono">
-              <span className="text-slate-400">Perspective Horizon:</span>
-              <span className="text-cyan-400 font-bold">{perspectiveWeight.toFixed(1)}x</span>
+              <span className="text-[#5D757E] dark:text-[#A0B7BC]">Perspective Horizon:</span>
+              <span className="text-[#376E6F] dark:text-cyan-400 font-bold">{perspectiveWeight.toFixed(1)}x</span>
             </div>
             <input
               type="range"
@@ -393,15 +393,15 @@ export const RtspIngestionPanel: React.FC = () => {
           {/* Reconnect Policy Settings */}
           <div className="space-y-1">
             <div className="flex justify-between text-[11px] font-mono">
-              <span className="text-slate-400">Reconnect Policy:</span>
-              <span className="text-slate-300 font-bold">{maxRetries} Retries / {timeoutSec}s Timeout</span>
+              <span className="text-[#5D757E] dark:text-[#A0B7BC]">Reconnect Policy:</span>
+              <span className="text-[#2F4454] dark:text-slate-300 font-bold">{maxRetries} Retries / {timeoutSec}s Timeout</span>
             </div>
             <div className="flex items-center space-x-2 pt-0.5">
               <select
                 disabled={isRtspActive || loading}
                 value={maxRetries}
                 onChange={(e) => setMaxRetries(Number(e.target.value))}
-                className="w-1/2 bg-[#111A26] border border-[#1E2D40] rounded px-2 py-1 text-slate-200 text-[11px] font-mono focus:border-cyan-400 disabled:opacity-50"
+                className="w-1/2 bg-[#111A26] border border-[#1E2D40] rounded px-2 py-1 text-[#1C3334] dark:text-slate-200 text-[11px] font-mono focus:border-cyan-400 disabled:opacity-50"
               >
                 <option value={3}>3 Retries</option>
                 <option value={5}>5 Retries (Standard)</option>
@@ -411,7 +411,7 @@ export const RtspIngestionPanel: React.FC = () => {
                 disabled={isRtspActive || loading}
                 value={timeoutSec}
                 onChange={(e) => setTimeoutSec(Number(e.target.value))}
-                className="w-1/2 bg-[#111A26] border border-[#1E2D40] rounded px-2 py-1 text-slate-200 text-[11px] font-mono focus:border-cyan-400 disabled:opacity-50"
+                className="w-1/2 bg-[#111A26] border border-[#1E2D40] rounded px-2 py-1 text-[#1C3334] dark:text-slate-200 text-[11px] font-mono focus:border-cyan-400 disabled:opacity-50"
               >
                 <option value={3}>3s Timeout</option>
                 <option value={5}>5s Timeout (Standard)</option>
@@ -419,7 +419,7 @@ export const RtspIngestionPanel: React.FC = () => {
               </select>
             </div>
             <div className="flex items-center space-x-1.5 text-[10px] text-slate-500 font-mono pt-0.5">
-              <ShieldAlert className="w-3 h-3 text-cyan-400 shrink-0" />
+              <ShieldAlert className="w-3 h-3 text-[#376E6F] dark:text-cyan-400 shrink-0" />
               <span>Exponential backoff with jitter</span>
             </div>
           </div>
@@ -427,7 +427,7 @@ export const RtspIngestionPanel: React.FC = () => {
 
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center justify-between pt-3 border-t border-[#192638] gap-3">
-          <div className="flex items-center space-x-2 text-[11px] font-mono text-slate-400">
+          <div className="flex items-center space-x-2 text-[11px] font-mono text-[#5D757E] dark:text-[#A0B7BC]">
             <Lock className="w-3.5 h-3.5 text-emerald-400" />
             <span>Credentials isolated server-side. Zero browser storage persistence.</span>
           </div>
@@ -437,7 +437,7 @@ export const RtspIngestionPanel: React.FC = () => {
               <button
                 onClick={handleValidate}
                 disabled={validationLoading || loading || !rtspUrl.trim()}
-                className="px-3.5 py-1.5 rounded-lg bg-[#111A26] hover:bg-[#192638] text-slate-300 border border-[#1E2D40] text-xs font-medium transition cursor-pointer disabled:opacity-50"
+                className="px-3.5 py-1.5 rounded-lg bg-[#111A26] hover:bg-[#192638] text-[#2F4454] dark:text-slate-300 border border-[#1E2D40] text-xs font-medium transition cursor-pointer disabled:opacity-50"
               >
                 {validationLoading ? 'Probing...' : 'Validate Route'}
               </button>
@@ -470,20 +470,20 @@ export const RtspIngestionPanel: React.FC = () => {
       {isRtspActive && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* MJPEG Live Stream Viewport */}
-          <div className="lg:col-span-2 rounded-xl border border-[#192638] bg-[#0A1018] overflow-hidden flex flex-col">
-            <div className="px-4 py-2.5 border-b border-[#192638] bg-[#0D1520] flex items-center justify-between">
+          <div className="lg:col-span-2 rounded-xl border border-[#E2E8EA] dark:border-[#203638] bg-white dark:bg-[#122123] shadow-xs overflow-hidden flex flex-col">
+            <div className="px-4 py-2.5 border-b border-[#E2E8EA] dark:border-[#203638] bg-[#0D1520] flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 <span className="text-xs font-semibold text-white tracking-wide">
                   Live CCTV Stream: {status?.camera_name || 'Network Camera'}
                 </span>
-                <span className="text-[10px] font-mono text-slate-400">
+                <span className="text-[10px] font-mono text-[#5D757E] dark:text-[#A0B7BC]">
                   {status?.sanitized_url}
                 </span>
               </div>
               <Link
                 to="/monitoring?source=webcam"
-                className="text-[11px] font-mono text-cyan-400 hover:text-cyan-300 flex items-center space-x-1"
+                className="text-[11px] font-mono text-[#376E6F] dark:text-cyan-400 hover:text-[#376E6F] dark:text-cyan-300 flex items-center space-x-1"
               >
                 <span>Full Command Center</span>
                 <ExternalLink className="w-3 h-3" />
@@ -499,52 +499,52 @@ export const RtspIngestionPanel: React.FC = () => {
                   console.warn('MJPEG stream image error:', e);
                 }}
               />
-              <div className="absolute top-3 left-3 px-2 py-0.5 rounded bg-black/70 backdrop-blur-xs text-[10px] font-mono text-cyan-300 border border-cyan-500/30 flex items-center space-x-1.5">
-                <Radio className="w-3 h-3 text-cyan-400 animate-pulse" />
+              <div className="absolute top-3 left-3 px-2 py-0.5 rounded bg-black/70 backdrop-blur-xs text-[10px] font-mono text-[#376E6F] dark:text-cyan-300 border border-cyan-500/30 flex items-center space-x-1.5">
+                <Radio className="w-3 h-3 text-[#376E6F] dark:text-cyan-400 animate-pulse" />
                 <span>RTSP CCTV FEED</span>
               </div>
-              <div className="absolute top-3 right-3 px-2 py-0.5 rounded bg-black/70 backdrop-blur-xs text-[10px] font-mono text-slate-300 border border-slate-700">
+              <div className="absolute top-3 right-3 px-2 py-0.5 rounded bg-black/70 backdrop-blur-xs text-[10px] font-mono text-[#2F4454] dark:text-slate-300 border border-slate-700">
                 {status?.location || 'Sector 4'}
               </div>
             </div>
           </div>
 
           {/* Active Session Telemetry Strip */}
-          <div className="rounded-xl border border-[#192638] bg-[#0A1018] p-4 flex flex-col justify-between space-y-4">
+          <div className="rounded-xl border border-[#E2E8EA] dark:border-[#203638] bg-white dark:bg-[#122123] shadow-xs p-4 flex flex-col justify-between space-y-4">
             <div>
-              <h4 className="text-xs font-semibold text-white uppercase tracking-wider mb-3">
+              <h4 className="text-xs font-semibold text-[#1C3334] dark:text-white uppercase tracking-wider mb-3">
                 Stream Telemetry & Acquisition
               </h4>
               <div className="space-y-2.5 text-xs">
                 <div className="flex justify-between p-2 rounded bg-[#0D1520] border border-[#192638]">
-                  <span className="text-slate-400">Capture Frame Rate:</span>
+                  <span className="text-[#5D757E] dark:text-[#A0B7BC]">Capture Frame Rate:</span>
                   <span className="font-mono font-semibold text-emerald-400">{status?.measured_fps || 0.0} FPS</span>
                 </div>
                 <div className="flex justify-between p-2 rounded bg-[#0D1520] border border-[#192638]">
-                  <span className="text-slate-400">Inference Frame Rate:</span>
-                  <span className="font-mono font-semibold text-cyan-400">{status?.processing_fps || 0.0} FPS</span>
+                  <span className="text-[#5D757E] dark:text-[#A0B7BC]">Inference Frame Rate:</span>
+                  <span className="font-mono font-semibold text-[#376E6F] dark:text-cyan-400">{status?.processing_fps || 0.0} FPS</span>
                 </div>
                 <div className="flex justify-between p-2 rounded bg-[#0D1520] border border-[#192638]">
-                  <span className="text-slate-400">Total Frames Captured:</span>
-                  <span className="font-mono text-slate-200">{status?.frames_captured?.toLocaleString() || 0}</span>
+                  <span className="text-[#5D757E] dark:text-[#A0B7BC]">Total Frames Captured:</span>
+                  <span className="font-mono text-[#1C3334] dark:text-slate-200">{status?.frames_captured?.toLocaleString() || 0}</span>
                 </div>
                 <div className="flex justify-between p-2 rounded bg-[#0D1520] border border-[#192638]">
-                  <span className="text-slate-400">Queue Dropped Frames:</span>
+                  <span className="text-[#5D757E] dark:text-[#A0B7BC]">Queue Dropped Frames:</span>
                   <span className="font-mono text-amber-400">{status?.frames_dropped?.toLocaleString() || 0}</span>
                 </div>
                 <div className="flex justify-between p-2 rounded bg-[#0D1520] border border-[#192638]">
-                  <span className="text-slate-400">Stream Uptime:</span>
-                  <span className="font-mono text-slate-200">{status?.uptime_seconds?.toFixed(1) || 0.0}s</span>
+                  <span className="text-[#5D757E] dark:text-[#A0B7BC]">Stream Uptime:</span>
+                  <span className="font-mono text-[#1C3334] dark:text-slate-200">{status?.uptime_seconds?.toFixed(1) || 0.0}s</span>
                 </div>
               </div>
             </div>
 
             <div className="p-3 bg-cyan-950/20 border border-cyan-500/20 rounded-lg">
-              <div className="flex items-center space-x-2 text-cyan-300 text-xs font-semibold">
-                <Activity className="w-4 h-4 text-cyan-400" />
+              <div className="flex items-center space-x-2 text-[#376E6F] dark:text-cyan-300 text-xs font-semibold">
+                <Activity className="w-4 h-4 text-[#376E6F] dark:text-cyan-400" />
                 <span>Synchronized Risk Engine</span>
               </div>
-              <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+              <p className="text-[11px] text-[#5D757E] dark:text-[#A0B7BC] mt-1 leading-relaxed">
                 RTSP frames enter the identical Farneback optical flow and 3x3 density splatting pipeline. Live telemetry updates synchronously in Monitoring.
               </p>
             </div>

@@ -15,8 +15,6 @@ import {
   AlertCircle,
   Camera,
   Radio,
-  Layers,
-  ShieldCheck,
   Clock
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -40,6 +38,7 @@ import {
   LoadingBlock 
 } from '../components/UIComponents';
 import { useSystem } from '../context/SystemContext';
+import { useTheme } from '../context/ThemeContext';
 
 interface PartialEndpointErrors {
   summary?: string;
@@ -51,6 +50,7 @@ interface PartialEndpointErrors {
 
 export const Overview: React.FC = () => {
   const { setSelectedAnalysis, refreshCounter } = useSystem();
+  const { isDark } = useTheme();
 
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [allAnalyses, setAllAnalyses] = useState<Analysis[] | null>(null);
@@ -69,7 +69,6 @@ export const Overview: React.FC = () => {
   const [fatalError, setFatalError] = useState<string | null>(null);
   const [partialErrors, setPartialErrors] = useState<PartialEndpointErrors>({});
 
-  // Request race condition tracking
   const overviewRequestIdRef = useRef<number>(0);
 
   const loadOverviewData = useCallback(async (isSilentRefresh = false) => {
@@ -85,7 +84,6 @@ export const Overview: React.FC = () => {
     const detectedErrors: PartialEndpointErrors = {};
 
     try {
-      // 1. Fetch summary, analyses, incidents, camera status, and multi-camera fleet in parallel with allSettled
       const [sumResult, analysesResult, incidentsResult, camResult, fleetHealthResult, fleetCamsResult] = await Promise.allSettled([
         analyticsApi.getSummary(),
         analysisApi.getAll(),
@@ -97,7 +95,6 @@ export const Overview: React.FC = () => {
 
       if (currentRequestId !== overviewRequestIdRef.current) return;
 
-      // Handle multi-camera fleet health & list
       if (fleetHealthResult.status === 'fulfilled') {
         setFleetHealth(fleetHealthResult.value);
       }
@@ -105,7 +102,6 @@ export const Overview: React.FC = () => {
         setFleetCameras(fleetCamsResult.value);
       }
 
-      // Handle single camera status
       if (camResult.status === 'fulfilled') {
         setCameraStatus(camResult.value);
       } else {
@@ -114,7 +110,6 @@ export const Overview: React.FC = () => {
 
       setLastSyncedTime(new Date().toLocaleTimeString());
 
-      // Handle summary endpoint
       if (sumResult.status === 'fulfilled') {
         setSummary(sumResult.value);
       } else {
@@ -122,7 +117,6 @@ export const Overview: React.FC = () => {
         setSummary(null);
       }
 
-      // Handle incidents endpoint
       if (incidentsResult.status === 'fulfilled') {
         setRecentIncidents(incidentsResult.value.slice(0, 5));
       } else {
@@ -130,7 +124,6 @@ export const Overview: React.FC = () => {
         setRecentIncidents(null);
       }
 
-      // Handle analyses endpoint
       let activeAnalysis: Analysis | null = null;
       if (analysesResult.status === 'fulfilled') {
         const analyses = analysesResult.value;
@@ -153,7 +146,6 @@ export const Overview: React.FC = () => {
         setSelectedAnalysis(null);
       }
 
-      // 2. If all three core endpoints failed, treat as fatal network failure
       if (
         sumResult.status === 'rejected' &&
         analysesResult.status === 'rejected' &&
@@ -164,7 +156,6 @@ export const Overview: React.FC = () => {
         return;
       }
 
-      // 3. Fetch telemetry & video if an active session exists
       if (activeAnalysis) {
         const targetId = activeAnalysis.id;
         const targetVideoId = activeAnalysis.video_id;
@@ -212,18 +203,15 @@ export const Overview: React.FC = () => {
   }, [setSelectedAnalysis]);
 
   useEffect(() => {
-    // Initial mount load
     loadOverviewData(false);
   }, [loadOverviewData]);
 
-  // Synchronize when header refresh trigger changes
   useEffect(() => {
     if (refreshCounter > 0) {
       loadOverviewData(true);
     }
   }, [refreshCounter, loadOverviewData]);
 
-  // Real-time camera status polling when webcam is actively ingesting
   useEffect(() => {
     if (!cameraStatus?.is_active) return;
     const interval = setInterval(async () => {
@@ -231,13 +219,12 @@ export const Overview: React.FC = () => {
         const stat = await cameraApi.getStatus();
         setCameraStatus(stat);
       } catch {
-        // Degraded or unreachable, ignore silent poll errors
+        // Silent poll guard
       }
     }, 2000);
     return () => clearInterval(interval);
   }, [cameraStatus?.is_active]);
 
-  // Format chart data honestly from actual recorded frames
   const chartData = useMemo(() => {
     if (!frameHistory || frameHistory.length === 0) return [];
     const step = Math.max(1, Math.floor(frameHistory.length / 50));
@@ -252,7 +239,6 @@ export const Overview: React.FC = () => {
       }));
   }, [frameHistory]);
 
-  // Zone matrix: extract cells from latest frame's grid_density
   const zoneCells = useMemo(() => {
     if (latestFrame && latestFrame.grid_density && latestFrame.grid_density.length === 9) {
       return latestFrame.grid_density;
@@ -276,56 +262,57 @@ export const Overview: React.FC = () => {
   const hasAnalyses = allAnalyses !== null && allAnalyses.length > 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full">
       {/* -------------------------------------------------------------------------
           1. HEADER WITH ACTIONS & REFRESH STATUS
           ------------------------------------------------------------------------- */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-[#192638] gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-[#E2E8EA] dark:border-[#1F3538] gap-4">
         <div>
           <div className="flex items-center space-x-2.5">
-            <h2 className="text-xl font-bold tracking-tight text-white">
+            <h2 className="text-xl font-bold tracking-tight text-[#1C3334] dark:text-[#EDF4F5]">
               CROWD SURVEILLANCE & FORECAST COMMAND CENTER
             </h2>
-            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/10 text-cyan-300 border border-cyan-500/25">
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#376E6F]/10 dark:bg-[#376E6F]/25 text-[#376E6F] dark:text-[#6EB5B6] border border-[#376E6F]/30 font-semibold">
               DIP OPS
             </span>
             {refreshing && (
-              <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 animate-pulse">
+              <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-mono bg-[#DA7B93]/15 text-[#B34D66] dark:text-[#DA7B93] border border-[#DA7B93]/30 animate-pulse">
                 <RefreshCw className="w-3 h-3 animate-spin" />
                 <span>Updating Telemetry...</span>
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-400 mt-1 max-w-3xl leading-relaxed">
-            Multi-stage Digital Image Processing surveillance system evaluating Farneback optical flow velocity fields, 
+          <p className="text-xs text-[#5D757E] dark:text-[#A0B7BC] mt-1 max-w-3xl leading-relaxed">
+            Multi-stage Digital Image Processing surveillance system evaluating Farneback optical flow velocity fields,
             directional Shannon entropy disorder, 2D continuous Gaussian density splatting, and +10s risk projections.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-          <span className="hidden sm:inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-[#0E1622] border border-[#1E2D40] text-[11px] font-mono text-slate-400">
-            <Clock className="w-3.5 h-3.5 text-cyan-400" />
+          <span className="hidden sm:inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#152729] border border-[#CBD5D8] dark:border-[#2C4B4E] text-[11px] font-mono text-[#5D757E] dark:text-[#A0B7BC] shadow-2xs">
+            <Clock className="w-3.5 h-3.5 text-[#376E6F] dark:text-[#6EB5B6]" />
             <span>Synced: {lastSyncedTime}</span>
           </span>
           <button
             onClick={() => loadOverviewData(true)}
             disabled={refreshing}
-            className="inline-flex items-center space-x-1.5 px-3 py-2 bg-[#121C2B] hover:bg-[#182538] text-slate-300 hover:text-white border border-[#1E2D40] rounded-lg text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center space-x-1.5 px-3 py-2 bg-white dark:bg-[#152729] hover:bg-[#F1F4F5] dark:hover:bg-[#1C3336] text-[#2F4454] dark:text-[#EDF4F5] border border-[#CBD5D8] dark:border-[#2C4B4E] rounded-lg text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 shadow-2xs"
             title="Refresh current dashboard data"
+            aria-label="Refresh overview dashboard data"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-cyan-400' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-[#376E6F]' : ''}`} />
             <span>Refresh</span>
           </button>
           <Link
             to="/cameras"
-            className="inline-flex items-center space-x-1.5 px-3 py-2 bg-[#121C2B] hover:bg-[#182538] text-cyan-300 border border-cyan-500/30 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+            className="inline-flex items-center space-x-1.5 px-3 py-2 bg-white dark:bg-[#152729] hover:bg-[#EEF5F5] dark:hover:bg-[#183133] text-[#376E6F] dark:text-[#6EB5B6] border border-[#376E6F]/30 dark:border-[#376E6F]/40 rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
           >
-            <Radio className="w-3.5 h-3.5 text-cyan-400" />
+            <Radio className="w-3.5 h-3.5 text-[#376E6F] dark:text-[#6EB5B6]" />
             <span>Multi-Camera Fleet</span>
           </Link>
           <Link
             to="/video-analysis"
-            className="inline-flex items-center space-x-2 px-3.5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-semibold transition-colors shadow-xs cursor-pointer"
+            className="inline-flex items-center space-x-2 px-3.5 py-2 bg-[#2F4454] hover:bg-[#1C3334] dark:bg-[#376E6F] dark:hover:bg-[#4A8E8F] text-white rounded-lg text-xs font-semibold transition-colors shadow-xs cursor-pointer"
           >
             <PlayCircle className="w-4 h-4" />
             <span>Video Ingestion Studio</span>
@@ -333,9 +320,9 @@ export const Overview: React.FC = () => {
           {latestAnalysis && (
             <Link
               to={`/monitoring?analysisId=${latestAnalysis.id}`}
-              className="inline-flex items-center space-x-1.5 px-3 py-2 bg-[#121C2B] hover:bg-[#182538] text-slate-200 border border-[#1E2D40] rounded-lg text-xs font-medium transition-colors cursor-pointer"
+              className="inline-flex items-center space-x-1.5 px-3 py-2 bg-[#F1F4F5] dark:bg-[#182E30] hover:bg-[#E4EAEB] text-[#2F4454] dark:text-[#EDF4F5] border border-[#CBD5D8] dark:border-[#2C4B4E] rounded-lg text-xs font-medium transition-colors cursor-pointer shadow-2xs"
             >
-              <Activity className="w-4 h-4 text-cyan-400" />
+              <Activity className="w-4 h-4 text-[#376E6F] dark:text-[#6EB5B6]" />
               <span>Open Telemetry Stream</span>
             </Link>
           )}
@@ -344,11 +331,11 @@ export const Overview: React.FC = () => {
 
       {/* Partial Errors Banner */}
       {hasPartialFailures && (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-950/20 p-3.5 text-xs text-amber-200 flex items-start space-x-2.5">
-          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+        <div className="rounded-xl border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-950/20 p-3.5 text-xs text-amber-900 dark:text-amber-200 flex items-start space-x-2.5 shadow-xs">
+          <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <div className="flex-1 space-y-1">
-            <span className="font-semibold block text-amber-300">Telemetry Stream Partially Degraded:</span>
-            <ul className="list-disc list-inside space-y-0.5 text-[11px] text-amber-300/80">
+            <span className="font-semibold block text-amber-900 dark:text-amber-300">Telemetry Stream Partially Degraded:</span>
+            <ul className="list-disc list-inside space-y-0.5 text-[11px] text-amber-800 dark:text-amber-300/80">
               {Object.entries(partialErrors).map(([key, msg]) => (
                 <li key={key}>{msg}</li>
               ))}
@@ -356,7 +343,7 @@ export const Overview: React.FC = () => {
           </div>
           <button
             onClick={() => loadOverviewData(true)}
-            className="px-2.5 py-1 bg-amber-900/40 hover:bg-amber-900/60 border border-amber-500/30 rounded text-[11px] text-amber-200 font-medium cursor-pointer shrink-0"
+            className="px-2.5 py-1 bg-amber-200 dark:bg-amber-900/40 hover:bg-amber-300 dark:hover:bg-amber-900/60 border border-amber-400 dark:border-amber-500/30 rounded text-[11px] text-amber-900 dark:text-amber-200 font-medium cursor-pointer shrink-0"
           >
             Retry Telemetry
           </button>
@@ -364,48 +351,48 @@ export const Overview: React.FC = () => {
       )}
 
       {/* -------------------------------------------------------------------------
-          MULTI-CAMERA FLEET STATUS BANNER (when cameras are registered in fleet)
+          MULTI-CAMERA FLEET STATUS BANNER
           ------------------------------------------------------------------------- */}
       {fleetHealth && fleetHealth.total_registered > 0 && (
-        <div className="rounded-xl border border-cyan-500/30 bg-[#07131F] p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-sm shadow-cyan-950/20">
+        <div className="rounded-xl border border-[#376E6F]/30 dark:border-[#376E6F]/40 bg-white dark:bg-[#122224] p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-xs">
           <div className="flex items-center space-x-3 overflow-hidden">
-            <div className="w-10 h-10 rounded-lg bg-cyan-950/60 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shrink-0 relative">
-              <Radio className="w-5 h-5 text-cyan-400" />
+            <div className="w-10 h-10 rounded-lg bg-[#EEF5F5] dark:bg-[#1A3336] border border-[#376E6F]/30 dark:border-[#376E6F]/50 flex items-center justify-center text-[#376E6F] dark:text-[#6EB5B6] shrink-0 relative">
+              <Radio className="w-5 h-5" />
               {fleetHealth.active_streams > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
               )}
             </div>
             <div className="truncate">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-semibold text-white">Multi-Camera Surveillance Fleet:</span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950/50 text-cyan-300 border border-cyan-500/30">
+                <span className="text-xs font-bold text-[#1C3334] dark:text-[#EDF4F5]">Multi-Camera Surveillance Fleet:</span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#EEF5F5] dark:bg-[#16292B] text-[#376E6F] dark:text-[#6EB5B6] border border-[#376E6F]/25 font-semibold">
                   {fleetHealth.active_streams} Active / {fleetHealth.total_registered} Registered
                 </span>
                 <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-medium border ${
-                  fleetHealth.system_status === 'OPERATIONAL' ? 'bg-emerald-950/40 text-emerald-300 border-emerald-500/30' :
-                  fleetHealth.system_status === 'DEGRADED' ? 'bg-amber-950/40 text-amber-300 border-amber-500/30' :
-                  'bg-slate-900 text-slate-400 border-slate-700'
+                  fleetHealth.system_status === 'OPERATIONAL' ? 'bg-[#EEF5F5] dark:bg-[#183133] text-[#376E6F] dark:text-[#6EC4C6] border-[#376E6F]/30' :
+                  fleetHealth.system_status === 'DEGRADED' ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300' :
+                  'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border-slate-300'
                 }`}>
                   {fleetHealth.system_status}
                 </span>
                 {fleetHealth.reconnecting_count > 0 && (
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-950/40 text-amber-300 border border-amber-500/30 animate-pulse">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-300 animate-pulse">
                     {fleetHealth.reconnecting_count} in Recovery
                   </span>
                 )}
               </div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-400 mt-1">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[#5D757E] dark:text-[#A0B7BC] mt-1">
                 <span>
-                  Connected: <strong className="text-emerald-400 font-mono">{fleetHealth.connected_count} nodes</strong>
+                  Connected: <strong className="text-emerald-700 dark:text-emerald-400 font-mono">{fleetHealth.connected_count} nodes</strong>
                 </span>
                 <span>•</span>
                 <span>
-                  Observed Crowd: <strong className="text-cyan-300 font-mono">{fleetHealth.total_observed_persons} persons</strong>
+                  Observed Crowd: <strong className="text-[#1C3334] dark:text-[#EDF4F5] font-mono">{fleetHealth.total_observed_persons} persons</strong>
                 </span>
                 <span>•</span>
                 <span>
                   Peak Fleet Risk: <strong className={`font-mono ${
-                    fleetHealth.highest_risk_score >= 70 ? 'text-rose-400' : fleetHealth.highest_risk_score >= 40 ? 'text-amber-400' : 'text-emerald-400'
+                    fleetHealth.highest_risk_score >= 70 ? 'text-[#2E151B] dark:text-rose-400' : fleetHealth.highest_risk_score >= 40 ? 'text-amber-700 dark:text-amber-400' : 'text-[#376E6F] dark:text-emerald-400'
                   }`}>
                     {fleetHealth.highest_risk_score.toFixed(1)} / 100
                   </strong>
@@ -417,7 +404,7 @@ export const Overview: React.FC = () => {
           <div className="flex items-center space-x-2 shrink-0">
             <Link
               to="/cameras"
-              className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-semibold transition cursor-pointer shadow-xs"
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-[#2F4454] hover:bg-[#1C3334] dark:bg-[#376E6F] dark:hover:bg-[#4A8E8F] text-white rounded-lg text-xs font-semibold transition cursor-pointer shadow-xs"
             >
               <span>Manage Camera Fleet</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -427,48 +414,47 @@ export const Overview: React.FC = () => {
       )}
 
       {/* -------------------------------------------------------------------------
-          LIVE WEBCAM STREAM BANNER (when hardware webcam is streaming)
+          LIVE WEBCAM STREAM BANNER
           ------------------------------------------------------------------------- */}
       {cameraStatus && cameraStatus.is_active && (
-        <div className="rounded-xl border border-cyan-500/40 bg-[#07131F] p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm shadow-cyan-950/20">
+        <div className="rounded-xl border border-[#376E6F]/30 dark:border-[#376E6F]/40 bg-white dark:bg-[#122224] p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs">
           <div className="flex items-center space-x-3 overflow-hidden">
-            <div className="w-10 h-10 rounded-lg bg-cyan-950/60 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shrink-0 relative">
+            <div className="w-10 h-10 rounded-lg bg-[#EEF5F5] dark:bg-[#1A3336] border border-[#376E6F]/30 dark:border-[#376E6F]/50 flex items-center justify-center text-[#376E6F] dark:text-[#6EB5B6] shrink-0 relative">
               <Camera className="w-5 h-5" />
-              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
             </div>
             <div className="truncate">
               <div className="flex items-center space-x-2">
-                <span className="text-xs font-semibold text-white">Live Hardware Webcam Feed:</span>
-                <span className="text-xs font-mono text-cyan-300 font-medium">
+                <span className="text-xs font-bold text-[#1C3334] dark:text-[#EDF4F5]">Live Hardware Webcam Feed:</span>
+                <span className="text-xs font-mono text-[#376E6F] dark:text-[#6EB5B6] font-semibold">
                   Device #{cameraStatus.device_index ?? 0}
                 </span>
                 <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-medium border ${
-                  cameraStatus.state === 'CONNECTED' ? 'bg-emerald-950/40 text-emerald-300 border-emerald-500/30' :
-                  cameraStatus.state === 'CONNECTING' ? 'bg-cyan-950/40 text-cyan-300 border-cyan-500/30 animate-pulse' :
-                  cameraStatus.state === 'DEGRADED' ? 'bg-amber-950/40 text-amber-300 border-amber-500/30' :
-                  'bg-rose-950/40 text-rose-300 border-rose-500/30'
+                  cameraStatus.state === 'CONNECTED' ? 'bg-[#EEF5F5] dark:bg-[#183133] text-[#376E6F] dark:text-[#6EC4C6] border-[#376E6F]/30' :
+                  cameraStatus.state === 'CONNECTING' ? 'bg-[#FDF3F5] dark:bg-[#2A161D] text-[#B34D66] dark:text-[#F0A4B8] border-[#DA7B93]/35 animate-pulse' :
+                  'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300'
                 }`}>
                   {cameraStatus.state}
                 </span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950/50 text-cyan-300 border border-cyan-500/30">
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#EEF5F5] dark:bg-[#16292B] text-[#376E6F] dark:text-[#6EB5B6] border border-[#376E6F]/25 font-semibold">
                   LIVE STREAM
                 </span>
               </div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-400 mt-1">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[#5D757E] dark:text-[#A0B7BC] mt-1">
                 <span>
-                  Capture: <strong className="text-slate-200 font-mono">{cameraStatus.measured_fps.toFixed(1)} FPS</strong>
+                  Capture: <strong className="text-[#1C3334] dark:text-[#EDF4F5] font-mono">{cameraStatus.measured_fps.toFixed(1)} FPS</strong>
                 </span>
                 <span>•</span>
                 <span>
-                  Inference: <strong className="text-emerald-400 font-mono">{cameraStatus.processing_fps.toFixed(1)} FPS</strong>
+                  Inference: <strong className="text-emerald-700 dark:text-emerald-400 font-mono">{cameraStatus.processing_fps.toFixed(1)} FPS</strong>
                 </span>
                 <span>•</span>
                 <span>
-                  Frames: <strong className="text-slate-200 font-mono">#{cameraStatus.latest_frame_id}</strong> ({cameraStatus.frames_captured} capt, {cameraStatus.frames_dropped} drop)
+                  Frames: <strong className="text-[#1C3334] dark:text-[#EDF4F5] font-mono">#{cameraStatus.latest_frame_id}</strong> ({cameraStatus.frames_captured} capt, {cameraStatus.frames_dropped} drop)
                 </span>
                 <span>•</span>
                 <span>
-                  Uptime: <strong className="text-slate-200 font-mono">{cameraStatus.uptime_seconds}s</strong>
+                  Uptime: <strong className="text-[#1C3334] dark:text-[#EDF4F5] font-mono">{cameraStatus.uptime_seconds}s</strong>
                 </span>
               </div>
             </div>
@@ -477,7 +463,7 @@ export const Overview: React.FC = () => {
           <div className="flex items-center space-x-3 shrink-0">
             <Link
               to="/monitoring?source=webcam"
-              className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-semibold transition cursor-pointer shadow-xs"
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-[#2F4454] hover:bg-[#1C3334] dark:bg-[#376E6F] dark:hover:bg-[#4A8E8F] text-white rounded-lg text-xs font-semibold transition cursor-pointer shadow-xs"
             >
               <span>Open Live Surveillance Feed</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -489,48 +475,35 @@ export const Overview: React.FC = () => {
       {/* -------------------------------------------------------------------------
           2. ACTIVE / LATEST SESSION BANNER
           ------------------------------------------------------------------------- */}
-      {allAnalyses === null && partialErrors.analyses ? (
-        <div className="rounded-xl border border-rose-500/30 bg-rose-950/15 p-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3 text-xs text-rose-300">
-            <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
-            <span>Failed to load surveillance sessions from catalog.</span>
-          </div>
-          <button
-            onClick={() => loadOverviewData(true)}
-            className="px-3 py-1 rounded bg-rose-900/30 hover:bg-rose-900/50 border border-rose-500/30 text-xs text-rose-200 cursor-pointer"
-          >
-            Retry
-          </button>
-        </div>
-      ) : latestAnalysis ? (
-        <div className="rounded-xl border border-[#192638] bg-[#0A1018] p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {latestAnalysis ? (
+        <div className="rounded-xl border border-[#E2E8EA] dark:border-[#233C3F] bg-white dark:bg-[#152729] p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs">
           <div className="flex items-center space-x-3 overflow-hidden">
-            <div className="w-10 h-10 rounded-lg bg-cyan-950/40 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-[#EEF5F5] dark:bg-[#1A3336] border border-[#376E6F]/30 flex items-center justify-center text-[#376E6F] dark:text-[#6EB5B6] shrink-0">
               <Video className="w-5 h-5" />
             </div>
             <div className="truncate">
               <div className="flex items-center space-x-2">
-                <span className="text-xs font-semibold text-white">Active Catalog Session:</span>
-                <span className="text-xs font-mono text-cyan-300 font-medium">
+                <span className="text-xs font-bold text-[#1C3334] dark:text-[#EDF4F5]">Active Catalog Session:</span>
+                <span className="text-xs font-mono text-[#2F4454] dark:text-[#A3CBD4] font-semibold">
                   {latestAnalysis.id}
                 </span>
                 <StatusPill status={latestAnalysis.status} />
               </div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-400 mt-1">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[#5D757E] dark:text-[#A0B7BC] mt-1">
                 <span>
-                  Source: <strong className="text-slate-200">{analysisVideo?.original_filename || analysisVideo?.filename || 'Surveillance Clip'}</strong>
+                  Source: <strong className="text-[#1C3334] dark:text-[#EDF4F5]">{analysisVideo?.original_filename || analysisVideo?.filename || 'Surveillance Clip'}</strong>
                 </span>
                 <span>•</span>
                 <span>
-                  Dominant Pattern: <strong className="text-slate-200 uppercase font-mono">{latestAnalysis.dominant_pattern || 'NORMAL_FLOW'}</strong>
+                  Dominant Pattern: <strong className="text-[#1C3334] dark:text-[#EDF4F5] uppercase font-mono">{latestAnalysis.dominant_pattern || 'NORMAL_FLOW'}</strong>
                 </span>
                 <span>•</span>
                 <span>
-                  Peak Crowd: <strong className="text-slate-200 font-mono">{typeof latestAnalysis.peak_count === 'number' ? latestAnalysis.peak_count : '—'}</strong>
+                  Peak Crowd: <strong className="text-[#1C3334] dark:text-[#EDF4F5] font-mono">{typeof latestAnalysis.peak_count === 'number' ? latestAnalysis.peak_count : '—'}</strong>
                 </span>
                 <span>•</span>
                 <span>
-                  Max Risk: <strong className="text-slate-200 font-mono">{typeof latestAnalysis.max_risk_score === 'number' ? `${latestAnalysis.max_risk_score.toFixed(1)}/100` : '—'}</strong>
+                  Max Risk: <strong className="text-[#1C3334] dark:text-[#EDF4F5] font-mono">{typeof latestAnalysis.max_risk_score === 'number' ? `${latestAnalysis.max_risk_score.toFixed(1)}/100` : '—'}</strong>
                 </span>
               </div>
             </div>
@@ -539,7 +512,7 @@ export const Overview: React.FC = () => {
           <div className="flex items-center space-x-3 shrink-0">
             <Link
               to={`/monitoring?analysisId=${latestAnalysis.id}`}
-              className="inline-flex items-center space-x-1.5 text-xs text-cyan-400 hover:text-cyan-300 font-medium"
+              className="inline-flex items-center space-x-1.5 text-xs text-[#376E6F] dark:text-[#6EB5B6] hover:text-[#2F4454] dark:hover:text-white font-semibold"
             >
               <span>Inspect Replay</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -549,7 +522,7 @@ export const Overview: React.FC = () => {
       ) : (
         <EmptyState
           title="No Video Surveillance Sessions Active"
-          description="The surveillance catalog is currently unpopulated. Ingest a video or select a synthetic demonstration scenario to begin tracking crowd density and risk telemetry."
+          description="The surveillance catalog is currently unpopulated. Ingest a video or select a demonstration scenario to begin tracking crowd density and risk telemetry."
           actionText="Go to Video Ingestion Studio"
           onAction={() => window.location.assign('/video-analysis')}
           icon={Video}
@@ -557,9 +530,9 @@ export const Overview: React.FC = () => {
       )}
 
       {/* -------------------------------------------------------------------------
-          3. SURVEILLANCE KPI TILES (Actual API Metrics or Explicit Empty/Unavailable)
+          3. SURVEILLANCE KPI TILES
           ------------------------------------------------------------------------- */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           label="Total Catalog Videos"
           value={
@@ -574,7 +547,7 @@ export const Overview: React.FC = () => {
               : (partialErrors.summary || 'Summary metrics unavailable')
           }
           icon={Video}
-          tone="cyan"
+          tone="slate"
         />
 
         <KPICard
@@ -597,7 +570,7 @@ export const Overview: React.FC = () => {
           icon={Activity}
           tone={
             latestFrame
-              ? latestFrame.smoothed_risk_score >= 50 ? 'rose' : latestFrame.smoothed_risk_score >= 25 ? 'amber' : 'emerald'
+              ? latestFrame.smoothed_risk_score >= 50 ? 'burgundy' : latestFrame.smoothed_risk_score >= 25 ? 'amber' : 'teal'
               : 'neutral'
           }
         />
@@ -633,7 +606,7 @@ export const Overview: React.FC = () => {
               : (partialErrors.summary || 'Incident counts unavailable')
           }
           icon={AlertTriangle}
-          tone={summary && summary.critical_incidents > 0 ? 'rose' : 'amber'}
+          tone={summary && summary.critical_incidents > 0 ? 'burgundy' : 'amber'}
         />
       </div>
 
@@ -642,63 +615,64 @@ export const Overview: React.FC = () => {
           ------------------------------------------------------------------------- */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Risk Trend Chart Panel */}
-        <div className="lg:col-span-2 rounded-xl border border-[#192638] bg-[#0A1018] p-5 flex flex-col justify-between">
+        <div className="lg:col-span-2 rounded-xl border border-[#E2E8EA] dark:border-[#233C3F] bg-white dark:bg-[#152729] p-5 flex flex-col justify-between shadow-xs">
           <div>
-            <div className="flex items-center justify-between pb-3 border-b border-[#192638] mb-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E2E8EA] dark:border-[#233C3F] mb-4">
               <div className="flex items-center space-x-2">
-                <Activity className="w-4 h-4 text-cyan-400" />
-                <h3 className="text-sm font-semibold text-white">
+                <Activity className="w-4 h-4 text-[#376E6F] dark:text-[#6EB5B6]" />
+                <h3 className="text-sm font-bold text-[#1C3334] dark:text-[#EDF4F5]">
                   Temporal Risk Trajectory & Point-in-Time Projections
                 </h3>
               </div>
               <div className="flex items-center space-x-3 text-xs">
-                <span className="flex items-center space-x-1 text-cyan-400 text-[11px] font-mono">
-                  <span className="w-2.5 h-0.5 bg-cyan-400 inline-block" />
+                <span className="flex items-center space-x-1 text-[#376E6F] dark:text-[#6EB5B6] text-[11px] font-mono">
+                  <span className="w-2.5 h-0.5 bg-[#376E6F] dark:bg-[#6EB5B6] inline-block" />
                   <span>Observed Composite Risk (t)</span>
                 </span>
-                <span className="flex items-center space-x-1 text-rose-400 text-[11px] font-mono">
-                  <span className="w-2.5 h-0.5 bg-rose-400 inline-block border-t border-dashed" />
+                <span className="flex items-center space-x-1 text-[#DA7B93] text-[11px] font-mono">
+                  <span className="w-2.5 h-0.5 bg-[#DA7B93] inline-block border-t border-dashed" />
                   <span>Point Projection (+10s at frame t)</span>
                 </span>
               </div>
             </div>
 
             {chartData.length > 0 ? (
-              <div className="h-64 w-full">
+              <div className="h-64 min-h-[256px] w-full min-w-0 relative">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="riskGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#06B6D4" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#06B6D4" stopOpacity={0.0} />
+                        <stop offset="5%" stopColor={isDark ? "#4A8E8F" : "#376E6F"} stopOpacity={0.3} />
+                        <stop offset="95%" stopColor={isDark ? "#4A8E8F" : "#376E6F"} stopOpacity={0.0} />
                       </linearGradient>
                       <linearGradient id="forecastGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#F43F5E" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="#F43F5E" stopOpacity={0.0} />
+                        <stop offset="5%" stopColor="#DA7B93" stopOpacity={0.25} />
+                        <stop offset="95%" stopColor="#DA7B93" stopOpacity={0.0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#192638" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#233C3F" : "#E2E8EA"} vertical={false} />
                     <XAxis 
                       dataKey="time" 
-                      stroke="#64748B" 
+                      stroke={isDark ? "#A0B7BC" : "#5D757E"} 
                       fontSize={11} 
                       tickLine={false} 
-                      axisLine={{ stroke: '#192638' }} 
+                      axisLine={{ stroke: isDark ? "#233C3F" : "#E2E8EA" }} 
                     />
                     <YAxis 
-                      stroke="#64748B" 
+                      stroke={isDark ? "#A0B7BC" : "#5D757E"} 
                       fontSize={11} 
                       domain={[0, 100]} 
                       tickLine={false} 
-                      axisLine={{ stroke: '#192638' }} 
+                      axisLine={{ stroke: isDark ? "#233C3F" : "#E2E8EA" }} 
                     />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: '#0E1622',
-                        borderColor: '#1E2D40',
+                        backgroundColor: isDark ? '#152729' : '#FFFFFF',
+                        borderColor: isDark ? '#2C4B4E' : '#CBD5D8',
                         borderRadius: '8px',
                         fontSize: '11px',
-                        color: '#F0F4F8',
+                        color: isDark ? '#EDF4F5' : '#1C3334',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                       }}
                       formatter={(val: any, name: any) => [
                         val !== null && typeof val === 'number' ? `${val.toFixed(1)}/100` : 'Not recorded',
@@ -708,49 +682,51 @@ export const Overview: React.FC = () => {
                     <Area 
                       type="monotone" 
                       dataKey="risk" 
-                      stroke="#06B6D4" 
+                      stroke={isDark ? "#6EB5B6" : "#376E6F"} 
                       strokeWidth={2} 
                       fill="url(#riskGrad)" 
+                      isAnimationActive={false}
                     />
                     <Area 
                       type="monotone" 
                       dataKey="forecast" 
-                      stroke="#F43F5E" 
+                      stroke="#DA7B93" 
                       strokeWidth={1.5} 
                       strokeDasharray="4 4" 
                       fill="url(#forecastGrad)" 
+                      isAnimationActive={false}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
             ) : frameHistory === null && partialErrors.frames ? (
-              <div className="h-64 flex flex-col items-center justify-center text-center p-6 text-rose-300">
-                <AlertCircle className="w-8 h-8 text-rose-400 mb-2" />
+              <div className="h-64 flex flex-col items-center justify-center text-center p-6 text-[#2E151B] dark:text-rose-300">
+                <AlertCircle className="w-8 h-8 text-[#2E151B] dark:text-rose-400 mb-2" />
                 <p className="text-xs font-semibold">Frame Telemetry Unavailable</p>
-                <p className="text-[11px] text-rose-300/80 mt-1 max-w-sm">
+                <p className="text-[11px] opacity-80 mt-1 max-w-sm">
                   {partialErrors.frames}
                 </p>
                 <button
                   onClick={() => loadOverviewData(true)}
-                  className="mt-3 px-3 py-1 bg-rose-900/30 hover:bg-rose-900/50 border border-rose-500/30 rounded text-xs text-rose-200 cursor-pointer"
+                  className="mt-3 px-3 py-1 bg-[#2E151B]/10 hover:bg-[#2E151B]/20 dark:bg-rose-900/30 dark:hover:bg-rose-900/50 border border-[#2E151B]/25 dark:border-rose-500/30 rounded text-xs text-[#2E151B] dark:text-rose-200 cursor-pointer"
                 >
                   Retry Telemetry
                 </button>
               </div>
             ) : (
-              <div className="h-64 flex flex-col items-center justify-center text-center p-6 text-slate-400">
-                <Activity className="w-8 h-8 text-slate-400 mb-2" />
-                <p className="text-xs font-medium text-slate-300">No frame telemetry recorded for this session</p>
-                <p className="text-[11px] text-slate-400 mt-1 max-w-sm">
+              <div className="h-64 flex flex-col items-center justify-center text-center p-6 text-[#5D757E] dark:text-[#A0B7BC]">
+                <Activity className="w-8 h-8 text-[#5D757E] dark:text-[#A0B7BC] mb-2" />
+                <p className="text-xs font-medium text-[#1C3334] dark:text-[#EDF4F5]">No frame telemetry recorded for this session</p>
+                <p className="text-[11px] text-[#5D757E] dark:text-[#A0B7BC] mt-1 max-w-sm">
                   The active session has not recorded any frame telemetry records yet, or is currently pending.
                 </p>
               </div>
             )}
           </div>
 
-          <div className="mt-4 pt-3 border-t border-[#192638] flex flex-col sm:flex-row sm:items-center justify-between text-[11px] text-slate-400 gap-2">
+          <div className="mt-4 pt-3 border-t border-[#E2E8EA] dark:border-[#233C3F] flex flex-col sm:flex-row sm:items-center justify-between text-[11px] text-[#5D757E] dark:text-[#A0B7BC] gap-2">
             <span className="flex items-center space-x-1.5">
-              <Info className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <Info className="w-3.5 h-3.5 text-[#376E6F] dark:text-[#6EB5B6] shrink-0" />
               <span>
                 Risk scores (0–100) are heuristic decision-support metrics (Farneback flow, Shannon entropy, 2D Gaussian density, congestion), not actuarial disaster probabilities.
               </span>
@@ -758,7 +734,7 @@ export const Overview: React.FC = () => {
             {latestAnalysis && (
               <Link 
                 to={`/analytics?analysisId=${latestAnalysis.id}`}
-                className="text-cyan-400 hover:text-cyan-300 font-medium inline-flex items-center space-x-1 shrink-0"
+                className="text-[#376E6F] dark:text-[#6EB5B6] hover:text-[#2F4454] dark:hover:text-white font-semibold inline-flex items-center space-x-1 shrink-0"
               >
                 <span>Full dynamics analytics</span>
                 <ArrowRight className="w-3 h-3" />
@@ -768,19 +744,19 @@ export const Overview: React.FC = () => {
         </div>
 
         {/* 3x3 Spatial Grid Quadrant Telemetry */}
-        <div className="rounded-xl border border-[#192638] bg-[#0A1018] p-5 flex flex-col justify-between">
+        <div className="rounded-xl border border-[#E2E8EA] dark:border-[#233C3F] bg-white dark:bg-[#152729] p-5 flex flex-col justify-between shadow-xs">
           <div>
-            <div className="flex items-center justify-between pb-3 border-b border-[#192638] mb-3">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E2E8EA] dark:border-[#233C3F] mb-3">
               <div className="flex items-center space-x-2">
-                <Grid3X3 className="w-4 h-4 text-cyan-400" />
-                <h3 className="text-sm font-semibold text-white">Spatial 3×3 Density Matrix</h3>
+                <Grid3X3 className="w-4 h-4 text-[#376E6F] dark:text-[#6EB5B6]" />
+                <h3 className="text-sm font-bold text-[#1C3334] dark:text-[#EDF4F5]">Spatial 3×3 Density Matrix</h3>
               </div>
-              <span className="text-[10px] font-mono text-slate-400">
+              <span className="text-[10px] font-mono text-[#5D757E] dark:text-[#A0B7BC]">
                 {latestFrame ? `t=${latestFrame.timestamp_sec.toFixed(1)}s` : 'No Frame'}
               </span>
             </div>
 
-            <p className="text-[11px] text-slate-400 mb-3">
+            <p className="text-[11px] text-[#5D757E] dark:text-[#A0B7BC] mb-3">
               Zone occupancy and perspective-weighted congestion across quadrants (Zones A1–C3):
             </p>
 
@@ -792,36 +768,36 @@ export const Overview: React.FC = () => {
                   return (
                     <div
                       key={zone.name}
-                      className={`rounded-lg border p-2 flex flex-col justify-between transition-colors ${
+                      className={`rounded-lg border p-2 flex flex-col justify-between transition-colors shadow-2xs ${
                         isHigh
-                          ? 'border-rose-500/40 bg-rose-950/20 text-rose-300'
+                          ? 'border-[#2E151B]/30 dark:border-rose-500/40 bg-[#FAF0F2] dark:bg-rose-950/20 text-[#2E151B] dark:text-rose-300'
                           : isMod
-                          ? 'border-amber-500/40 bg-amber-950/20 text-amber-300'
-                          : 'border-[#192638] bg-[#0E1622] text-slate-300'
+                          ? 'border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300'
+                          : 'border-[#E2E8EA] dark:border-[#233C3F] bg-[#F8F9FA] dark:bg-[#112022] text-[#1C3334] dark:text-[#EDF4F5]'
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-mono font-bold">{zone.name}</span>
-                        <span className={`text-[9px] px-1 rounded font-mono ${
-                          isHigh ? 'bg-rose-500/30 text-rose-200' : isMod ? 'bg-amber-500/30 text-amber-200' : 'bg-slate-800 text-slate-400'
+                        <span className={`text-[9px] px-1 rounded font-mono font-semibold ${
+                          isHigh ? 'bg-[#2E151B]/15 dark:bg-rose-500/30 text-[#2E151B] dark:text-rose-200' : isMod ? 'bg-amber-200 dark:bg-amber-500/30 text-amber-900 dark:text-amber-200' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400'
                         }`}>
                           {zone.density_level}
                         </span>
                       </div>
 
                       <div className="my-1">
-                        <div className="text-lg font-bold font-mono text-white">
+                        <div className="text-lg font-bold font-mono text-[#1C3334] dark:text-[#EDF4F5]">
                           {zone.population}
                         </div>
-                        <span className="text-[9px] text-slate-400 font-mono block">
+                        <span className="text-[9px] text-[#5D757E] dark:text-[#A0B7BC] font-mono block">
                           density: {(zone.normalized_density * 100).toFixed(0)}%
                         </span>
                       </div>
 
-                      <div className="text-[9px] font-mono text-slate-400 border-t border-[#192638] pt-1 flex justify-between">
+                      <div className="text-[9px] font-mono text-[#5D757E] dark:text-[#A0B7BC] border-t border-[#E2E8EA] dark:border-[#233C3F] pt-1 flex justify-between">
                         <span>v: {zone.avg_velocity.toFixed(1)}px</span>
                         {zone.pattern !== 'NORMAL' && (
-                          <span className="text-amber-400 font-bold uppercase">{zone.pattern}</span>
+                          <span className="text-[#DA7B93] font-bold uppercase">{zone.pattern}</span>
                         )}
                       </div>
                     </div>
@@ -829,10 +805,10 @@ export const Overview: React.FC = () => {
                 })}
               </div>
             ) : (
-              <div className="aspect-square rounded-lg border border-dashed border-[#1E2D40] bg-[#0E1622] flex flex-col items-center justify-center p-6 text-center text-slate-400">
-                <Grid3X3 className="w-8 h-8 text-slate-400 mb-2" />
-                <p className="text-xs font-medium text-slate-300">Spatial Telemetry Unavailable</p>
-                <p className="text-[11px] text-slate-400 mt-1 max-w-xs">
+              <div className="aspect-square rounded-lg border border-dashed border-[#CBD5D8] dark:border-[#233C3F] bg-[#F8F9FA] dark:bg-[#112022] flex flex-col items-center justify-center p-6 text-center text-[#5D757E] dark:text-[#A0B7BC]">
+                <Grid3X3 className="w-8 h-8 text-[#5D757E] dark:text-[#A0B7BC] mb-2" />
+                <p className="text-xs font-semibold text-[#1C3334] dark:text-[#EDF4F5]">Spatial Telemetry Unavailable</p>
+                <p className="text-[11px] text-[#5D757E] dark:text-[#A0B7BC] mt-1 max-w-xs">
                   {partialErrors.frames
                     ? 'Frame telemetry request failed.'
                     : 'No processed frame records exist to construct the 3×3 quadrant density matrix.'}
@@ -841,11 +817,11 @@ export const Overview: React.FC = () => {
             )}
           </div>
 
-          <div className="mt-3 pt-3 border-t border-[#192638] text-[11px] text-slate-400 flex items-center justify-between">
+          <div className="mt-3 pt-3 border-t border-[#E2E8EA] dark:border-[#233C3F] text-[11px] text-[#5D757E] dark:text-[#A0B7BC] flex items-center justify-between">
             <span>Perspective Scale: {latestAnalysis?.perspective_weight ? `${latestAnalysis.perspective_weight}×` : '1.0×'}</span>
             <Link
               to={latestAnalysis ? `/monitoring?analysisId=${latestAnalysis.id}` : '/monitoring'}
-              className="text-cyan-400 hover:text-cyan-300 font-medium inline-flex items-center space-x-1"
+              className="text-[#376E6F] dark:text-[#6EB5B6] hover:text-[#2F4454] dark:hover:text-white font-semibold inline-flex items-center space-x-1"
             >
               <span>Inspect grid flow</span>
               <ArrowRight className="w-3 h-3" />
@@ -859,18 +835,18 @@ export const Overview: React.FC = () => {
           ------------------------------------------------------------------------- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Sustained Incidents */}
-        <div className="rounded-xl border border-[#192638] bg-[#0A1018] p-5">
-          <div className="flex items-center justify-between pb-3 border-b border-[#192638] mb-3">
+        <div className="rounded-xl border border-[#E2E8EA] dark:border-[#233C3F] bg-white dark:bg-[#152729] p-5 shadow-xs">
+          <div className="flex items-center justify-between pb-3 border-b border-[#E2E8EA] dark:border-[#233C3F] mb-3">
             <div className="flex items-center space-x-2">
-              <ShieldAlert className="w-4 h-4 text-rose-400" />
-              <h3 className="text-sm font-semibold text-white">
+              <ShieldAlert className="w-4 h-4 text-[#DA7B93]" />
+              <h3 className="text-sm font-bold text-[#1C3334] dark:text-[#EDF4F5]">
                 Recent Sustained Incidents & Early Warnings
               </h3>
             </div>
             {recentIncidents && (
               <Link
                 to="/incidents"
-                className="text-xs text-cyan-400 hover:text-cyan-300 font-medium inline-flex items-center space-x-1"
+                className="text-xs text-[#376E6F] dark:text-[#6EB5B6] hover:text-[#2F4454] dark:hover:text-white font-semibold inline-flex items-center space-x-1"
               >
                 <span>View all ({recentIncidents.length})</span>
                 <ArrowRight className="w-3 h-3" />
@@ -879,15 +855,15 @@ export const Overview: React.FC = () => {
           </div>
 
           {recentIncidents === null && partialErrors.incidents ? (
-            <div className="py-12 text-center text-rose-300">
-              <AlertCircle className="w-8 h-8 mx-auto mb-2 text-rose-400" />
+            <div className="py-12 text-center text-[#2E151B] dark:text-rose-300">
+              <AlertCircle className="w-8 h-8 mx-auto mb-2 text-[#2E151B] dark:text-rose-400" />
               <p className="text-xs font-semibold">Incident Retrieval Failed</p>
-              <p className="text-[11px] text-rose-300/80 mt-1 max-w-xs mx-auto">
+              <p className="text-[11px] opacity-80 mt-1 max-w-xs mx-auto">
                 {partialErrors.incidents}
               </p>
               <button
                 onClick={() => loadOverviewData(true)}
-                className="mt-3 px-3 py-1 bg-rose-900/30 hover:bg-rose-900/50 border border-rose-500/30 rounded text-xs text-rose-200 cursor-pointer"
+                className="mt-3 px-3 py-1 bg-[#2E151B]/10 hover:bg-[#2E151B]/20 dark:bg-rose-900/30 dark:hover:bg-rose-900/50 border border-[#2E151B]/25 dark:border-rose-500/30 rounded text-xs text-[#2E151B] dark:text-rose-200 cursor-pointer"
               >
                 Retry Incidents
               </button>
@@ -897,36 +873,36 @@ export const Overview: React.FC = () => {
               {recentIncidents.map((inc) => (
                 <div
                   key={inc.id}
-                  className="rounded-lg border border-[#192638] bg-[#0E1622] p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:border-[#22354E] transition-colors"
+                  className="rounded-lg border border-[#E2E8EA] dark:border-[#233C3F] bg-[#F8F9FA] dark:bg-[#112022] p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:border-[#CBD5D8] dark:hover:border-[#376E6F]/40 transition-colors shadow-2xs"
                 >
                   <div className="space-y-1">
                     <div className="flex items-center space-x-2">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase ${
-                        inc.severity === 'CRITICAL' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' :
-                        inc.severity === 'HIGH' ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30' :
-                        'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
+                        inc.severity === 'CRITICAL' ? 'bg-[#FAF0F2] dark:bg-rose-950/30 text-[#2E151B] dark:text-rose-300 border border-[#2E151B]/30 dark:border-rose-500/30' :
+                        inc.severity === 'HIGH' ? 'bg-[#FDF3F5] dark:bg-[#2A161D] text-[#B34D66] dark:text-[#F0A4B8] border border-[#DA7B93]/35' :
+                        'bg-amber-50 dark:bg-amber-950/25 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30'
                       }`}>
                         {inc.severity}
                       </span>
-                      <span className="text-xs font-semibold text-white font-mono">
+                      <span className="text-xs font-bold text-[#1C3334] dark:text-[#EDF4F5] font-mono">
                         {inc.incident_type}
                       </span>
-                      <span className="text-[11px] text-slate-400 font-mono">
+                      <span className="text-[11px] text-[#5D757E] dark:text-[#A0B7BC] font-mono">
                         @ {typeof inc.video_timestamp_sec === 'number' ? `${inc.video_timestamp_sec.toFixed(1)}s` : '—'}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-300 line-clamp-1">
+                    <p className="text-[11px] text-[#2F4454] dark:text-[#C5D5D8] line-clamp-1">
                       {inc.trigger_reason}
                     </p>
-                    <div className="text-[10px] text-slate-400 font-mono">
-                      Region: <span className="text-slate-300">{inc.relevant_region || 'Monitored Scene'}</span> • Score: {typeof inc.risk_score === 'number' ? `${inc.risk_score.toFixed(1)}/100` : '—'}
+                    <div className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] font-mono">
+                      Region: <span className="text-[#1C3334] dark:text-[#EDF4F5]">{inc.relevant_region || 'Monitored Scene'}</span> • Score: {typeof inc.risk_score === 'number' ? `${inc.risk_score.toFixed(1)}/100` : '—'}
                     </div>
                   </div>
 
                   <div className="shrink-0 flex items-center space-x-2">
                     <Link
                       to={`/incidents?selected=${inc.id}`}
-                      className="px-2.5 py-1 rounded bg-[#162234] hover:bg-[#1E2D40] border border-[#22354E] text-[11px] text-cyan-300 font-medium inline-flex items-center space-x-1 transition-colors"
+                      className="px-2.5 py-1 rounded bg-white dark:bg-[#16292B] hover:bg-[#EEF5F5] dark:hover:bg-[#1E3538] border border-[#CBD5D8] dark:border-[#2C4B4E] text-[11px] text-[#376E6F] dark:text-[#6EB5B6] font-semibold inline-flex items-center space-x-1 transition-colors shadow-2xs"
                     >
                       <span>Review</span>
                       <ExternalLink className="w-3 h-3" />
@@ -936,10 +912,10 @@ export const Overview: React.FC = () => {
               ))}
             </div>
           ) : (
-            <div className="py-12 text-center text-slate-400">
-              <ShieldAlert className="w-8 h-8 mx-auto mb-2 text-slate-400" />
-              <p className="text-xs font-medium text-slate-300">No incidents are recorded in the current catalog.</p>
-              <p className="text-[11px] text-slate-400 mt-1 max-w-xs mx-auto">
+            <div className="py-12 text-center text-[#5D757E] dark:text-[#A0B7BC]">
+              <ShieldAlert className="w-8 h-8 mx-auto mb-2 text-[#5D757E] dark:text-[#A0B7BC]" />
+              <p className="text-xs font-semibold text-[#1C3334] dark:text-[#EDF4F5]">No incidents recorded in the current catalog.</p>
+              <p className="text-[11px] text-[#5D757E] dark:text-[#A0B7BC] mt-1 max-w-xs mx-auto">
                 Any automated threshold violations or sustained risk conditions will appear here with evidentiary keyframes.
               </p>
             </div>
@@ -947,16 +923,16 @@ export const Overview: React.FC = () => {
         </div>
 
         {/* Catalog Audit Sessions */}
-        <div className="rounded-xl border border-[#192638] bg-[#0A1018] p-5">
-          <div className="flex items-center justify-between pb-3 border-b border-[#192638] mb-3">
+        <div className="rounded-xl border border-[#E2E8EA] dark:border-[#233C3F] bg-white dark:bg-[#152729] p-5 shadow-xs">
+          <div className="flex items-center justify-between pb-3 border-b border-[#E2E8EA] dark:border-[#233C3F] mb-3">
             <div className="flex items-center space-x-2">
-              <Users className="w-4 h-4 text-cyan-400" />
-              <h3 className="text-sm font-semibold text-white">Recent Catalog Audit Sessions</h3>
+              <Users className="w-4 h-4 text-[#376E6F] dark:text-[#6EB5B6]" />
+              <h3 className="text-sm font-bold text-[#1C3334] dark:text-[#EDF4F5]">Recent Catalog Audit Sessions</h3>
             </div>
             {allAnalyses && (
               <Link
                 to="/history"
-                className="text-xs text-cyan-400 hover:text-cyan-300 font-medium inline-flex items-center space-x-1"
+                className="text-xs text-[#376E6F] dark:text-[#6EB5B6] hover:text-[#2F4454] dark:hover:text-white font-semibold inline-flex items-center space-x-1"
               >
                 <span>Full archive ({allAnalyses.length})</span>
                 <ArrowRight className="w-3 h-3" />
@@ -965,15 +941,15 @@ export const Overview: React.FC = () => {
           </div>
 
           {allAnalyses === null && partialErrors.analyses ? (
-            <div className="py-12 text-center text-rose-300">
-              <AlertCircle className="w-8 h-8 mx-auto mb-2 text-rose-400" />
+            <div className="py-12 text-center text-[#2E151B] dark:text-rose-300">
+              <AlertCircle className="w-8 h-8 mx-auto mb-2 text-[#2E151B] dark:text-rose-400" />
               <p className="text-xs font-semibold">Catalog Sessions Unavailable</p>
-              <p className="text-[11px] text-rose-300/80 mt-1 max-w-xs mx-auto">
+              <p className="text-[11px] opacity-80 mt-1 max-w-xs mx-auto">
                 {partialErrors.analyses}
               </p>
               <button
                 onClick={() => loadOverviewData(true)}
-                className="mt-3 px-3 py-1 bg-rose-900/30 hover:bg-rose-900/50 border border-rose-500/30 rounded text-xs text-rose-200 cursor-pointer"
+                className="mt-3 px-3 py-1 bg-[#2E151B]/10 hover:bg-[#2E151B]/20 dark:bg-rose-900/30 dark:hover:bg-rose-900/50 border border-[#2E151B]/25 dark:border-rose-500/30 rounded text-xs text-[#2E151B] dark:text-rose-200 cursor-pointer"
               >
                 Retry Sessions
               </button>
@@ -983,16 +959,16 @@ export const Overview: React.FC = () => {
               {allAnalyses!.slice(0, 5).map((anl) => (
                 <div
                   key={anl.id}
-                  className="rounded-lg border border-[#192638] bg-[#0E1622] p-3 flex items-center justify-between hover:border-[#22354E] transition-colors"
+                  className="rounded-lg border border-[#E2E8EA] dark:border-[#233C3F] bg-[#F8F9FA] dark:bg-[#112022] p-3 flex items-center justify-between hover:border-[#CBD5D8] dark:hover:border-[#376E6F]/40 transition-colors shadow-2xs"
                 >
                   <div className="space-y-1">
                     <div className="flex items-center space-x-2">
-                      <span className="text-xs font-mono font-medium text-white">
+                      <span className="text-xs font-mono font-bold text-[#1C3334] dark:text-[#EDF4F5]">
                         {anl.id.slice(0, 14)}...
                       </span>
                       <StatusPill status={anl.status} />
                     </div>
-                    <div className="flex items-center space-x-3 text-[11px] text-slate-400 font-mono">
+                    <div className="flex items-center space-x-3 text-[11px] text-[#5D757E] dark:text-[#A0B7BC] font-mono">
                       <span>Frames: {typeof anl.current_frame === 'number' ? anl.current_frame : 0}/{anl.total_frames || '—'}</span>
                       <span>•</span>
                       <span>Peak: {typeof anl.peak_count === 'number' ? anl.peak_count : 0}</span>
@@ -1004,7 +980,7 @@ export const Overview: React.FC = () => {
                   <div className="shrink-0 flex items-center space-x-2">
                     <Link
                       to={`/monitoring?analysisId=${anl.id}`}
-                      className="px-2.5 py-1 rounded bg-[#162234] hover:bg-[#1E2D40] border border-[#22354E] text-[11px] text-slate-300 hover:text-white font-medium inline-flex items-center space-x-1 transition-colors"
+                      className="px-2.5 py-1 rounded bg-white dark:bg-[#16292B] hover:bg-[#EEF5F5] dark:hover:bg-[#1E3538] border border-[#CBD5D8] dark:border-[#2C4B4E] text-[11px] text-[#2F4454] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-white font-medium inline-flex items-center space-x-1 transition-colors shadow-2xs"
                     >
                       <span>Replay</span>
                       <ArrowRight className="w-3 h-3" />
@@ -1014,10 +990,10 @@ export const Overview: React.FC = () => {
               ))}
             </div>
           ) : (
-            <div className="py-12 text-center text-slate-400">
-              <PlayCircle className="w-8 h-8 mx-auto mb-2 text-slate-400" />
-              <p className="text-xs font-medium text-slate-300">No session history in database</p>
-              <p className="text-[11px] text-slate-400 mt-1 max-w-xs mx-auto">
+            <div className="py-12 text-center text-[#5D757E] dark:text-[#A0B7BC]">
+              <PlayCircle className="w-8 h-8 mx-auto mb-2 text-[#5D757E] dark:text-[#A0B7BC]" />
+              <p className="text-xs font-semibold text-[#1C3334] dark:text-[#EDF4F5]">No session history in database</p>
+              <p className="text-[11px] text-[#5D757E] dark:text-[#A0B7BC] mt-1 max-w-xs mx-auto">
                 Uploaded videos and completed computer vision runs will persist here for post-event forensic replay.
               </p>
             </div>

@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
 import { TopBar } from './components/TopBar';
+import { ThemeProvider } from './context/ThemeContext';
 import { SystemProvider, useSystem } from './context/SystemContext';
 
 import { Overview } from './pages/Overview';
@@ -21,7 +22,7 @@ const AppLayout: React.FC = () => {
   const { sidebarCollapsed } = useSystem();
 
   return (
-    <div className="min-h-screen bg-[#070B11] text-[#F0F4F8] flex">
+    <div className="min-h-screen bg-[#F8F9FA] dark:bg-[#0B1415] text-[#1C3334] dark:text-[#EEF4F5] flex transition-colors duration-200">
       {/* Dynamic Collapsible Sidebar */}
       <Navbar />
 
@@ -31,7 +32,7 @@ const AppLayout: React.FC = () => {
           sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'
         }`}
       >
-        {/* Top Context Bar */}
+        {/* Top Context Bar with Theme Toggle */}
         <TopBar />
 
         {/* Scrollable Page Content */}
@@ -57,9 +58,11 @@ const AppLayout: React.FC = () => {
 export function App() {
   return (
     <BrowserRouter>
-      <SystemProvider>
-        <AppLayout />
-      </SystemProvider>
+      <ThemeProvider>
+        <SystemProvider>
+          <AppLayout />
+        </SystemProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

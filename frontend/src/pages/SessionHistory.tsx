@@ -73,17 +73,17 @@ export const SessionHistory: React.FC = () => {
   return (
     <div className="space-y-6 w-full">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-4 border-b border-[#1E2D40] gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-4 border-b border-[#E2E8EA] dark:border-[#203638] gap-4">
         <div>
           <div className="flex items-center space-x-2.5">
-            <h1 className="text-xl font-bold text-white tracking-tight">
+            <h1 className="text-xl font-bold text-[#1C3334] dark:text-[#EDF4F5] tracking-tight">
               SURVEILLANCE SESSION AUDIT LOG
             </h1>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-cyan-950/40 border border-cyan-500/30 text-cyan-300">
               PERSISTENT REPOSITORY
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-[#5D757E] dark:text-[#A0B7BC] mt-1">
             Historical archive of all video analyses, peak density metrics, high-risk durations, and audit CSV exports
           </p>
         </div>
@@ -91,7 +91,7 @@ export const SessionHistory: React.FC = () => {
         <button
           onClick={() => loadSessions(true)}
           disabled={refreshing}
-          className="inline-flex items-center space-x-2 px-3 py-1.5 bg-[#0E1622] hover:bg-[#141E2B] text-slate-300 hover:text-white border border-[#1E2D40] rounded-lg text-xs font-medium transition cursor-pointer self-start lg:self-auto"
+          className="inline-flex items-center space-x-2 px-3 py-1.5 bg-white dark:bg-[#152729] hover:bg-[#F1F4F5] dark:hover:bg-[#1C3336] text-[#2F4454] dark:text-[#EDF4F5] border border-[#CBD5D8] dark:border-[#2C4B4E] shadow-2xs rounded-lg text-xs font-medium transition cursor-pointer self-start lg:self-auto"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-cyan-400' : ''}`} />
           <span>Refresh Catalog</span>
@@ -139,10 +139,10 @@ export const SessionHistory: React.FC = () => {
       </div>
 
       {/* Sessions Table */}
-      <div className="bg-[#0E1622] border border-[#1E2D40] rounded-xl overflow-hidden shadow-xs">
+      <div className="bg-white dark:bg-[#0E1622] border border-[#E2E8EA] dark:border-[#1E2D40] rounded-xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-[#0A1018] text-slate-400 font-semibold uppercase tracking-wider text-[11px] border-b border-[#1E2D40]">
+            <thead className="bg-[#F8F9FA] dark:bg-[#0A1018] text-[#5D757E] dark:text-[#5D757E] dark:text-slate-400 font-semibold uppercase tracking-wider text-[11px] border-b border-[#E2E8EA] dark:border-[#1E2D40]">
               <tr>
                 <th className="p-3.5">Analysis ID</th>
                 <th className="p-3.5">Status</th>
@@ -154,13 +154,13 @@ export const SessionHistory: React.FC = () => {
                 <th className="p-3.5 text-right">Audit Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#1E2D40] text-slate-200">
+            <tbody className="divide-y divide-[#E2E8EA] dark:divide-[#1E2D40] text-[#1C3334] dark:text-slate-200">
               {analyses.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="p-10 text-center text-slate-500">
                     <div className="max-w-md mx-auto space-y-2">
                       <FolderOpen className="w-8 h-8 text-slate-600 mx-auto" />
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-[#5D757E] dark:text-slate-400">
                         No surveillance sessions have been recorded yet.
                       </p>
                       <p className="text-[11px] text-slate-500">
@@ -171,27 +171,27 @@ export const SessionHistory: React.FC = () => {
                 </tr>
               ) : (
                 analyses.map((a) => (
-                  <tr key={a.id} className="hover:bg-[#121C2B] transition-colors">
-                    <td className="p-3.5 font-mono text-cyan-400 font-medium">
+                  <tr key={a.id} className="hover:bg-[#F6F8F9] dark:hover:bg-[#121C2B] transition-colors">
+                    <td className="p-3.5 font-mono text-[#376E6F] dark:text-cyan-400 font-semibold">
                       {a.id}
                     </td>
                     <td className="p-3.5">
                       <StatusPill status={a.status} />
                     </td>
-                    <td className="p-3.5 text-slate-400 font-mono">
+                    <td className="p-3.5 text-[#5D757E] dark:text-slate-400 font-mono">
                       {a.created_at ? a.created_at.replace('T', ' ').slice(0, 19) : '—'}
                     </td>
-                    <td className="p-3.5 font-bold font-mono text-white">
-                      {a.peak_count} <span className="text-[10px] text-slate-400 font-normal">pers.</span>
+                    <td className="p-3.5 font-bold font-mono text-[#1C3334] dark:text-white">
+                      {a.peak_count} <span className="text-[10px] text-[#5D757E] dark:text-slate-400 font-normal">pers.</span>
                     </td>
                     <td className="p-3.5 font-mono font-medium">
-                      <span className="text-slate-300">{a.avg_risk_score.toFixed(1)}</span>
+                      <span className="text-[#2F4454] dark:text-slate-300">{a.avg_risk_score.toFixed(1)}</span>
                       <span className="text-slate-500 mx-1">/</span>
                       <span className={a.max_risk_score >= 70 ? 'text-rose-400 font-bold' : a.max_risk_score >= 40 ? 'text-amber-400' : 'text-emerald-400'}>
                         {a.max_risk_score.toFixed(1)}
                       </span>
                     </td>
-                    <td className="p-3.5 font-mono text-slate-300">
+                    <td className="p-3.5 font-mono text-[#2F4454] dark:text-slate-300">
                       {a.high_risk_duration_sec}s
                     </td>
                     <td className="p-3.5">
@@ -207,7 +207,7 @@ export const SessionHistory: React.FC = () => {
                     <td className="p-3.5 text-right space-x-2">
                       <Link
                         to={`/monitoring?analysisId=${a.id}`}
-                        className="inline-flex items-center space-x-1 px-2.5 py-1 bg-[#141E2B] hover:bg-[#1E2D40] text-slate-200 hover:text-white rounded border border-[#1E2D40] transition text-xs cursor-pointer"
+                        className="inline-flex items-center space-x-1 px-2.5 py-1 bg-[#141E2B] hover:bg-[#1E2D40] text-slate-200 hover:text-[#1C3334] dark:text-white rounded border border-[#1E2D40] transition text-xs cursor-pointer"
                         title="Inspect Telemetry & Replay"
                       >
                         <Eye className="w-3.5 h-3.5 text-cyan-400" />
@@ -215,7 +215,7 @@ export const SessionHistory: React.FC = () => {
                       </Link>
                       <Link
                         to={`/analytics?analysisId=${a.id}`}
-                        className="inline-flex items-center space-x-1 px-2.5 py-1 bg-[#141E2B] hover:bg-[#1E2D40] text-slate-200 hover:text-white rounded border border-[#1E2D40] transition text-xs cursor-pointer"
+                        className="inline-flex items-center space-x-1 px-2.5 py-1 bg-[#141E2B] hover:bg-[#1E2D40] text-slate-200 hover:text-[#1C3334] dark:text-white rounded border border-[#1E2D40] transition text-xs cursor-pointer"
                         title="View Advanced Dynamics"
                       >
                         <BarChart2 className="w-3.5 h-3.5 text-purple-400" />
