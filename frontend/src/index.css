@@ -18,13 +18,13 @@
 
 @layer base {
   :root {
-    /* Warm Light Theme (Default) */
-    --cg-bg-base: #F8F9FA;
+    /* Warm Ivory Light Theme (Default per Art Direction) */
+    --cg-bg-base: #F8F6F3;
     --cg-bg-surface: #FFFFFF;
-    --cg-bg-panel: #F1F4F5;
+    --cg-bg-panel: #F1ECE6;
     --cg-bg-card: #FFFFFF;
-    --cg-bg-card-hover: #F6F8F9;
-    --cg-border-subtle: #E2E8EA;
+    --cg-bg-card-hover: #F6F2EC;
+    --cg-border-subtle: #E5DFD7;
     --cg-border-accent: #CBD5D8;
     --cg-text-primary: #1C3334;
     --cg-text-secondary: #2F4454;

@@ -336,7 +336,12 @@ export const MultiCameraPage: React.FC = () => {
           icon={Camera}
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className={`grid gap-6 ${
+          cameras.length === 1 ? 'grid-cols-1 max-w-4xl mx-auto' :
+          cameras.length === 2 ? 'grid-cols-1 lg:grid-cols-2' :
+          cameras.length <= 4 ? 'grid-cols-1 md:grid-cols-2' :
+          'grid-cols-1 md:grid-cols-2 xl:grid-cols-3'
+        }`}>
           {cameras.map((cam) => {
             const camId = cam.camera_id || '';
             const isActing = actionLoading[camId];

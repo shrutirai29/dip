@@ -13,32 +13,32 @@ import { useTheme } from '../context/ThemeContext';
 
 const routeTitles: Record<string, { title: string; subtitle: string }> = {
   '/': {
-    title: 'Surveillance Command Overview',
-    subtitle: 'Real-time crowd dynamics, automated telemetry & early risk indicators',
+    title: 'Real-Time Crowd Intelligence',
+    subtitle: 'Monitor. Analyse. Predict. Prevent. • High-precision spatial surveillance',
+  },
+  '/monitoring': {
+    title: 'Live Surveillance & Spatial Replay',
+    subtitle: '3D analytical plaza matrix, synchronized trajectory scrubbing & HUD telemetry',
   },
   '/cameras': {
     title: 'Multi-Camera Fleet Surveillance',
-    subtitle: 'Concurrent webcam, recorded video, and RTSP stream monitoring grid',
+    subtitle: 'Concurrent CCTV stream monitoring, network isolation & failover recovery',
   },
   '/video-analysis': {
-    title: 'Video Ingestion & Studio',
-    subtitle: 'Upload CCTV footage, configure DIP perspective & launch inference',
-  },
-  '/monitoring': {
-    title: 'Telemetry & Replay Stream',
-    subtitle: 'Spatial 3x3 density matrix, synchronized trajectory scrubbing & HUD playback',
+    title: 'Surveillance Ingestion Studio',
+    subtitle: 'Upload CCTV footage, calibrate monocular perspective & launch inference',
   },
   '/analytics': {
-    title: 'Dynamics & Forecasting',
-    subtitle: 'Directional Shannon entropy, velocity dynamics & +10s risk projections',
+    title: 'Crowd Dynamics & Forecasting',
+    subtitle: 'Directional Shannon entropy, optical flow vectors & +10s risk projections',
   },
   '/incidents': {
-    title: 'Incident Warnings & Evidence',
-    subtitle: 'Sustained hazard advisories, evidentiary keyframes & operator workflow',
+    title: 'Incident Warnings & Hazard Audit',
+    subtitle: 'Sustained condition hazard log, evidentiary keyframes & operator workflow',
   },
   '/history': {
-    title: 'Audit Session History',
-    subtitle: 'Historical inspection log, metric summaries & persistent database catalog',
+    title: 'Surveillance Session Audit Log',
+    subtitle: 'Historical archive of all video analyses, peak density metrics & audit CSV exports',
   },
   '/benchmarks': {
     title: 'System Evaluation & Benchmarks',

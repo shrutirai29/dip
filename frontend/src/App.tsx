@@ -22,7 +22,7 @@ const AppLayout: React.FC = () => {
   const { sidebarCollapsed } = useSystem();
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] dark:bg-[#0B1415] text-[#1C3334] dark:text-[#EEF4F5] flex transition-colors duration-200">
+    <div className="min-h-screen bg-[#F8F6F3] dark:bg-[#0B1415] text-[#1C3334] dark:text-[#EEF4F5] flex transition-colors duration-200">
       {/* Dynamic Collapsible Sidebar */}
       <Navbar />
 

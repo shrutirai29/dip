@@ -41,6 +41,7 @@ import {
   ErrorState, 
   LoadingBlock 
 } from '../components/UIComponents';
+import { SpatialDensity3D } from '../components/SpatialDensity3D';
 import { useSystem } from '../context/SystemContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -255,11 +256,11 @@ export const Overview: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-[#E2E8EA] dark:border-[#203638] gap-4">
         <div>
           <div className="flex items-center space-x-2.5">
-            <h1 className="text-xl font-bold tracking-tight text-[#1C3334] dark:text-[#EDF4F5]">
-              CROWD SURVEILLANCE & FORECAST WORKSTATION
+            <h1 className="text-2xl font-bold tracking-tight text-[#1C3334] dark:text-[#EDF4F5] font-serif">
+              Real-Time Crowd Intelligence
             </h1>
             <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-[#376E6F]/10 dark:bg-[#376E6F]/25 text-[#376E6F] dark:text-[#6EB5B6] border border-[#376E6F]/30">
-              DIP OPS v2.0
+              {fleetHealth?.system_status || 'OPERATIONAL'}
             </span>
             {refreshing && (
               <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-mono bg-[#DA7B93]/15 text-[#B34D66] dark:text-[#DA7B93] border border-[#DA7B93]/30 animate-pulse">
@@ -268,9 +269,8 @@ export const Overview: React.FC = () => {
               </span>
             )}
           </div>
-          <p className="text-xs text-[#5D757E] dark:text-[#A0B7BC] mt-1 max-w-2xl leading-relaxed">
-            Multi-stage Digital Image Processing surveillance system evaluating Farneback optical flow velocity fields,
-            directional Shannon entropy disorder, 2D continuous Gaussian density splatting, and +10s risk projections.
+          <p className="text-xs text-[#5D757E] dark:text-[#A0B7BC] mt-1 max-w-2xl leading-relaxed font-serif italic text-base">
+            Monitor. Analyse. Predict. Prevent.
           </p>
         </div>
 
@@ -505,73 +505,11 @@ export const Overview: React.FC = () => {
             </div>
           </div>
 
-          {/* 3×3 Density Quadrant Breakdown */}
-          <div className="bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl p-4 shadow-xs">
-            <div className="flex items-center justify-between pb-2.5 border-b border-[#E2E8EA] dark:border-[#203638] mb-3">
-              <div className="flex items-center space-x-2">
-                <Grid3X3 className="w-4 h-4 text-[#376E6F] dark:text-[#6EB5B6]" />
-                <h3 className="text-xs font-bold text-[#1C3334] dark:text-[#EDF4F5] uppercase tracking-wider">
-                  Spatial 3×3 Density Matrix
-                </h3>
-              </div>
-              <span className="text-[10px] font-mono text-[#5D757E] dark:text-[#A0B7BC]">
-                {latestFrame ? `Frame #${latestFrame.frame_index} • t=${latestFrame.timestamp_sec.toFixed(1)}s` : '9 Quadrant Sectors (A1–C3)'}
-              </span>
-            </div>
-
-            {zoneCells !== null ? (
-              <div className="grid grid-cols-3 gap-2">
-                {zoneCells.map((zone) => {
-                  const isCritical = zone.density_level === 'Critical';
-                  const isHigh = zone.density_level === 'High';
-                  const isMod = zone.density_level === 'Moderate';
-                  return (
-                    <div
-                      key={zone.name}
-                      className={`rounded-lg border p-2 flex flex-col justify-between transition-colors shadow-2xs ${
-                        isCritical
-                          ? 'border-[#2E151B]/40 dark:border-rose-500/40 bg-[#FAF0F2] dark:bg-rose-950/20 text-[#2E151B] dark:text-rose-300'
-                          : isHigh
-                          ? 'border-amber-400 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-950/20 text-amber-900 dark:text-amber-200'
-                          : isMod
-                          ? 'border-amber-200 dark:border-amber-500/20 bg-amber-50/50 dark:bg-[#121C2B] text-amber-800 dark:text-amber-300'
-                          : 'border-[#E2E8EA] dark:border-[#203638] bg-[#F8F9FA] dark:bg-[#0E1622] text-[#1C3334] dark:text-[#EDF4F5]'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono font-bold">{zone.name}</span>
-                        <span className={`w-2 h-2 rounded-full ${
-                          isCritical ? 'bg-rose-500 animate-pulse' :
-                          isHigh ? 'bg-orange-500' :
-                          isMod ? 'bg-amber-500' : 'bg-emerald-500'
-                        }`} />
-                      </div>
-                      <div className="my-1">
-                        <div className="text-base font-bold font-mono text-[#1C3334] dark:text-[#EDF4F5] tabular-nums">
-                          {zone.population}
-                        </div>
-                        <span className="text-[9px] text-[#5D757E] dark:text-[#A0B7BC] font-mono block">
-                          {(zone.normalized_density * 100).toFixed(0)}% cap
-                        </span>
-                      </div>
-                      <div className="text-[9px] font-mono text-[#5D757E] dark:text-[#A0B7BC] border-t border-[#E2E8EA] dark:border-[#203638] pt-1 flex justify-between tabular-nums">
-                        <span>v: {zone.avg_velocity.toFixed(0)} px/s</span>
-                        {zone.pattern && zone.pattern !== 'NORMAL' && (
-                          <span className="text-[#DA7B93] font-bold uppercase truncate max-w-[50px]">{zone.pattern}</span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="py-6 rounded-lg border border-dashed border-[#CBD5D8] dark:border-[#203638] bg-[#F8F9FA] dark:bg-[#0E1622] text-center text-[#5D757E] dark:text-[#A0B7BC] space-y-1">
-                <Grid3X3 className="w-5 h-5 mx-auto text-slate-400" />
-                <p className="text-xs font-semibold text-[#1C3334] dark:text-[#EDF4F5]">Spatial Matrix Standing By</p>
-                <p className="text-[10px] max-w-xs mx-auto">Start a camera feed or replay to view 3×3 quadrant density distribution.</p>
-              </div>
-            )}
-          </div>
+          {/* 3D Spatial Plaza Matrix (Signature Feature) */}
+          <SpatialDensity3D
+            gridData={zoneCells}
+            cameraName={cameraStatus?.is_active ? cameraStatus.camera_name || 'Hardware Camera #0' : 'Offline Ingestion Node'}
+          />
         </div>
 
         {/* Right Column (5 cols): Temporal Risk Trajectory & Incident Feed */}
