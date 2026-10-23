@@ -69,7 +69,7 @@ export const MetricStrip: React.FC<{ children: React.ReactNode; className?: stri
   children,
   className = '',
 }) => (
-  <div className={`flex flex-wrap items-center divide-y sm:divide-y-0 sm:divide-x divide-[#E2E8EA] dark:divide-[#203638] bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl overflow-hidden shadow-2xs ${className}`}>
+  <div className={`w-full flex flex-wrap items-center divide-y sm:divide-y-0 sm:divide-x divide-[#E2DBD1] dark:divide-[#1F3538] bg-[#FAF8F5] dark:bg-[#0E1A1B] border-y border-[#E2DBD1] dark:border-[#1F3538] py-1 select-none ${className}`}>
     {children}
   </div>
 );

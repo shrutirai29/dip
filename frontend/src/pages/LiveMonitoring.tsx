@@ -440,13 +440,12 @@ export const LiveMonitoring: React.FC = () => {
       {/* -------------------------------------------------------------------------
           1. HEADER WITH FEED SOURCE SWITCHER & TELEMETRY CONTROLS
           ------------------------------------------------------------------------- */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-4 border-b border-[#E2E8EA] dark:border-[#203638] gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-4 border-b border-[#E2DBD1] dark:border-[#203638] gap-4">
         <div>
           <div className="flex items-center space-x-2.5">
-            <h1 className="text-xl font-bold text-[#1C3334] dark:text-[#EDF4F5] tracking-tight">
-              {activeSource === 'webcam' ? 'LIVE HARDWARE WEBCAM MONITORING' : 'TELEMETRY & SPATIAL REPLAY'}
-            </h1>
-
+            <span className="text-[10px] font-mono font-bold tracking-widest text-[#376E6F] dark:text-[#6EB5B6] uppercase">
+              CROWDGUARD // 03 • LIVE SURVEILLANCE & SPATIAL REPLAY
+            </span>
             {activeSource === 'webcam' ? (
               isBackendOffline ? (
                 <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-500/30">
@@ -489,6 +488,9 @@ export const LiveMonitoring: React.FC = () => {
             )}
           </div>
 
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight text-[#1C3334] dark:text-[#EDF4F5] mt-1">
+            {activeSource === 'webcam' ? 'Live Surveillance & Tracking' : 'Forensic Replay & Spatial Telemetry'}
+          </h1>
           <p className="text-xs text-[#5D757E] dark:text-[#A0B7BC] mt-1">
             {activeSource === 'webcam'
               ? 'Real-time local hardware webcam video acquisition, YOLOv8 ByteTrack multi-object tracking, and continuous Farneback velocity telemetry'

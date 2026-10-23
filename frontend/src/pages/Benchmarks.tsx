@@ -190,21 +190,19 @@ export const BenchmarksPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-[#E2E8EA] dark:border-[#203638] pb-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-[#E2DBD1] dark:border-[#203638] pb-4">
         <div>
-          <div className="flex items-center space-x-3">
-            <div className="p-2.5 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-cyan-400">
-              <Cpu className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black tracking-tight text-[#1C3334] dark:text-[#EDF4F5] flex items-center gap-2">
-                System Evaluation & Benchmarks
-              </h1>
-              <p className="text-xs text-[#5D757E] dark:text-[#A0B7BC] font-mono mt-0.5">
-                CROWDGUARD v2.0 • Phase 4.6 Performance Optimization, Fair Scheduling & Real-World Validation
-              </p>
-            </div>
+          <div className="flex items-center space-x-2.5">
+            <span className="text-[10px] font-mono font-bold tracking-widest text-[#376E6F] dark:text-[#6EB5B6] uppercase">
+              CROWDGUARD // 05 • TECHNICAL EVALUATION & PROFILING
+            </span>
           </div>
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight text-[#1C3334] dark:text-[#EDF4F5] mt-1">
+            System Evaluation & Benchmarks
+          </h1>
+          <p className="text-xs text-[#5D757E] dark:text-[#A0B7BC] mt-1 max-w-2xl leading-relaxed">
+            Quantitative evaluation: Detection accuracy, inference latency breakdown, multi-stream scheduler scaling, and sustained validation.
+          </p>
         </div>
 
         <div className="flex items-center space-x-3">

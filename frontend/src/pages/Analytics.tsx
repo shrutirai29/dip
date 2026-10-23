@@ -189,14 +189,17 @@ export const Analytics: React.FC = () => {
   return (
     <div className="space-y-6 w-full">
       {/* Header with Session Selector, Status, and CSV Export */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-4 border-b border-[#E2E8EA] dark:border-[#203638] gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-4 border-b border-[#E2DBD1] dark:border-[#203638] gap-4">
         <div>
           <div className="flex items-center space-x-2.5">
-            <h1 className="text-xl font-bold text-[#1C3334] dark:text-[#EDF4F5] tracking-tight">
-              ADVANCED DYNAMICS & PREDICTIVE ANALYTICS
-            </h1>
+            <span className="text-[10px] font-mono font-bold tracking-widest text-[#376E6F] dark:text-[#6EB5B6] uppercase">
+              CROWDGUARD // 04 • CROWD DYNAMICS & FORECASTING
+            </span>
             {selectedAnalysis && <StatusPill status={selectedAnalysis.status} />}
           </div>
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight text-[#1C3334] dark:text-[#EDF4F5] mt-1">
+            Crowd Dynamics & Predictive Analytics
+          </h1>
           <p className="text-xs text-[#5D757E] dark:text-[#A0B7BC] mt-1">
             Temporal feature decomposition: Farneback optical flow velocity vectors, directional Shannon entropy, and multi-horizon risk projections
           </p>

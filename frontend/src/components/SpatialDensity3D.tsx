@@ -22,6 +22,7 @@ export interface SpatialDensity3DProps {
   selectedZoneName?: string | null;
   cameraName?: string | null;
   className?: string;
+  heightClassName?: string;
 }
 
 type VisualizationMode = 'density' | 'risk' | 'velocity';
@@ -57,6 +58,7 @@ export const SpatialDensity3D: React.FC<SpatialDensity3DProps> = ({
   selectedZoneName,
   cameraName = 'SURVEILLANCE NODE',
   className = '',
+  heightClassName = '',
 }) => {
   const { isDark } = useTheme();
   const mountRef = useRef<HTMLDivElement>(null);
@@ -249,9 +251,31 @@ export const SpatialDensity3D: React.FC<SpatialDensity3DProps> = ({
     // 8. 3x3 Quadrant Plinths
     const columnGroup = new THREE.Group();
     const columns: { mesh: THREE.Mesh; cap: THREE.LineSegments; cellIndex: number }[] = [];
+    const sprites: THREE.Sprite[] = [];
     const cellWidth = 2.2;
     const gap = 0.4;
     const totalStep = cellWidth + gap;
+    const sectorCodes = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3'];
+
+    const createSectorSprite = (code: string, isDarkTheme: boolean) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 128;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.font = 'bold 32px monospace';
+        ctx.fillStyle = isDarkTheme ? '#8AA1A7' : '#2F4454';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(code, 64, 32);
+      }
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.minFilter = THREE.LinearFilter;
+      const spMat = new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0.8 });
+      const sprite = new THREE.Sprite(spMat);
+      sprite.scale.set(1.1, 0.55, 1);
+      return sprite;
+    };
 
     quadrants.forEach((cell, idx) => {
       const row = Math.floor(idx / 3) - 1; // -1, 0, 1
@@ -306,8 +330,14 @@ export const SpatialDensity3D: React.FC<SpatialDensity3DProps> = ({
 
       mesh.userData = { cellIndex: idx };
 
+      // Sector Floating Sprite Label
+      const sprite = createSectorSprite(sectorCodes[idx] || `Z${idx}`, isDark);
+      sprite.position.set(col * totalStep, heightVal + 0.45, row * totalStep);
+      sprites.push(sprite);
+
       columnGroup.add(mesh);
       columnGroup.add(cap);
+      columnGroup.add(sprite);
       columns.push({ mesh, cap, cellIndex: idx });
     });
 
@@ -450,6 +480,11 @@ export const SpatialDensity3D: React.FC<SpatialDensity3DProps> = ({
       domEl.removeEventListener('wheel', onWheel);
 
       // Dispose three.js objects
+      sprites.forEach((s) => {
+        if (s.material.map) s.material.map.dispose();
+        s.material.dispose();
+      });
+
       columns.forEach(({ mesh, cap }) => {
         mesh.geometry.dispose();
         if (Array.isArray(mesh.material)) mesh.material.forEach((m) => m.dispose());
@@ -556,7 +591,7 @@ export const SpatialDensity3D: React.FC<SpatialDensity3DProps> = ({
       </div>
 
       {/* 2. Primary 3D Viewport Area */}
-      <div className="relative w-full h-80 sm:h-96 min-h-[300px] bg-gradient-to-b from-[#F8F6F3] to-[#ECE7DF] dark:from-[#0B1415] dark:to-[#112022] flex items-center justify-center overflow-hidden select-none">
+      <div className={`relative w-full ${heightClassName || 'h-80 sm:h-96 min-h-[300px]'} bg-gradient-to-b from-[#F8F6F3] to-[#ECE7DF] dark:from-[#0B1415] dark:to-[#112022] flex items-center justify-center overflow-hidden select-none`}>
         {/* Loading overlay */}
         {isLoading && (
           <div className="absolute inset-0 z-20 bg-white/70 dark:bg-black/70 backdrop-blur-xs flex items-center justify-center space-x-2 text-xs font-mono text-[#376E6F] dark:text-[#6EC4C6]">
