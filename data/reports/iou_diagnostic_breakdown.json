@@ -1,0 +1,294 @@
+{
+  "summary": {
+    "total_ground_truth": 26,
+    "total_predicted": 27,
+    "true_positives": 26,
+    "false_positives": 1,
+    "false_negatives": 0,
+    "precision": 0.963,
+    "recall": 1.0,
+    "f1_score": 0.9811,
+    "micro_mean_iou_all_boxes": 0.9308,
+    "macro_mean_iou_non_empty_frames": 0.9381,
+    "macro_mean_iou_all_15_frames_with_zeros": 0.4378,
+    "penalized_mean_iou_tp_fp_fn": 0.8963,
+    "box_iou_min": 0.6612,
+    "box_iou_max": 1.0,
+    "box_iou_median": 0.9694
+  },
+  "per_frame_diagnostics": [
+    {
+      "frame_id": "real_f000",
+      "category": "multi_person",
+      "resolution": [
+        1560,
+        890
+      ],
+      "ground_truth_count": 3,
+      "predicted_count": 3,
+      "true_positives": 3,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "matched_ious": [
+        0.831,
+        0.8142,
+        0.9624
+      ],
+      "frame_mean_iou": 0.8692,
+      "invalid_boxes_count": 0
+    },
+    {
+      "frame_id": "real_f029",
+      "category": "sparse",
+      "resolution": [
+        1560,
+        890
+      ],
+      "ground_truth_count": 1,
+      "predicted_count": 1,
+      "true_positives": 1,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "matched_ious": [
+        0.9972
+      ],
+      "frame_mean_iou": 0.9972,
+      "invalid_boxes_count": 0
+    },
+    {
+      "frame_id": "real_f058",
+      "category": "empty",
+      "resolution": [
+        1560,
+        890
+      ],
+      "ground_truth_count": 0,
+      "predicted_count": 0,
+      "true_positives": 0,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "matched_ious": [],
+      "frame_mean_iou": 0.0,
+      "invalid_boxes_count": 0
+    },
+    {
+      "frame_id": "real_f087",
+      "category": "empty",
+      "resolution": [
+        1560,
+        890
+      ],
+      "ground_truth_count": 0,
+      "predicted_count": 0,
+      "true_positives": 0,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "matched_ious": [],
+      "frame_mean_iou": 0.0,
+      "invalid_boxes_count": 0
+    },
+    {
+      "frame_id": "real_f116",
+      "category": "empty",
+      "resolution": [
+        1560,
+        890
+      ],
+      "ground_truth_count": 0,
+      "predicted_count": 0,
+      "true_positives": 0,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "matched_ious": [],
+      "frame_mean_iou": 0.0,
+      "invalid_boxes_count": 0
+    },
+    {
+      "frame_id": "real_f145",
+      "category": "dense_occluded",
+      "resolution": [
+        1560,
+        890
+      ],
+      "ground_truth_count": 5,
+      "predicted_count": 6,
+      "true_positives": 5,
+      "false_positives": 1,
+      "false_negatives": 0,
+      "matched_ious": [
+        0.9659,
+        1.0,
+        0.9683,
+        0.6612,
+        0.8858
+      ],
+      "frame_mean_iou": 0.8962,
+      "invalid_boxes_count": 0
+    },
+    {
+      "frame_id": "real_f174",
+      "category": "dense_occluded",
+      "resolution": [
+        1560,
+        890
+      ],
+      "ground_truth_count": 4,
+      "predicted_count": 4,
+      "true_positives": 4,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "matched_ious": [
+        0.959,
+        0.9546,
+        0.9747,
+        0.9924
+      ],
+      "frame_mean_iou": 0.9702,
+      "invalid_boxes_count": 0
+    },
+    {
+      "frame_id": "real_f203",
+      "category": "dense_occluded",
+      "resolution": [
+        1560,
+        890
+      ],
+      "ground_truth_count": 5,
+      "predicted_count": 5,
+      "true_positives": 5,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "matched_ious": [
+        0.9369,
+        0.9751,
+        0.982,
+        0.676,
+        0.9295
+      ],
+      "frame_mean_iou": 0.8999,
+      "invalid_boxes_count": 0
+    },
+    {
+      "frame_id": "real_f232",
+      "category": "multi_person",
+      "resolution": [
+        1560,
+        890
+      ],
+      "ground_truth_count": 4,
+      "predicted_count": 4,
+      "true_positives": 4,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "matched_ious": [
+        1.0,
+        0.9987,
+        0.9978,
+        0.9924
+      ],
+      "frame_mean_iou": 0.9972,
+      "invalid_boxes_count": 0
+    },
+    {
+      "frame_id": "real_f261",
+      "category": "multi_person",
+      "resolution": [
+        1560,
+        890
+      ],
+      "ground_truth_count": 4,
+      "predicted_count": 4,
+      "true_positives": 4,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "matched_ious": [
+        0.9984,
+        0.976,
+        0.9704,
+        0.8012
+      ],
+      "frame_mean_iou": 0.9365,
+      "invalid_boxes_count": 0
+    },
+    {
+      "frame_id": "syn_f010",
+      "category": "synthetic_simulation",
+      "resolution": [
+        640,
+        480
+      ],
+      "ground_truth_count": 0,
+      "predicted_count": 0,
+      "true_positives": 0,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "matched_ious": [],
+      "frame_mean_iou": 0.0,
+      "invalid_boxes_count": 0
+    },
+    {
+      "frame_id": "syn_f050",
+      "category": "synthetic_simulation",
+      "resolution": [
+        640,
+        480
+      ],
+      "ground_truth_count": 0,
+      "predicted_count": 0,
+      "true_positives": 0,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "matched_ious": [],
+      "frame_mean_iou": 0.0,
+      "invalid_boxes_count": 0
+    },
+    {
+      "frame_id": "syn_f100",
+      "category": "synthetic_simulation",
+      "resolution": [
+        640,
+        480
+      ],
+      "ground_truth_count": 0,
+      "predicted_count": 0,
+      "true_positives": 0,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "matched_ious": [],
+      "frame_mean_iou": 0.0,
+      "invalid_boxes_count": 0
+    },
+    {
+      "frame_id": "syn_f150",
+      "category": "synthetic_simulation",
+      "resolution": [
+        640,
+        480
+      ],
+      "ground_truth_count": 0,
+      "predicted_count": 0,
+      "true_positives": 0,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "matched_ious": [],
+      "frame_mean_iou": 0.0,
+      "invalid_boxes_count": 0
+    },
+    {
+      "frame_id": "syn_f200",
+      "category": "synthetic_simulation",
+      "resolution": [
+        640,
+        480
+      ],
+      "ground_truth_count": 0,
+      "predicted_count": 0,
+      "true_positives": 0,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "matched_ious": [],
+      "frame_mean_iou": 0.0,
+      "invalid_boxes_count": 0
+    }
+  ]
+}

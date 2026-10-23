@@ -3,6 +3,7 @@ import uuid
 import threading
 import cv2
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks, Response
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -15,8 +16,14 @@ from app.schemas.schemas import (
 )
 from app.services.video_processor import VideoProcessor
 from app.services.report_service import ReportService
+from app.api.camera_endpoints import router as camera_router
+from app.api.multi_camera_endpoints import router as multi_camera_router
 
 router = APIRouter()
+router.include_router(camera_router, prefix="/camera", tags=["Camera Ingestion"])
+router.include_router(multi_camera_router, prefix="/cameras", tags=["Multi-Camera Surveillance"])
+from app.api.benchmark_endpoints import router as benchmark_router
+router.include_router(benchmark_router, prefix="/benchmark", tags=["Evaluation"])
 
 # Active jobs tracking: analysis_id -> { "cancel_event": Event, "pause_event": Event }
 active_jobs: dict[str, dict] = {}
@@ -238,6 +245,64 @@ def get_analysis_results(analysis_id: str, db: Session = Depends(get_db)):
     if not analysis:
         raise HTTPException(status_code=404, detail="Analysis not found")
     return db.query(FrameRecord).filter(FrameRecord.analysis_id == analysis_id).order_by(FrameRecord.frame_index.asc()).all()
+
+@router.api_route("/analyses/{analysis_id}/video", methods=["GET", "HEAD"])
+def get_analysis_video(analysis_id: str, db: Session = Depends(get_db)):
+    """
+    Serve the browser-compatible annotated surveillance video for a given analysis session.
+    Supports HTTP range requests (206 Partial Content) for seamless timeline seeking.
+    """
+    analysis = db.query(Analysis).filter(Analysis.id == analysis_id).first()
+    if not analysis:
+        raise HTTPException(status_code=404, detail="Analysis session not found")
+
+    if analysis.status in ("pending", "processing"):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Surveillance video is currently being rendered ({analysis.progress_percent:.1f}%)."
+        )
+
+    if analysis.status == "failed" and not analysis.annotated_video_path:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Analysis failed: {analysis.error_message or 'No video artifact generated.'}"
+        )
+
+    expected_filename = f"{analysis_id}_annotated.mp4"
+    artifact_path = os.path.join(settings.PROCESSED_DIR, expected_filename)
+
+    if not os.path.exists(artifact_path):
+        if analysis.annotated_video_path:
+            clean_rel = analysis.annotated_video_path.lstrip("/").replace("data/processed/", "")
+            candidate = os.path.join(settings.PROCESSED_DIR, clean_rel)
+            if os.path.exists(candidate):
+                artifact_path = candidate
+
+    if not os.path.exists(artifact_path):
+        raise HTTPException(
+            status_code=404,
+            detail="Annotated video artifact was not found on the server filesystem."
+        )
+
+    real_processed = os.path.realpath(settings.PROCESSED_DIR)
+    real_artifact = os.path.realpath(artifact_path)
+    if not real_artifact.startswith(real_processed):
+        raise HTTPException(status_code=403, detail="Access denied to requested video path.")
+
+    try:
+        from app.services.video_transcode_service import ensure_h264_browser_compatible
+        artifact_path = ensure_h264_browser_compatible(artifact_path)
+    except Exception as e:
+        print(f"[get_analysis_video] Warning checking H.264 compatibility: {e}")
+
+    return FileResponse(
+        artifact_path,
+        media_type="video/mp4",
+        headers={
+            "Accept-Ranges": "bytes",
+            "Cache-Control": "public, max-age=3600"
+        }
+    )
 
 @router.post("/analyses/{analysis_id}/pause")
 def pause_analysis(analysis_id: str, db: Session = Depends(get_db)):

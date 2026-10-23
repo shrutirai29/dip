@@ -112,3 +112,76 @@ export interface AnalyticsSummary {
   peak_crowd_overall: number;
   avg_risk_overall: number;
 }
+
+export interface CameraSessionStatus {
+  camera_id?: string;
+  state: 'IDLE' | 'CONNECTING' | 'CONNECTED' | 'DEGRADED' | 'RECONNECTING' | 'DISCONNECTED' | 'ERROR' | 'STOPPING';
+  source_type?: 'webcam' | 'rtsp' | null;
+  device_index?: number | null;
+  camera_name?: string | null;
+  sanitized_url?: string | null;
+  location?: string | null;
+  is_active: boolean;
+  frames_captured: number;
+  frames_consumed: number;
+  frames_dropped: number;
+  latest_frame_id: number;
+  latest_frame_timestamp: number;
+  frame_age_seconds?: number | null;
+  measured_fps: number;
+  processing_fps: number;
+  uptime_seconds: number;
+  error_message: string | null;
+  retry_count?: number;
+  max_retries?: number;
+  next_retry_delay_sec?: number;
+  person_count?: number;
+  smoothed_risk_score?: number;
+  risk_band?: 'Low' | 'Moderate' | 'High' | 'Critical';
+  latest_captured_timestamp?: number | null;
+  latest_captured_monotonic?: number | null;
+  latest_published_timestamp?: number | null;
+  latest_detection_timestamp?: number | null;
+  detection_age_seconds?: number | null;
+  staleness_threshold_sec?: number;
+  is_stale?: boolean;
+  staleness_status?: string;
+  priority_weight?: number;
+  dispatches_since_last_run?: number;
+  last_priority_reason?: string;
+  active_policy?: string;
+  total_dropped_stale?: number;
+  stale_drop_rate?: number;
+}
+
+export interface MultiCameraHealth {
+  total_registered: number;
+  max_registered_limit: number;
+  active_streams: number;
+  max_active_limit: number;
+  connected_count: number;
+  degraded_count: number;
+  reconnecting_count: number;
+  error_or_disconnected_count: number;
+  total_observed_persons: number;
+  highest_risk_score: number;
+  system_status: 'OPERATIONAL' | 'DEGRADED' | 'OFFLINE' | 'IDLE';
+}
+
+export interface CameraRegisterPayload {
+  name: string;
+  source_type: 'webcam' | 'rtsp';
+  device_index?: number;
+  rtsp_url?: string;
+  username?: string;
+  password?: string;
+  location?: string;
+  target_fps?: number;
+  conf_threshold?: number;
+  inference_size?: number;
+  perspective_weight?: number;
+  privacy_mode?: string;
+  timeout_seconds?: number;
+  max_retries?: number;
+  start_immediately?: boolean;
+}

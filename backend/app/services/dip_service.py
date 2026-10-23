@@ -1,6 +1,21 @@
 import cv2
 import numpy as np
 
+# In-memory kernel cache for 2D Gaussian density splatting
+_GAUSSIAN_KERNEL_CACHE: dict = {}
+
+def _get_cached_gaussian_kernel(k_scaled: int, sigma: float) -> np.ndarray:
+    cache_key = (k_scaled, round(sigma, 1))
+    if cache_key not in _GAUSSIAN_KERNEL_CACHE:
+        half_k = k_scaled // 2
+        x = np.arange(-half_k, half_k + 1)
+        y = np.arange(-half_k, half_k + 1)
+        xx, yy = np.meshgrid(x, y)
+        kernel = np.exp(-(xx**2 + yy**2) / (2.0 * sigma**2)).astype(np.float32)
+        _GAUSSIAN_KERNEL_CACHE[cache_key] = kernel
+    return _GAUSSIAN_KERNEL_CACHE[cache_key]
+
+
 class DIPProcessor:
     """
     Advanced Digital Image Processing (DIP) pipeline:
@@ -13,11 +28,13 @@ class DIPProcessor:
     """
 
     @staticmethod
-    def preprocess_frame(frame: np.ndarray, apply_denoise: bool = True) -> np.ndarray:
+    def preprocess_frame(frame: np.ndarray, apply_denoise: bool = False) -> np.ndarray:
         """
-        DIP: Dual-stage noise suppression (bilateral filter preserving edge gradients).
+        DIP: Dual-stage noise suppression.
+        When apply_denoise is True, applies edge-preserving bilateral filtering.
+        Default is False to avoid redundant CPU filtering prior to CNN inference.
         """
-        if apply_denoise and frame is not None:
+        if apply_denoise and frame is not None and frame.size > 0:
             return cv2.bilateralFilter(frame, 5, 50, 50)
         return frame
 
@@ -124,13 +141,14 @@ class DIPProcessor:
         Adjusts Gaussian kernel footprint and weighting according to vertical Y-coordinate:
         - People farther away (higher in frame, small pixel bounding area) receive perspective normalization.
         - People close up (lower in frame) receive standard ground projection.
+        Optimized with cached kernel arrays.
         """
         h, w = frame_shape[:2]
-        density_map = np.zeros((h, w), dtype=np.float32)
-        
         if not detections:
             return np.zeros((h, w, 3), dtype=np.uint8)
-            
+
+        density_map = np.zeros((h, w), dtype=np.float32)
+        
         for det in detections:
             bbox = det.get("bbox", [])
             if len(bbox) != 4:
@@ -144,7 +162,6 @@ class DIPProcessor:
             y_norm = max(0.1, min(1.0, cy / float(h)))
             
             # Far perspective weight: when higher up (small y_norm), scale up representation
-            # because 1 person in far pixels represents equal physical space
             persp_scale = 1.0 + (1.0 - y_norm) * (perspective_weight * 0.8)
             
             # Adaptive kernel size scaled by perspective (smaller in background, wider in foreground)
@@ -155,11 +172,9 @@ class DIPProcessor:
             
             sigma = max(3.0, sigma_base * (0.6 + 0.5 * y_norm))
             
-            # Generate local 2D Gaussian kernel patch
-            x = np.arange(-half_k, half_k + 1)
-            y = np.arange(-half_k, half_k + 1)
-            xx, yy = np.meshgrid(x, y)
-            kernel = np.exp(-(xx**2 + yy**2) / (2 * sigma**2)) * persp_scale
+            # Retrieve cached Gaussian kernel patch
+            base_k = _get_cached_gaussian_kernel(k_scaled, sigma)
+            kernel = base_k * persp_scale
             
             # Bounds clipping
             kx1 = max(0, cx - half_k)
@@ -180,7 +195,7 @@ class DIPProcessor:
         if max_val > 0:
             norm_density = np.clip((density_map / max(max_val, 3.5)) * 255, 0, 255).astype(np.uint8)
         else:
-            norm_density = np.zeros((h, w), dtype=np.uint8)
+            return np.zeros((h, w, 3), dtype=np.uint8)
             
         # Colorize using high-contrast JET colormap
         heatmap_colored = cv2.applyColorMap(norm_density, cv2.COLORMAP_JET)
@@ -243,13 +258,16 @@ class DIPProcessor:
     def blend_heatmap_on_frame(frame: np.ndarray, heatmap: np.ndarray, alpha: float = 0.45) -> np.ndarray:
         """
         DIP: Alpha blending weighted overlay: Output = Frame*(1-alpha) + Heatmap*alpha.
+        Optimized with cv2.addWeighted and uint8 vectorized masking to eliminate float32 conversion overhead.
         """
-        if heatmap is None or frame is None:
+        if heatmap is None or frame is None or heatmap.size == 0 or frame.size == 0:
             return frame
-        mask = cv2.cvtColor(heatmap, cv2.COLOR_BGR2GRAY) > 10
+        gray = cv2.cvtColor(heatmap, cv2.COLOR_BGR2GRAY)
+        mask = gray > 10
         if not np.any(mask):
             return frame
-        output = frame.copy().astype(np.float32)
-        h_f = heatmap.astype(np.float32)
-        output[mask] = output[mask] * (1.0 - alpha) + h_f[mask] * alpha
-        return np.clip(output, 0, 255).astype(np.uint8)
+        blended = cv2.addWeighted(frame, 1.0 - alpha, heatmap, alpha, 0)
+        out = frame.copy()
+        mask3 = np.repeat(mask[:, :, np.newaxis], 3, axis=2)
+        np.copyto(out, blended, where=mask3)
+        return out

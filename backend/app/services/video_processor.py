@@ -65,7 +65,12 @@ class VideoProcessor:
             weight_motion_anomaly=analysis.weight_motion_anomaly,
             weight_congestion=analysis.weight_congestion
         )
-        tracker = SimpleByteTracker(max_lost_frames=15, iou_threshold=0.3)
+        tracker = SimpleByteTracker(
+            max_lost_frames=settings.TRACKER_MAX_LOST,
+            iou_threshold=settings.DEFAULT_IOU_THRESHOLD,
+            min_hits=settings.TRACKER_MIN_HITS,
+            instant_confirm_conf=settings.TRACKER_INSTANT_CONFIRM_CONF
+        )
         forecasting_engine = PatternAndForecastingEngine(history_window=25)
         incident_service = IncidentService(self.db, sustenance_frames=2, cooldown_sec=4.0)
 
@@ -145,23 +150,33 @@ class VideoProcessor:
                 flow_entropy = flow_data["directional_entropy"]
                 motion_var = flow_data["motion_variance"]
 
-                # 3. YOLO Person Detection
+                # 3. YOLO Person Detection (Class 0 strict filter with analysis conf_threshold)
                 detections = self.detection_service.detect_persons(
                     frame_clean,
-                    imgsz=analysis.inference_size
+                    imgsz=analysis.inference_size,
+                    conf_threshold=analysis.conf_threshold
                 )
-                person_count = len(detections)
 
-                # 4. Object Tracking
+                # 4. Object Tracking (Confirmed Tracks State Machine)
                 active_tracks = tracker.update(detections, timestamp_sec, width, height)
+                confirmed_detections = [
+                    {
+                        "bbox": t["bbox"],
+                        "confidence": t.get("confidence", 1.0),
+                        "class_id": 0,
+                        "class_name": "person"
+                    }
+                    for t in active_tracks
+                ]
+                person_count = len(active_tracks)
                 speeds = [t["speed"] for t in active_tracks]
                 accels = [t["acceleration"] for t in active_tracks]
                 mean_speed = float(np.mean(speeds)) if speeds else 0.0
                 mean_accel = float(np.mean(accels)) if accels else 0.0
 
-                # 5. Intelligent 3x3 Spatial Quadrant Telemetry
+                # 5. Intelligent 3x3 Spatial Quadrant Telemetry (Confirmed Persons Only)
                 grid_cells = self.density_service.compute_zone_telemetry(
-                    width, height, detections, active_tracks, flow_data, analysis.perspective_weight
+                    width, height, confirmed_detections, active_tracks, flow_data, analysis.perspective_weight
                 )
                 grid_densities = [c["normalized_density"] for c in grid_cells]
 
@@ -195,22 +210,23 @@ class VideoProcessor:
                 if risk_data["smoothed_score"] >= 50.0:
                     high_risk_frames += 1
 
-                # 9. Perspective-Aware Continuous 2D Gaussian Density Splatting
+                # 9. Perspective-Aware Continuous 2D Gaussian Density Splatting (Confirmed Persons Only)
                 heatmap_overlay = DIPProcessor.generate_density_heatmap(
-                    (height, width), detections, kernel_size=61, sigma_base=14.0, perspective_weight=analysis.perspective_weight
+                    (height, width), confirmed_detections, kernel_size=61, sigma_base=14.0, perspective_weight=analysis.perspective_weight
                 )
                 annotated_frame = DIPProcessor.blend_heatmap_on_frame(frame_clean, heatmap_overlay, alpha=0.45)
 
-                # 10. Privacy Anonymization Filter (if configured)
-                annotated_frame = DIPProcessor.apply_privacy_filter(annotated_frame, detections, mode=analysis.privacy_mode)
+                # 10. Privacy Anonymization Filter (if configured, Confirmed Persons Only)
+                annotated_frame = DIPProcessor.apply_privacy_filter(annotated_frame, confirmed_detections, mode=analysis.privacy_mode)
 
                 # 11. Draw Spatial Quadrant Grid
                 annotated_frame = self.density_service.draw_grid_overlay(annotated_frame, grid_cells, alpha=0.22)
 
-                # 12. Draw Tracks & Velocity Vectors
+                # 12. Draw Tracks & Velocity Vectors with Explainable Labels
                 for trk in active_tracks:
                     bx1, by1, bx2, by2 = [int(v) for v in trk["bbox"]]
                     tid = trk["id"]
+                    t_conf = trk.get("confidence", 0.0)
                     hist = trk.get("history", [])
                     if len(hist) > 1:
                         pts = np.array([(int(p[0]), int(p[1])) for p in hist], np.int32).reshape((-1, 1, 2))
@@ -218,7 +234,7 @@ class VideoProcessor:
 
                     # Bounding Box
                     cv2.rectangle(annotated_frame, (bx1, by1), (bx2, by2), (0, 255, 128), 2)
-                    label = f"ID:{tid} v:{trk['speed']:.1f}px/s"
+                    label = f"person #{tid} {t_conf:.2f} v:{trk['speed']:.1f}px/s"
                     cv2.putText(annotated_frame, label, (bx1, max(14, by1 - 5)),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 255, 128), 1, cv2.LINE_AA)
 
@@ -328,6 +344,17 @@ class VideoProcessor:
                             "forecast_risk": forecast_data["forecast_10s"],
                             "pattern": detected_pattern
                         })
+
+            if 'writer' in locals() and writer is not None:
+                writer.release()
+                writer = None
+
+            if not cancel_event.is_set():
+                try:
+                    from app.services.video_transcode_service import ensure_h264_browser_compatible
+                    ensure_h264_browser_compatible(output_path)
+                except Exception as trans_err:
+                    print(f"[VideoProcessor] Video transcoding warning: {trans_err}")
 
             # Status assignment
             if cancel_event.is_set():

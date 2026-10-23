@@ -18,10 +18,13 @@ class Settings:
     
     # YOLO Detection Settings
     YOLO_MODEL_NAME: str = "yolov8n.pt"  # nano model for fast CPU/CUDA inference
-    DEFAULT_CONF_THRESHOLD: float = 0.25
+    DEFAULT_CONF_THRESHOLD: float = 0.30  # Evidence-based baseline to suppress small background clutter
     DEFAULT_IOU_THRESHOLD: float = 0.45
     DEFAULT_INFERENCE_SIZE: int = 640
     DEFAULT_FRAME_STRIDE: int = 2  # Process every 2nd frame for real-time CPU balance
+    TRACKER_MIN_HITS: int = 2  # Consecutive frames required to confirm tentative track
+    TRACKER_INSTANT_CONFIRM_CONF: float = 0.60  # Immediate confirmation for high-confidence detections
+    TRACKER_MAX_LOST: int = 15
     
     # Risk Engine Heuristic Weights (Sum to 1.0)
     WEIGHT_DENSITY: float = 0.35
@@ -42,6 +45,27 @@ class Settings:
     DEFAULT_PRIVACY_MODE: str = "none"  # "none", "face_blur", "full_anonymize"
     
     MAX_UPLOAD_SIZE_MB: int = 150
+    
+    # RTSP CCTV Integration & Network Security
+    ALLOWED_CAMERA_SUBNETS: list[str] = [
+        "192.168.0.0/16",
+        "10.0.0.0/8",
+        "172.16.0.0/12"
+    ]
+    # Allowed ports: standard RTSP (554), RTSPS (322), alternate (8554, 5544, 10554, 7070)
+    # plus non-privileged dynamic port range (1024-65535)
+    ALLOWED_CAMERA_PORTS: list[int] = [554, 322, 8554, 5544, 10554, 7070]
+    ALLOW_LOOPBACK_RTSP_TESTING: bool = os.getenv("ALLOW_LOOPBACK_RTSP_TESTING", "0").lower() in ("1", "true")
+    DEFAULT_RTSP_TIMEOUT_SEC: float = 5.0
+    DEFAULT_RTSP_MAX_RETRIES: int = 5
+    DEFAULT_RTSP_INITIAL_BACKOFF_SEC: float = 1.0
+    DEFAULT_RTSP_MAX_BACKOFF_SEC: float = 16.0
+    
+    # Multi-Camera Resource Limits & Scheduling
+    MAX_REGISTERED_CAMERAS: int = 16
+    MAX_ACTIVE_STREAMS: int = 4
+    DEFAULT_CAMERA_FPS: float = 25.0
+    CAMERA_BUFFER_MAX_AGE_SEC: float = 0.5
     
     # CORS Allowed Origins
     CORS_ORIGINS: list[str] = [
