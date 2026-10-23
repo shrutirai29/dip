@@ -13,6 +13,10 @@ const routeTitles: Record<string, { title: string; subtitle: string }> = {
     title: 'Surveillance Command Overview',
     subtitle: 'Real-time crowd dynamics, automated telemetry & early risk indicators',
   },
+  '/cameras': {
+    title: 'Multi-Camera Fleet Surveillance',
+    subtitle: 'Concurrent webcam, recorded video, and RTSP stream monitoring grid',
+  },
   '/video-analysis': {
     title: 'Video Ingestion & Studio',
     subtitle: 'Upload CCTV footage, configure DIP perspective & launch inference',
@@ -32,6 +36,10 @@ const routeTitles: Record<string, { title: string; subtitle: string }> = {
   '/history': {
     title: 'Audit Session History',
     subtitle: 'Historical inspection log, metric summaries & persistent database catalog',
+  },
+  '/benchmarks': {
+    title: 'System Evaluation & Benchmarks',
+    subtitle: 'Detection accuracy, bottleneck profiling, adaptive scheduling & sustained validation',
   },
   '/docs': {
     title: 'DIP System Methodology',

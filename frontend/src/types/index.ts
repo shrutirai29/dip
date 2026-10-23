@@ -138,6 +138,20 @@ export interface CameraSessionStatus {
   person_count?: number;
   smoothed_risk_score?: number;
   risk_band?: 'Low' | 'Moderate' | 'High' | 'Critical';
+  latest_captured_timestamp?: number | null;
+  latest_captured_monotonic?: number | null;
+  latest_published_timestamp?: number | null;
+  latest_detection_timestamp?: number | null;
+  detection_age_seconds?: number | null;
+  staleness_threshold_sec?: number;
+  is_stale?: boolean;
+  staleness_status?: string;
+  priority_weight?: number;
+  dispatches_since_last_run?: number;
+  last_priority_reason?: string;
+  active_policy?: string;
+  total_dropped_stale?: number;
+  stale_drop_rate?: number;
 }
 
 export interface MultiCameraHealth {

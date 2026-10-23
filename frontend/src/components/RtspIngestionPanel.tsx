@@ -4,13 +4,11 @@ import {
   Play, 
   Square, 
   AlertTriangle, 
-  Clock, 
   ExternalLink,
   ShieldAlert,
   RotateCw,
   CheckCircle2,
   Lock,
-  Layers,
   Activity
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -396,11 +394,33 @@ export const RtspIngestionPanel: React.FC = () => {
           <div className="space-y-1">
             <div className="flex justify-between text-[11px] font-mono">
               <span className="text-slate-400">Reconnect Policy:</span>
-              <span className="text-slate-300 font-bold">Max {maxRetries} Retries</span>
+              <span className="text-slate-300 font-bold">{maxRetries} Retries / {timeoutSec}s Timeout</span>
             </div>
-            <div className="flex items-center space-x-2 text-[10px] text-slate-400 font-mono pt-1">
-              <ShieldAlert className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-              <span>Exponential backoff with +/-20% random jitter (1s - 16s)</span>
+            <div className="flex items-center space-x-2 pt-0.5">
+              <select
+                disabled={isRtspActive || loading}
+                value={maxRetries}
+                onChange={(e) => setMaxRetries(Number(e.target.value))}
+                className="w-1/2 bg-[#111A26] border border-[#1E2D40] rounded px-2 py-1 text-slate-200 text-[11px] font-mono focus:border-cyan-400 disabled:opacity-50"
+              >
+                <option value={3}>3 Retries</option>
+                <option value={5}>5 Retries (Standard)</option>
+                <option value={10}>10 Retries (Persistent)</option>
+              </select>
+              <select
+                disabled={isRtspActive || loading}
+                value={timeoutSec}
+                onChange={(e) => setTimeoutSec(Number(e.target.value))}
+                className="w-1/2 bg-[#111A26] border border-[#1E2D40] rounded px-2 py-1 text-slate-200 text-[11px] font-mono focus:border-cyan-400 disabled:opacity-50"
+              >
+                <option value={3}>3s Timeout</option>
+                <option value={5}>5s Timeout (Standard)</option>
+                <option value={10}>10s Timeout (Slow WAN)</option>
+              </select>
+            </div>
+            <div className="flex items-center space-x-1.5 text-[10px] text-slate-500 font-mono pt-0.5">
+              <ShieldAlert className="w-3 h-3 text-cyan-400 shrink-0" />
+              <span>Exponential backoff with jitter</span>
             </div>
           </div>
         </div>

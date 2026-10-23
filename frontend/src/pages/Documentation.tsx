@@ -10,7 +10,7 @@ import {
 
 export const Documentation: React.FC = () => {
   return (
-    <div className="space-y-6 max-w-5xl text-xs text-slate-200">
+    <div className="space-y-6 w-full text-xs text-slate-200">
       {/* Header */}
       <div className="pb-4 border-b border-[#1E2D40]">
         <div className="flex items-center space-x-2.5">

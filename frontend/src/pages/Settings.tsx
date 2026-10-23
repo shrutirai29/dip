@@ -10,7 +10,7 @@ import {
 
 export const SettingsPage: React.FC = () => {
   return (
-    <div className="space-y-6 max-w-5xl text-xs text-slate-200">
+    <div className="space-y-6 w-full text-xs text-slate-200">
       {/* Header */}
       <div className="pb-4 border-b border-[#1E2D40]">
         <div className="flex items-center space-x-2.5">
@@ -162,7 +162,7 @@ export const SettingsPage: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-slate-300 font-mono text-[11px]">
             <div className="p-2.5 bg-[#0A1018] rounded-lg border border-[#1E2D40]">
               <span className="text-slate-500 text-[10px] block">API REST Prefix</span>
-              <span className="text-cyan-400 mt-0.5 block">http://127.0.0.1:8000/api/v1</span>
+              <span className="text-cyan-400 mt-0.5 block">/api</span>
             </div>
             <div className="p-2.5 bg-[#0A1018] rounded-lg border border-[#1E2D40]">
               <span className="text-slate-500 text-[10px] block">Database Storage</span>

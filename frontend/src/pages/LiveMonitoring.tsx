@@ -430,7 +430,7 @@ export const LiveMonitoring: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl">
+    <div className="space-y-6 w-full">
       {/* -------------------------------------------------------------------------
           1. HEADER WITH FEED SOURCE SWITCHER & TELEMETRY CONTROLS
           ------------------------------------------------------------------------- */}

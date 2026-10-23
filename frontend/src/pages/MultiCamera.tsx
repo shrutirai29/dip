@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Camera,
   Radio,
@@ -7,10 +7,8 @@ import {
   Square,
   RotateCw,
   Trash2,
-  Activity,
   Users,
   ShieldAlert,
-  Compass,
   AlertTriangle,
   CheckCircle2,
   Maximize2,
@@ -232,6 +230,7 @@ export const MultiCameraPage: React.FC = () => {
           <button
             onClick={() => fetchCamerasAndHealth(false)}
             disabled={refreshing}
+            aria-label="Refresh Registry"
             className="p-2 bg-[#0A1018] hover:bg-[#121C2B] text-slate-300 hover:text-white border border-[#192638] rounded-xl text-xs transition cursor-pointer"
             title="Refresh Registry"
           >
@@ -320,7 +319,10 @@ export const MultiCameraPage: React.FC = () => {
           {cameras.map((cam) => {
             const camId = cam.camera_id || '';
             const isActing = actionLoading[camId];
-            const isStale = (cam.frame_age_seconds ?? 0) > 3.0 && cam.is_active;
+            const detAge = typeof cam.detection_age_seconds === 'number'
+              ? cam.detection_age_seconds
+              : (cam.frame_age_seconds ?? 0);
+            const isStale = (cam.is_stale || (detAge > 2.0)) && cam.is_active;
 
             return (
               <div
@@ -345,9 +347,16 @@ export const MultiCameraPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-medium border shrink-0 ${stateColors[cam.state] || stateColors.IDLE}`}>
-                    {cam.state}
-                  </span>
+                  <div className="flex items-center space-x-1.5 shrink-0">
+                    {isStale && (
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-medium border bg-amber-950/40 text-amber-300 border-amber-500/40 animate-pulse">
+                        STALE
+                      </span>
+                    )}
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-medium border ${stateColors[cam.state] || stateColors.IDLE}`}>
+                      {cam.state}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Card Viewport Preview */}
@@ -358,19 +367,20 @@ export const MultiCameraPage: React.FC = () => {
                         src={multiCameraApi.getStreamUrl(camId)}
                         alt={cam.camera_name || 'Live Feed'}
                         className="w-full h-full object-contain"
-                        loading="lazy"
+                        loading="eager"
                       />
                       {/* Live Stale Overlay Badge */}
                       {isStale && (
-                        <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-amber-950/80 border border-amber-500/50 text-[10px] text-amber-200 font-mono flex items-center space-x-1">
-                          <AlertTriangle className="w-3 h-3 text-amber-400" />
-                          <span>STALE FEED ({cam.frame_age_seconds}s)</span>
+                        <div className="absolute top-2 left-2 px-2.5 py-1 rounded-lg bg-amber-950/90 border border-amber-500/60 text-[10px] text-amber-200 font-mono flex items-center space-x-1.5 shadow-md">
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                          <span>STALE DETECTION ({detAge.toFixed(1)}s)</span>
                         </div>
                       )}
                       <button
                         onClick={() => setSelectedCameraForView(cam)}
                         className="absolute bottom-2 right-2 p-1.5 rounded-lg bg-black/60 hover:bg-black/80 text-white border border-white/20 transition cursor-pointer"
                         title="Enlarge Feed"
+                        aria-label={`Enlarge feed for ${cam.camera_name || 'camera'}`}
                       >
                         <Maximize2 className="w-3.5 h-3.5" />
                       </button>
@@ -400,12 +410,15 @@ export const MultiCameraPage: React.FC = () => {
                 </div>
 
                 {/* Card Telemetry Strip */}
-                <div className="p-4 grid grid-cols-3 gap-2 bg-[#070B11] border-b border-[#192638] text-center font-mono">
-                  <div className="p-2 rounded-lg bg-[#0A1018] border border-[#192638]">
+                <div className="p-3 grid grid-cols-4 gap-2 bg-[#070B11] border-b border-[#192638] text-center font-mono">
+                  <div className="p-1.5 rounded-lg bg-[#0A1018] border border-[#192638]">
                     <span className="text-[10px] text-slate-400 block font-sans">Observed</span>
-                    <span className="text-sm font-bold text-white mt-0.5 block">{cam.person_count ?? 0}</span>
+                    <span className="text-sm font-bold text-white mt-0.5 block">
+                      {cam.person_count ?? 0}
+                      {isStale && <span className="text-[9px] text-amber-400 block font-sans font-normal">(Preserved)</span>}
+                    </span>
                   </div>
-                  <div className="p-2 rounded-lg bg-[#0A1018] border border-[#192638]">
+                  <div className="p-1.5 rounded-lg bg-[#0A1018] border border-[#192638]">
                     <span className="text-[10px] text-slate-400 block font-sans">Risk Score</span>
                     <span className={`text-sm font-bold mt-0.5 block ${
                       (cam.smoothed_risk_score ?? 0) >= 70 ? 'text-rose-400' :
@@ -414,10 +427,16 @@ export const MultiCameraPage: React.FC = () => {
                       {(cam.smoothed_risk_score ?? 0).toFixed(1)}
                     </span>
                   </div>
-                  <div className="p-2 rounded-lg bg-[#0A1018] border border-[#192638]">
+                  <div className="p-1.5 rounded-lg bg-[#0A1018] border border-[#192638]">
                     <span className="text-[10px] text-slate-400 block font-sans">FPS (Cap/Inf)</span>
                     <span className="text-[11px] font-bold text-slate-200 mt-1 block">
                       {cam.measured_fps.toFixed(0)} / {cam.processing_fps.toFixed(0)}
+                    </span>
+                  </div>
+                  <div className="p-1.5 rounded-lg bg-[#0A1018] border border-[#192638]">
+                    <span className="text-[10px] text-slate-400 block font-sans">Freshness</span>
+                    <span className={`text-[11px] font-bold mt-1 block ${isStale ? 'text-amber-400' : 'text-emerald-400'}`}>
+                      {detAge > 0 ? `${detAge.toFixed(1)}s` : 'Fresh'}
                     </span>
                   </div>
                 </div>
@@ -457,6 +476,7 @@ export const MultiCameraPage: React.FC = () => {
                       <button
                         onClick={() => handleRetryCamera(camId)}
                         disabled={!!isActing}
+                        aria-label="Retry camera connection"
                         className="p-1.5 bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 rounded-lg text-xs transition cursor-pointer"
                         title="Retry Now"
                       >
@@ -469,6 +489,7 @@ export const MultiCameraPage: React.FC = () => {
                     <button
                       onClick={() => handleRemoveCamera(camId, cam.camera_name || undefined)}
                       disabled={!!isActing}
+                      aria-label="Remove camera"
                       className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-950/20 rounded-lg transition cursor-pointer"
                       title="Remove Camera"
                     >
@@ -483,36 +504,93 @@ export const MultiCameraPage: React.FC = () => {
       )}
 
       {/* 4. Enlarge Feed Modal View */}
-      {selectedCameraForView && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-[#0A1018] border border-[#192638] rounded-2xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col">
-            <div className="p-4 border-b border-[#192638] flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <h3 className="text-base font-bold text-white">
-                  {selectedCameraForView.camera_name || 'Enlarged Viewport'}
-                </h3>
-                <span className="text-xs font-mono text-cyan-400">
-                  {selectedCameraForView.camera_id}
-                </span>
-              </div>
-              <button
-                onClick={() => setSelectedCameraForView(null)}
-                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-[#121C2B] transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {selectedCameraForView && (() => {
+        const modalDetAge = typeof selectedCameraForView.detection_age_seconds === 'number'
+          ? selectedCameraForView.detection_age_seconds
+          : (selectedCameraForView.frame_age_seconds ?? 0);
+        const modalIsStale = (selectedCameraForView.is_stale || (modalDetAge > 2.0)) && selectedCameraForView.is_active;
 
-            <div className="aspect-video bg-black flex items-center justify-center">
-              <img
-                src={multiCameraApi.getStreamUrl(selectedCameraForView.camera_id || '')}
-                alt="Enlarged Camera Stream"
-                className="w-full h-full object-contain"
-              />
+        return (
+          <div 
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4"
+            onClick={() => setSelectedCameraForView(null)}
+          >
+            <div 
+              className="bg-[#0A1018] border border-[#192638] rounded-2xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-4 border-b border-[#192638] flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <h3 className="text-base font-bold text-white">
+                    {selectedCameraForView.camera_name || 'Enlarged Viewport'}
+                  </h3>
+                  <span className="text-xs font-mono text-cyan-400">
+                    {selectedCameraForView.camera_id}
+                  </span>
+                  <span className="text-xs text-slate-400 font-mono">
+                    • {selectedCameraForView.location || selectedCameraForView.sanitized_url}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {modalIsStale && (
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-950/60 text-amber-300 border border-amber-500/40">
+                      STALE DETECTION ({modalDetAge.toFixed(1)}s)
+                    </span>
+                  )}
+                  <button
+                    onClick={() => setSelectedCameraForView(null)}
+                    className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-[#121C2B] transition cursor-pointer"
+                    aria-label="Close enlarged feed"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="aspect-video bg-black flex items-center justify-center relative">
+                <img
+                  src={multiCameraApi.getStreamUrl(selectedCameraForView.camera_id || '')}
+                  alt="Enlarged Camera Stream"
+                  className="w-full h-full object-contain"
+                  loading="eager"
+                />
+              </div>
+
+              {/* Bottom Quick Telemetry Strip */}
+              <div className="p-3 bg-[#070B11] border-t border-[#192638] grid grid-cols-4 gap-2 text-center font-mono text-xs">
+                <div className="p-2 rounded bg-[#0A1018] border border-[#192638]">
+                  <span className="text-[10px] text-slate-400 font-sans block">Observed Crowd</span>
+                  <span className="font-bold text-white block mt-0.5">
+                    {selectedCameraForView.person_count ?? 0}
+                    {modalIsStale && <span className="text-[9px] text-amber-400 block font-sans font-normal">(Preserved)</span>}
+                  </span>
+                </div>
+                <div className="p-2 rounded bg-[#0A1018] border border-[#192638]">
+                  <span className="text-[10px] text-slate-400 font-sans block">Risk Assessment</span>
+                  <span className={`font-bold block mt-0.5 ${
+                    (selectedCameraForView.smoothed_risk_score ?? 0) >= 70 ? 'text-rose-400' :
+                    (selectedCameraForView.smoothed_risk_score ?? 0) >= 40 ? 'text-amber-400' : 'text-emerald-400'
+                  }`}>
+                    {(selectedCameraForView.smoothed_risk_score ?? 0).toFixed(1)} / 100
+                  </span>
+                </div>
+                <div className="p-2 rounded bg-[#0A1018] border border-[#192638]">
+                  <span className="text-[10px] text-slate-400 font-sans block">Throughput</span>
+                  <span className="font-bold text-slate-200 block mt-0.5">
+                    {selectedCameraForView.measured_fps.toFixed(0)} Cap / {selectedCameraForView.processing_fps.toFixed(0)} Inf FPS
+                  </span>
+                </div>
+                <div className="p-2 rounded bg-[#0A1018] border border-[#192638]">
+                  <span className="text-[10px] text-slate-400 font-sans block">Detection Freshness</span>
+                  <span className={`font-bold block mt-0.5 ${modalIsStale ? 'text-amber-400' : 'text-emerald-400'}`}>
+                    {modalDetAge > 0 ? `${modalDetAge.toFixed(1)}s` : 'Fresh'}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* 5. Add Camera Modal Form */}
       {isModalOpen && (
@@ -527,6 +605,7 @@ export const MultiCameraPage: React.FC = () => {
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
+                aria-label="Close registration modal"
                 className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-[#121C2B] transition cursor-pointer"
               >
                 <X className="w-5 h-5" />

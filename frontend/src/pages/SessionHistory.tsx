@@ -16,8 +16,6 @@ import { Analysis } from '../types';
 import { 
   KPICard, 
   StatusPill, 
-  RiskBadge, 
-  EmptyState, 
   ErrorState, 
   LoadingBlock 
 } from '../components/UIComponents';
@@ -73,7 +71,7 @@ export const SessionHistory: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl">
+    <div className="space-y-6 w-full">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-4 border-b border-[#1E2D40] gap-4">
         <div>

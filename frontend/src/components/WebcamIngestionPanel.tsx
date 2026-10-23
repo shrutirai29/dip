@@ -210,6 +210,43 @@ export const WebcamIngestionPanel: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* Hyperparameter Calibration Strip */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-[#192638] text-xs">
+          <div className="space-y-1">
+            <div className="flex justify-between text-[11px] font-mono">
+              <span className="text-slate-400">Detection Confidence:</span>
+              <span className="text-cyan-400 font-bold">{(confThreshold * 100).toFixed(0)}%</span>
+            </div>
+            <input
+              type="range"
+              min="0.10"
+              max="0.90"
+              step="0.05"
+              value={confThreshold}
+              onChange={(e) => setConfThreshold(parseFloat(e.target.value))}
+              disabled={isActive || loading}
+              className="w-full accent-cyan-500 cursor-pointer disabled:opacity-50"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex justify-between text-[11px] font-mono">
+              <span className="text-slate-400">Perspective Weighting:</span>
+              <span className="text-cyan-400 font-bold">{perspectiveWeight.toFixed(1)}x</span>
+            </div>
+            <input
+              type="range"
+              min="0.5"
+              max="2.5"
+              step="0.1"
+              value={perspectiveWeight}
+              onChange={(e) => setPerspectiveWeight(parseFloat(e.target.value))}
+              disabled={isActive || loading}
+              className="w-full accent-cyan-500 cursor-pointer disabled:opacity-50"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Live Stream Viewport & Telemetry HUD */}
