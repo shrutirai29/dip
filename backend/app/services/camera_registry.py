@@ -229,7 +229,8 @@ class CameraRegistryService:
                 "total_observed_persons": total_persons,
                 "highest_risk_score": round(max_risk, 1),
                 "system_status": (
-                    "OPERATIONAL" if (error_count == 0 and reconnecting_count == 0)
+                    "OPERATIONAL" if (error_count == 0 and reconnecting_count == 0 and connected_count > 0)
+                    else "IDLE" if total_registered == 0 or (connected_count == 0 and active_count == 0 and error_count == 0)
                     else "DEGRADED" if connected_count > 0
                     else "OFFLINE" if total_registered > 0
                     else "IDLE"

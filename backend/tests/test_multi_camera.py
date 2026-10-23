@@ -206,3 +206,13 @@ def test_multi_camera_api_endpoints():
     del_res = client.delete(f"/api/cameras/{cam_id}")
     assert del_res.status_code == 200
     assert client.get(f"/api/cameras/{cam_id}").status_code == 404
+
+
+def test_aggregate_health_status_honesty():
+    """Verify system_status does not claim OPERATIONAL when 0 cameras are registered or running."""
+    service = CameraRegistryService()
+    # 0 cameras registered -> IDLE
+    health = service.get_aggregate_health()
+    assert health["total_registered"] == 0
+    assert health["system_status"] == "IDLE"
+

@@ -244,6 +244,16 @@ export const Overview: React.FC = () => {
     return null;
   }, [latestFrame]);
 
+  const measuredPeakRisk = useMemo(() => {
+    if (latestFrame && typeof latestFrame.smoothed_risk_score === 'number' && Number.isFinite(latestFrame.smoothed_risk_score)) {
+      return latestFrame.smoothed_risk_score;
+    }
+    if (latestAnalysis && typeof latestAnalysis.max_risk_score === 'number' && Number.isFinite(latestAnalysis.max_risk_score)) {
+      return latestAnalysis.max_risk_score;
+    }
+    return null;
+  }, [latestFrame, latestAnalysis]);
+
   if (loading && !summary && !allAnalyses && !cameraStatus) {
     return (
       <div className="space-y-6">
@@ -275,7 +285,7 @@ export const Overview: React.FC = () => {
               CROWDGUARD // 01 • SPATIAL PLATFORM
             </span>
             <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-[#376E6F]/10 dark:bg-[#376E6F]/25 text-[#376E6F] dark:text-[#6EB5B6] border border-[#376E6F]/30">
-              {fleetHealth?.system_status || 'OPERATIONAL'}
+              {fleetHealth?.system_status || (loading ? 'INITIALIZING' : hasPartialFailures ? 'DEGRADED' : 'STANDBY')}
             </span>
             {refreshing && (
               <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-mono bg-[#DA7B93]/15 text-[#B34D66] dark:text-[#DA7B93] border border-[#DA7B93]/30 animate-pulse">
@@ -366,9 +376,13 @@ export const Overview: React.FC = () => {
               CV Engine
             </span>
             <span className="font-bold text-[#2F4454] dark:text-[#88A8C0] tabular-nums">
-              {cameraStatus?.is_active ? `${cameraStatus.processing_fps.toFixed(1)} FPS` : '24.0 FPS'}
+              {cameraStatus?.is_active && typeof cameraStatus.processing_fps === 'number'
+                ? `${cameraStatus.processing_fps.toFixed(1)} FPS`
+                : 'N/A'}
             </span>
-            <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC]">inf</span>
+            <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC]">
+              {cameraStatus?.is_active ? 'inf' : 'standby'}
+            </span>
           </div>
 
           {/* Observed Population */}
@@ -381,7 +395,7 @@ export const Overview: React.FC = () => {
                 ? latestFrame.person_count
                 : latestAnalysis && typeof latestAnalysis.peak_count === 'number'
                 ? latestAnalysis.peak_count
-                : '—'}
+                : 'N/A'}
             </span>
             <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC]">persons</span>
           </div>
@@ -392,16 +406,19 @@ export const Overview: React.FC = () => {
               Peak Risk
             </span>
             <span className={`font-bold tabular-nums ${
-              (latestFrame?.smoothed_risk_score || latestAnalysis?.max_risk_score || 0) >= 70 ? 'text-[#2E151B] dark:text-rose-400' :
-              (latestFrame?.smoothed_risk_score || latestAnalysis?.max_risk_score || 0) >= 40 ? 'text-[#DA7B93]' : 'text-[#376E6F] dark:text-[#6EC4C6]'
+              measuredPeakRisk === null
+                ? 'text-[#5D757E] dark:text-[#A0B7BC]'
+                : measuredPeakRisk >= 70
+                ? 'text-[#2E151B] dark:text-rose-400'
+                : measuredPeakRisk >= 40
+                ? 'text-[#DA7B93]'
+                : 'text-[#376E6F] dark:text-[#6EC4C6]'
             }`}>
-              {latestFrame && typeof latestFrame.smoothed_risk_score === 'number'
-                ? latestFrame.smoothed_risk_score.toFixed(1)
-                : latestAnalysis && typeof latestAnalysis.max_risk_score === 'number'
-                ? latestAnalysis.max_risk_score.toFixed(1)
-                : '0.0'}
+              {measuredPeakRisk !== null ? measuredPeakRisk.toFixed(1) : 'N/A'}
             </span>
-            <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC]">/ 100</span>
+            <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC]">
+              {measuredPeakRisk !== null ? '/ 100' : 'no data'}
+            </span>
           </div>
 
           {/* Incident Warnings */}
@@ -409,17 +426,27 @@ export const Overview: React.FC = () => {
             <span className="text-[10px] uppercase font-semibold tracking-wider text-[#5D757E] dark:text-[#A0B7BC]">
               Incidents
             </span>
-            <span className={`font-bold tabular-nums ${recentIncidents && recentIncidents.length > 0 ? 'text-[#2E151B] dark:text-[#DA7B93]' : 'text-[#376E6F] dark:text-[#6EC4C6]'}`}>
-              {recentIncidents ? recentIncidents.length : '0'}
+            <span className={`font-bold tabular-nums ${
+              (summary?.total_incidents ?? recentIncidents?.length ?? 0) > 0
+                ? 'text-[#2E151B] dark:text-[#DA7B93]'
+                : 'text-[#376E6F] dark:text-[#6EC4C6]'
+            }`}>
+              {summary && typeof summary.total_incidents === 'number'
+                ? summary.total_incidents
+                : recentIncidents
+                ? recentIncidents.length
+                : '0'}
             </span>
-            <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC]">logged</span>
+            <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC]">
+              {summary && typeof summary.total_incidents === 'number' ? 'total' : 'recent'}
+            </span>
           </div>
         </div>
 
         <div className="flex items-center space-x-2 text-[10px]">
           <span className="text-[#5D757E] dark:text-[#A0B7BC]">STATUS:</span>
           <span className="font-semibold text-[#376E6F] dark:text-[#6EC4C6] uppercase">
-            {fleetHealth?.system_status || 'NOMINAL'}
+            {fleetHealth?.system_status || (loading ? 'INITIALIZING' : hasPartialFailures ? 'DEGRADED' : 'STANDBY')}
           </span>
         </div>
       </div>
@@ -671,7 +698,7 @@ export const Overview: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <ShieldAlert className="w-4 h-4 text-[#2E151B] dark:text-[#DA7B93]" />
                 <h3 className="text-xs font-bold text-[#1C3334] dark:text-[#EDF4F5] uppercase tracking-wider font-mono">
-                  Hazard Incident Log
+                  Hazard Incident Log (Recent {recentIncidents?.length ?? 0})
                 </h3>
               </div>
               <Link to="/incidents" className="text-[10px] font-semibold text-[#376E6F] dark:text-[#6EB5B6] hover:underline">
