@@ -25,7 +25,8 @@ import {
 import { analysisApi } from '../services/api';
 import { Analysis, FrameRecord } from '../types';
 import { 
-  KPICard, 
+  MetricStrip, 
+  MetricItem, 
   StatusPill, 
   EmptyState, 
   ErrorState, 
@@ -240,41 +241,49 @@ export const Analytics: React.FC = () => {
         </div>
       </div>
 
-      {/* Top 4 Telemetry Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard
+      {/* High-Density Statistical Ribbon */}
+      <MetricStrip>
+        <MetricItem
           label="Mean Flow Speed"
           value={metrics.meanSpeed}
           unit="px / sec"
-          subtext="Centroid vector tracking"
+          subtext="Centroid Tracking Velocity"
           icon={Activity}
           tone="teal"
         />
-        <KPICard
+        <MetricItem
           label="Optical Flow Mag"
           value={metrics.meanFlow}
           unit="px / frame"
-          subtext="Farneback dense motion field"
+          subtext="Farneback Dense Motion"
           icon={Zap}
           tone="slate"
         />
-        <KPICard
+        <MetricItem
           label="Directional Entropy"
           value={metrics.meanEntropy}
           unit="Shannon H"
-          subtext="Normalized angular disorder"
+          subtext="Normalized Flow Disorder"
           icon={Compass}
           tone="deepteal"
         />
-        <KPICard
+        <MetricItem
           label="Surge Acceleration"
           value={metrics.meanAccel}
           unit="px / sec²"
-          subtext="Velocity gradient rate"
+          subtext="Velocity Gradient Rate"
           icon={TrendingUp}
           tone="rose"
         />
-      </div>
+        <MetricItem
+          label="Peak Projected Risk"
+          value={metrics.peakForecast10s}
+          unit="/ 100"
+          subtext="Maximum +10s Horizon"
+          icon={BarChart2}
+          tone="burgundy"
+        />
+      </MetricStrip>
 
       {/* Analytics Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -283,7 +292,7 @@ export const Analytics: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-xs font-semibold text-[#1C3334] dark:text-white uppercase tracking-wider">
-                Current Risk vs Multi-Horizon Forecast (+5s, +10s, +15s)
+                1. What is the short-term disaster risk trajectory? — Multi-Horizon Projections (+5s, +10s, +15s)
               </h3>
               <p className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] mt-0.5">
                 Velocity and density gradient trend extrapolation
@@ -379,12 +388,12 @@ export const Analytics: React.FC = () => {
           </div>
         </div>
 
-        {/* Directional Shannon Entropy & Motion Variance */}
+        {/* 2. Is the crowd moving in organized laminar flow or turbulent panic? — Shannon Entropy & Velocity Variance */}
         <div className="bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl p-5 space-y-3 shadow-xs">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-xs font-semibold text-[#1C3334] dark:text-white uppercase tracking-wider">
-                Directional Shannon Entropy & Motion Variance
+                2. Is the crowd moving in organized laminar flow or turbulent panic? — Shannon Entropy & Velocity Variance
               </h3>
               <p className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] mt-0.5">
                 Quantifying coordinated laminar flow vs chaotic turbulence
@@ -470,7 +479,7 @@ export const Analytics: React.FC = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <h3 className="text-xs font-semibold text-[#1C3334] dark:text-white uppercase tracking-wider">
-                Four Normalized Heuristic Risk Components Progression
+                3. Which physical mechanism is driving the composite risk rating? — 4-Factor Heuristic Decomposition
               </h3>
               <p className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] mt-0.5">
                 Decomposition into Density Pressure (35%), Surge Influx (20%), Motion Anomaly (25%), and Spatial Congestion (20%)

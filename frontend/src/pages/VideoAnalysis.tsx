@@ -488,29 +488,29 @@ export const VideoAnalysis: React.FC = () => {
             </div>
 
             {selectedVideo ? (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                <div className="p-3 bg-[#F8F9FA] dark:bg-[#0E1622] rounded-lg border border-[#CBD5D8] dark:border-[#192638]">
-                  <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] uppercase block mb-1">Duration</span>
-                  <span className="font-mono font-bold text-[#1C3334] dark:text-white text-sm">
+              <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-[#E2E8EA] dark:divide-[#203638] bg-[#F8F9FA] dark:bg-[#0E1622] rounded-lg border border-[#CBD5D8] dark:border-[#192638] text-xs">
+                <div className="p-3">
+                  <span className="text-[9px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block mb-0.5">Duration</span>
+                  <span className="font-mono font-bold text-[#1C3334] dark:text-white text-sm tabular-nums">
                     {selectedVideo.duration_seconds.toFixed(1)}s
                   </span>
                 </div>
-                <div className="p-3 bg-[#F8F9FA] dark:bg-[#0E1622] rounded-lg border border-[#CBD5D8] dark:border-[#192638]">
-                  <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] uppercase block mb-1">Framerate</span>
-                  <span className="font-mono font-bold text-[#1C3334] dark:text-white text-sm">
+                <div className="p-3">
+                  <span className="text-[9px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block mb-0.5">Framerate</span>
+                  <span className="font-mono font-bold text-[#1C3334] dark:text-white text-sm tabular-nums">
                     {selectedVideo.fps.toFixed(1)} FPS
                   </span>
                 </div>
-                <div className="p-3 bg-[#F8F9FA] dark:bg-[#0E1622] rounded-lg border border-[#CBD5D8] dark:border-[#192638]">
-                  <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] uppercase block mb-1">Resolution</span>
-                  <span className="font-mono font-bold text-[#1C3334] dark:text-white text-sm">
+                <div className="p-3">
+                  <span className="text-[9px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block mb-0.5">Resolution</span>
+                  <span className="font-mono font-bold text-[#1C3334] dark:text-white text-sm tabular-nums">
                     {selectedVideo.width} × {selectedVideo.height}
                   </span>
                 </div>
-                <div className="p-3 bg-[#F8F9FA] dark:bg-[#0E1622] rounded-lg border border-[#CBD5D8] dark:border-[#192638]">
-                  <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] uppercase block mb-1">Total Frames</span>
-                  <span className="font-mono font-bold text-[#1C3334] dark:text-white text-sm">
-                    {selectedVideo.frame_count}
+                <div className="p-3">
+                  <span className="text-[9px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block mb-0.5">Total Frames</span>
+                  <span className="font-mono font-bold text-[#1C3334] dark:text-white text-sm tabular-nums">
+                    #{selectedVideo.frame_count}
                   </span>
                 </div>
               </div>
@@ -614,22 +614,22 @@ export const VideoAnalysis: React.FC = () => {
               <span className="text-[11px] font-semibold text-slate-300 block mb-2">
                 Risk Heuristic Weight Distribution (Normalized Composite Formula):
               </span>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                <div className="p-2.5 bg-[#F8F9FA] dark:bg-[#0E1622] rounded border border-[#CBD5D8] dark:border-[#192638]">
-                  <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] block">Density (wd)</span>
-                  <span className="font-mono font-bold text-[#376E6F] dark:text-cyan-300">{(weightDensity * 100).toFixed(0)}%</span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-[#E2E8EA] dark:divide-[#203638] bg-[#F8F9FA] dark:bg-[#0E1622] rounded border border-[#CBD5D8] dark:border-[#192638] text-xs">
+                <div className="p-2.5">
+                  <span className="text-[9px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block">Density (wd)</span>
+                  <span className="font-mono font-bold text-[#376E6F] dark:text-[#6EC4C6] tabular-nums">{(weightDensity * 100).toFixed(0)}%</span>
                 </div>
-                <div className="p-2.5 bg-[#F8F9FA] dark:bg-[#0E1622] rounded border border-[#CBD5D8] dark:border-[#192638]">
-                  <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] block">Growth Influx (wg)</span>
-                  <span className="font-mono font-bold text-amber-300">{(weightGrowth * 100).toFixed(0)}%</span>
+                <div className="p-2.5">
+                  <span className="text-[9px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block">Growth Influx (wg)</span>
+                  <span className="font-mono font-bold text-amber-700 dark:text-amber-300 tabular-nums">{(weightGrowth * 100).toFixed(0)}%</span>
                 </div>
-                <div className="p-2.5 bg-[#F8F9FA] dark:bg-[#0E1622] rounded border border-[#CBD5D8] dark:border-[#192638]">
-                  <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] block">Disorder/Flow (wm)</span>
-                  <span className="font-mono font-bold text-rose-300">{(weightMotion * 100).toFixed(0)}%</span>
+                <div className="p-2.5">
+                  <span className="text-[9px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block">Disorder/Flow (wm)</span>
+                  <span className="font-mono font-bold text-[#DA7B93] tabular-nums">{(weightMotion * 100).toFixed(0)}%</span>
                 </div>
-                <div className="p-2.5 bg-[#F8F9FA] dark:bg-[#0E1622] rounded border border-[#CBD5D8] dark:border-[#192638]">
-                  <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] block">Congestion (wc)</span>
-                  <span className="font-mono font-bold text-purple-300">{(weightCongestion * 100).toFixed(0)}%</span>
+                <div className="p-2.5">
+                  <span className="text-[9px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block">Congestion (wc)</span>
+                  <span className="font-mono font-bold text-[#2F4454] dark:text-[#A0B7BC] tabular-nums">{(weightCongestion * 100).toFixed(0)}%</span>
                 </div>
               </div>
             </div>

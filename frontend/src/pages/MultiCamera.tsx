@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { multiCameraApi } from '../services/api';
 import { CameraSessionStatus, MultiCameraHealth } from '../types';
-import { KPICard, EmptyState } from '../components/UIComponents';
+import { MetricStrip, MetricItem, EmptyState } from '../components/UIComponents';
 
 export const MultiCameraPage: React.FC = () => {
   const [cameras, setCameras] = useState<CameraSessionStatus[]>([]);
@@ -257,57 +257,59 @@ export const MultiCameraPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Aggregate Fleet Health & Capacity HUD */}
+      {/* 2. Aggregate Fleet Telemetry Ribbon */}
       {health && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-          <KPICard
-            label="Registered Feeds"
-            value={`${health.total_registered} / ${health.max_registered_limit}`}
-            unit="nodes"
-            icon={Layers}
-            tone="slate"
-            subtext="Allocated Slots"
-          />
-          <KPICard
-            label="Active Streams"
-            value={`${health.active_streams} / ${health.max_active_limit}`}
-            unit="live"
-            icon={Radio}
-            tone="teal"
-            subtext="Concurrent Ingestion"
-          />
-          <KPICard
-            label="Connected Nodes"
-            value={health.connected_count}
-            unit="healthy"
-            icon={CheckCircle2}
-            tone="emerald"
-            subtext="Stable Frame Delivery"
-          />
-          <KPICard
-            label="Nodes In Recovery"
-            value={health.reconnecting_count}
-            unit="retrying"
-            icon={AlertTriangle}
-            tone={health.reconnecting_count > 0 ? 'amber' : 'neutral'}
-            subtext="Exponential Backoff"
-          />
-          <KPICard
-            label="Fleet Observed Crowd"
-            value={health.total_observed_persons}
-            unit="persons"
-            icon={Users}
-            tone="deepteal"
-            subtext="Across All Sectors"
-          />
-          <KPICard
-            label="Peak Fleet Risk"
-            value={health.highest_risk_score.toFixed(1)}
-            unit="/ 100"
-            icon={ShieldAlert}
-            tone={health.highest_risk_score >= 70 ? 'burgundy' : health.highest_risk_score >= 40 ? 'amber' : 'emerald'}
-            subtext={`Status: ${health.system_status}`}
-          />
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-[11px] font-mono text-[#5D757E] dark:text-[#A0B7BC] px-1">
+            <span className="font-semibold tracking-wider uppercase">SURVEILLANCE FLEET TELEMETRY</span>
+            <span className="tabular-nums font-semibold text-[#376E6F] dark:text-[#6EC4C6]">
+              {health.connected_count} CONNECTED • {health.active_streams} ACTIVE
+            </span>
+          </div>
+          <MetricStrip>
+            <MetricItem
+              label="Registered Slots"
+              value={`${health.total_registered} / ${health.max_registered_limit}`}
+              unit="nodes"
+              subtext="Capacity Allocation"
+              tone="slate"
+            />
+            <MetricItem
+              label="Active Streams"
+              value={`${health.active_streams} / ${health.max_active_limit}`}
+              unit="active"
+              subtext="Ingestion Channels"
+              tone="teal"
+            />
+            <MetricItem
+              label="Connected Feeds"
+              value={health.connected_count}
+              unit="online"
+              subtext="Synchronized Capture"
+              tone="emerald"
+            />
+            <MetricItem
+              label="Nodes In Recovery"
+              value={health.reconnecting_count}
+              unit="retrying"
+              subtext={health.reconnecting_count > 0 ? 'Backoff Retrying' : 'Zero Failures'}
+              tone={health.reconnecting_count > 0 ? 'amber' : 'neutral'}
+            />
+            <MetricItem
+              label="Fleet Observed Crowd"
+              value={health.total_observed_persons}
+              unit="persons"
+              subtext="Multi-Zone Aggregate"
+              tone="teal"
+            />
+            <MetricItem
+              label="Peak Fleet Risk"
+              value={health.highest_risk_score.toFixed(1)}
+              unit="/ 100"
+              subtext={`Status: ${health.system_status}`}
+              tone={health.highest_risk_score >= 70 ? 'burgundy' : health.highest_risk_score >= 40 ? 'amber' : 'emerald'}
+            />
+          </MetricStrip>
         </div>
       )}
 
@@ -428,34 +430,34 @@ export const MultiCameraPage: React.FC = () => {
                   )}
                 </div>
 
-                {/* Card Telemetry Strip */}
-                <div className="p-3 grid grid-cols-4 gap-2 bg-[#F8F9FA] dark:bg-[#112022] border-b border-[#E2E8EA] dark:border-[#233C3F] text-center font-mono">
-                  <div className="p-1.5 rounded-lg bg-white dark:bg-[#152729] border border-[#CBD5D8] dark:border-[#233C3F] shadow-2xs">
-                    <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] block font-sans">Observed</span>
-                    <span className="text-sm font-bold text-[#1C3334] dark:text-[#EDF4F5] mt-0.5 block">
+                {/* Precision Surveillance Telemetry Strip */}
+                <div className="px-3 py-2 bg-[#F8F9FA] dark:bg-[#112022] border-b border-[#E2E8EA] dark:border-[#233C3F] grid grid-cols-4 divide-x divide-[#E2E8EA] dark:divide-[#233C3F] text-center font-mono">
+                  <div className="px-1.5">
+                    <span className="text-[9px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block font-sans font-medium">Observed</span>
+                    <span className="text-xs font-bold text-[#1C3334] dark:text-[#EDF4F5] mt-0.5 block tabular-nums">
                       {cam.person_count ?? 0}
-                      {isStale && <span className="text-[9px] text-amber-700 dark:text-amber-400 block font-sans font-normal">(Preserved)</span>}
+                      {isStale && <span className="text-[8px] text-amber-700 dark:text-amber-400 block font-sans font-normal">(Preserved)</span>}
                     </span>
                   </div>
-                  <div className="p-1.5 rounded-lg bg-white dark:bg-[#152729] border border-[#CBD5D8] dark:border-[#233C3F] shadow-2xs">
-                    <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] block font-sans">Risk Score</span>
-                    <span className={`text-sm font-bold mt-0.5 block ${
+                  <div className="px-1.5">
+                    <span className="text-[9px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block font-sans font-medium">Risk Score</span>
+                    <span className={`text-xs font-bold mt-0.5 block tabular-nums ${
                       (cam.smoothed_risk_score ?? 0) >= 70 ? 'text-[#2E151B] dark:text-rose-400' :
-                      (cam.smoothed_risk_score ?? 0) >= 40 ? 'text-amber-700 dark:text-amber-400' : 'text-[#376E6F] dark:text-emerald-400'
+                      (cam.smoothed_risk_score ?? 0) >= 40 ? 'text-amber-700 dark:text-amber-400' : 'text-[#376E6F] dark:text-[#6EC4C6]'
                     }`}>
                       {(cam.smoothed_risk_score ?? 0).toFixed(1)}
                     </span>
                   </div>
-                  <div className="p-1.5 rounded-lg bg-white dark:bg-[#152729] border border-[#CBD5D8] dark:border-[#233C3F] shadow-2xs">
-                    <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] block font-sans">FPS (Cap/Inf)</span>
-                    <span className="text-[11px] font-bold text-[#1C3334] dark:text-[#EDF4F5] mt-1 block">
-                      {cam.measured_fps.toFixed(0)} / {cam.processing_fps.toFixed(0)}
+                  <div className="px-1.5">
+                    <span className="text-[9px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block font-sans font-medium">Cap / Inf</span>
+                    <span className="text-xs font-bold text-[#1C3334] dark:text-[#EDF4F5] mt-0.5 block tabular-nums">
+                      {cam.measured_fps.toFixed(0)}/{cam.processing_fps.toFixed(0)}
                     </span>
                   </div>
-                  <div className="p-1.5 rounded-lg bg-white dark:bg-[#152729] border border-[#CBD5D8] dark:border-[#233C3F] shadow-2xs">
-                    <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] block font-sans">Freshness</span>
-                    <span className={`text-[11px] font-bold mt-1 block ${isStale ? 'text-amber-700 dark:text-amber-400' : 'text-[#376E6F] dark:text-emerald-400'}`}>
-                      {detAge > 0 ? `${detAge.toFixed(1)}s` : 'Fresh'}
+                  <div className="px-1.5">
+                    <span className="text-[9px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block font-sans font-medium">Freshness</span>
+                    <span className={`text-xs font-bold mt-0.5 block tabular-nums ${isStale ? 'text-amber-700 dark:text-amber-400' : 'text-[#376E6F] dark:text-[#6EC4C6]'}`}>
+                      {detAge > 0 ? `${detAge.toFixed(1)}s` : '0.0s'}
                     </span>
                   </div>
                 </div>

@@ -256,7 +256,7 @@ export const BenchmarksPage: React.FC = () => {
           className={`flex items-center space-x-2 px-4 py-2.5 text-xs font-medium border-b-2 transition cursor-pointer whitespace-nowrap ${
             activeTab === 'adaptive'
               ? 'border-cyan-400 text-cyan-300 bg-cyan-950/20'
-              : 'border-transparent text-[#5D757E] dark:text-[#5D757E] dark:text-slate-400 hover:text-[#1C3334] dark:hover:text-[#1C3334] dark:text-slate-200'
+              : 'border-transparent text-[#5D757E] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-[#EDF4F5]'
           }`}
         >
           <Cpu className="w-4 h-4 text-cyan-400" />
@@ -268,7 +268,7 @@ export const BenchmarksPage: React.FC = () => {
           className={`flex items-center space-x-2 px-4 py-2.5 text-xs font-medium border-b-2 transition cursor-pointer whitespace-nowrap ${
             activeTab === 'sustained'
               ? 'border-indigo-400 text-indigo-300 bg-indigo-950/20'
-              : 'border-transparent text-[#5D757E] dark:text-[#5D757E] dark:text-slate-400 hover:text-[#1C3334] dark:hover:text-[#1C3334] dark:text-slate-200'
+              : 'border-transparent text-[#5D757E] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-[#EDF4F5]'
           }`}
         >
           <Clock className="w-4 h-4 text-indigo-400" />
@@ -280,7 +280,7 @@ export const BenchmarksPage: React.FC = () => {
           className={`flex items-center space-x-2 px-4 py-2.5 text-xs font-medium border-b-2 transition cursor-pointer whitespace-nowrap ${
             activeTab === 'experiments'
               ? 'border-emerald-400 text-emerald-300 bg-emerald-950/10'
-              : 'border-transparent text-[#5D757E] dark:text-[#5D757E] dark:text-slate-400 hover:text-[#1C3334] dark:hover:text-[#1C3334] dark:text-slate-200'
+              : 'border-transparent text-[#5D757E] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-[#EDF4F5]'
           }`}
         >
           <Zap className="w-4 h-4 text-emerald-400" />
@@ -292,7 +292,7 @@ export const BenchmarksPage: React.FC = () => {
           className={`flex items-center space-x-2 px-4 py-2.5 text-xs font-medium border-b-2 transition cursor-pointer whitespace-nowrap ${
             activeTab === 'accuracy'
               ? 'border-cyan-400 text-cyan-300 bg-cyan-950/10'
-              : 'border-transparent text-[#5D757E] dark:text-[#5D757E] dark:text-slate-400 hover:text-[#1C3334] dark:hover:text-[#1C3334] dark:text-slate-200'
+              : 'border-transparent text-[#5D757E] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-[#EDF4F5]'
           }`}
         >
           <Target className="w-4 h-4" />
@@ -304,7 +304,7 @@ export const BenchmarksPage: React.FC = () => {
           className={`flex items-center space-x-2 px-4 py-2.5 text-xs font-medium border-b-2 transition cursor-pointer whitespace-nowrap ${
             activeTab === 'performance'
               ? 'border-cyan-400 text-cyan-300 bg-cyan-950/10'
-              : 'border-transparent text-[#5D757E] dark:text-[#5D757E] dark:text-slate-400 hover:text-[#1C3334] dark:hover:text-[#1C3334] dark:text-slate-200'
+              : 'border-transparent text-[#5D757E] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-[#EDF4F5]'
           }`}
         >
           <BarChart2 className="w-4 h-4" />
@@ -316,7 +316,7 @@ export const BenchmarksPage: React.FC = () => {
           className={`flex items-center space-x-2 px-4 py-2.5 text-xs font-medium border-b-2 transition cursor-pointer whitespace-nowrap ${
             activeTab === 'risk'
               ? 'border-cyan-400 text-cyan-300 bg-cyan-950/10'
-              : 'border-transparent text-[#5D757E] dark:text-[#5D757E] dark:text-slate-400 hover:text-[#1C3334] dark:hover:text-[#1C3334] dark:text-slate-200'
+              : 'border-transparent text-[#5D757E] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-[#EDF4F5]'
           }`}
         >
           <ShieldCheck className="w-4 h-4" />
@@ -328,7 +328,7 @@ export const BenchmarksPage: React.FC = () => {
           className={`flex items-center space-x-2 px-4 py-2.5 text-xs font-medium border-b-2 transition cursor-pointer whitespace-nowrap ${
             activeTab === 'frames'
               ? 'border-cyan-400 text-cyan-300 bg-cyan-950/10'
-              : 'border-transparent text-[#5D757E] dark:text-[#5D757E] dark:text-slate-400 hover:text-[#1C3334] dark:hover:text-[#1C3334] dark:text-slate-200'
+              : 'border-transparent text-[#5D757E] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-[#EDF4F5]'
           }`}
         >
           <Database className="w-4 h-4" />

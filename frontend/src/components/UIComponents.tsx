@@ -9,8 +9,71 @@ import {
 } from 'lucide-react';
 
 /* =========================================================================
-   1. KPI CARD COMPONENT
+   1. KPI CARD & CONSOLE METRIC STRIP COMPONENTS
    ========================================================================= */
+export interface MetricItemProps {
+  label: string;
+  value: string | number;
+  unit?: string;
+  subtext?: string;
+  tone?: 'slate' | 'teal' | 'rose' | 'burgundy' | 'deepteal' | 'amber' | 'emerald' | 'cyan' | 'neutral';
+  icon?: React.ComponentType<{ className?: string }>;
+}
+
+export const MetricItem: React.FC<MetricItemProps> = ({
+  label,
+  value,
+  unit,
+  subtext,
+  tone = 'neutral',
+  icon: Icon,
+}) => {
+  const toneAccent: Record<string, string> = {
+    slate: 'text-[#2F4454] dark:text-[#A0B7BC]',
+    teal: 'text-[#376E6F] dark:text-[#6EB5B6]',
+    cyan: 'text-[#376E6F] dark:text-[#6EB5B6]',
+    rose: 'text-[#DA7B93]',
+    burgundy: 'text-[#2E151B] dark:text-[#F0B3C1]',
+    deepteal: 'text-[#1C3334] dark:text-[#EDF4F5]',
+    emerald: 'text-emerald-700 dark:text-emerald-300',
+    amber: 'text-amber-700 dark:text-amber-300',
+    neutral: 'text-[#1C3334] dark:text-[#EDF4F5]',
+  };
+
+  return (
+    <div className="flex-1 px-4 py-2.5 min-w-[130px]">
+      <div className="flex items-center space-x-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] mb-1">
+        {Icon && <Icon className="w-3 h-3 text-[#5D757E] dark:text-[#A0B7BC] shrink-0" />}
+        <span className="truncate">{label}</span>
+      </div>
+      <div className="flex items-baseline space-x-1.5">
+        <span className={`text-xl font-bold tracking-tight font-mono tabular-nums ${toneAccent[tone] || toneAccent.neutral}`}>
+          {value}
+        </span>
+        {unit && (
+          <span className="text-[10px] font-mono text-[#5D757E] dark:text-[#A0B7BC]">
+            {unit}
+          </span>
+        )}
+      </div>
+      {subtext && (
+        <p className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] truncate mt-0.5">
+          {subtext}
+        </p>
+      )}
+    </div>
+  );
+};
+
+export const MetricStrip: React.FC<{ children: React.ReactNode; className?: string }> = ({
+  children,
+  className = '',
+}) => (
+  <div className={`flex flex-wrap items-center divide-y sm:divide-y-0 sm:divide-x divide-[#E2E8EA] dark:divide-[#203638] bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl overflow-hidden shadow-2xs ${className}`}>
+    {children}
+  </div>
+);
+
 interface KPICardProps {
   label: string;
   value: string | number;

@@ -33,7 +33,8 @@ import {
 import { analysisApi, incidentApi, cameraApi, resolveMediaUrl } from '../services/api';
 import { Analysis, FrameRecord, Incident, GridDensityCell, CameraSessionStatus } from '../types';
 import { 
-  KPICard, 
+  MetricStrip, 
+  MetricItem, 
   RiskBadge, 
   StatusPill, 
   EmptyState, 
@@ -714,9 +715,9 @@ export const LiveMonitoring: React.FC = () => {
                 )}
               </div>
 
-              {/* Live Quick Telemetry Row */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <KPICard
+              {/* Live Precision Telemetry Strip */}
+              <MetricStrip>
+                <MetricItem
                   label="Observed Count"
                   value={liveTelemetry?.person_count ?? (cameraStatus?.is_active ? 'Measuring...' : '—')}
                   unit="persons"
@@ -724,7 +725,7 @@ export const LiveMonitoring: React.FC = () => {
                   tone="teal"
                   subtext="YOLOv8 Class 0"
                 />
-                <KPICard
+                <MetricItem
                   label="Current Risk"
                   value={
                     liveTelemetry && typeof liveTelemetry.smoothed_risk_score === 'number'
@@ -739,7 +740,7 @@ export const LiveMonitoring: React.FC = () => {
                   }
                   subtext={liveTelemetry?.risk_band ? `Band: ${liveTelemetry.risk_band}` : 'Heuristic 4-factor'}
                 />
-                <KPICard
+                <MetricItem
                   label="Forecast (+10s)"
                   value={
                     liveTelemetry && typeof liveTelemetry.forecast_risk_10s === 'number'
@@ -752,9 +753,9 @@ export const LiveMonitoring: React.FC = () => {
                     (liveTelemetry?.forecast_risk_10s || 0) >= 70 ? 'burgundy' :
                     (liveTelemetry?.forecast_risk_10s || 0) >= 40 ? 'rose' : 'slate'
                   }
-                  subtext={liveTelemetry?.forecast_trend ? `Trend: ${liveTelemetry.forecast_trend}` : 'Linear Extrapolation'}
+                  subtext={liveTelemetry?.forecast_trend ? `Trend: ${liveTelemetry.forecast_trend}` : 'Linear Projection'}
                 />
-                <KPICard
+                <MetricItem
                   label="Directional Entropy"
                   value={
                     liveTelemetry && typeof liveTelemetry.directional_entropy === 'number'
@@ -766,7 +767,7 @@ export const LiveMonitoring: React.FC = () => {
                   tone="deepteal"
                   subtext="Flow Turbulence"
                 />
-              </div>
+              </MetricStrip>
             </div>
 
             {/* Right Col: Interactive 3x3 Spatial Grid Matrix */}
@@ -1274,9 +1275,9 @@ export const LiveMonitoring: React.FC = () => {
                 </div>
               )}
 
-              {/* Quick Telemetry Row */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <KPICard
+              {/* Synchronized Replay Telemetry Strip */}
+              <MetricStrip>
+                <MetricItem
                   label="Observed Count"
                   value={currentFrame?.person_count ?? '—'}
                   unit="persons"
@@ -1284,7 +1285,7 @@ export const LiveMonitoring: React.FC = () => {
                   tone="teal"
                   subtext="YOLOv8 Class 0"
                 />
-                <KPICard
+                <MetricItem
                   label="Current Risk"
                   value={currentFrame?.smoothed_risk_score !== undefined ? currentFrame.smoothed_risk_score.toFixed(1) : '—'}
                   unit="/ 100"
@@ -1295,7 +1296,7 @@ export const LiveMonitoring: React.FC = () => {
                   }
                   subtext="Heuristic 4-factor"
                 />
-                <KPICard
+                <MetricItem
                   label="Forecast (+10s)"
                   value={currentFrame?.forecast_risk_10s !== undefined ? currentFrame.forecast_risk_10s.toFixed(1) : '—'}
                   unit="/ 100"
@@ -1304,9 +1305,9 @@ export const LiveMonitoring: React.FC = () => {
                     (currentFrame?.forecast_risk_10s || 0) >= 70 ? 'burgundy' :
                     (currentFrame?.forecast_risk_10s || 0) >= 40 ? 'rose' : 'slate'
                   }
-                  subtext="Trend Extrapolation"
+                  subtext="Trend Projection"
                 />
-                <KPICard
+                <MetricItem
                   label="Directional Entropy"
                   value={currentFrame?.directional_entropy !== undefined ? currentFrame.directional_entropy.toFixed(3) : '—'}
                   unit="Shannon H"
@@ -1314,7 +1315,7 @@ export const LiveMonitoring: React.FC = () => {
                   tone="deepteal"
                   subtext="Flow Turbulence"
                 />
-              </div>
+              </MetricStrip>
             </div>
 
             {/* Right Col: Interactive 3x3 Spatial Grid Matrix */}

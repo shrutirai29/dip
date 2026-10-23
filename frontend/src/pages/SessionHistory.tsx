@@ -14,7 +14,8 @@ import { Link } from 'react-router-dom';
 import { analysisApi } from '../services/api';
 import { Analysis } from '../types';
 import { 
-  KPICard, 
+  MetricStrip, 
+  MetricItem, 
   StatusPill, 
   ErrorState, 
   LoadingBlock 
@@ -102,41 +103,41 @@ export const SessionHistory: React.FC = () => {
         <ErrorState message={errorMessage} onRetry={() => loadSessions(false)} />
       )}
 
-      {/* KPI Cards Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard
-          label="Total Sessions"
+      {/* Audit Registry Summary Strip */}
+      <MetricStrip>
+        <MetricItem
+          label="Catalog Sessions"
           value={summary.total}
           unit="runs"
-          subtext="Catalog archive count"
+          subtext="Persistent Archive Count"
           icon={History}
-          tone="neutral"
+          tone="slate"
         />
-        <KPICard
+        <MetricItem
           label="Completed Audits"
           value={summary.completed}
           unit="finished"
-          subtext="Fully processed runs"
+          subtext="Fully Processed Records"
           icon={CheckCircle2}
-          tone="emerald"
+          tone="teal"
         />
-        <KPICard
-          label="Active Inferences"
+        <MetricItem
+          label="Active Pipelines"
           value={summary.processing}
           unit="running"
-          subtext={summary.processing > 0 ? 'Background workers active' : 'Idle pipeline'}
+          subtext={summary.processing > 0 ? 'Active Ingestion Workers' : 'Idle Queue'}
           icon={Activity}
-          tone={summary.processing > 0 ? 'cyan' : 'neutral'}
+          tone={summary.processing > 0 ? 'teal' : 'neutral'}
         />
-        <KPICard
-          label="Total Hazard Alerts"
+        <MetricItem
+          label="Aggregated Hazard Alerts"
           value={summary.totalIncidents}
           unit="incidents"
-          subtext="Flagged across all sessions"
+          subtext="Flagged Safety Conditions"
           icon={AlertTriangle}
-          tone={summary.totalIncidents > 0 ? 'amber' : 'neutral'}
+          tone={summary.totalIncidents > 0 ? 'amber' : 'emerald'}
         />
-      </div>
+      </MetricStrip>
 
       {/* Sessions Table */}
       <div className="bg-white dark:bg-[#0E1622] border border-[#E2E8EA] dark:border-[#1E2D40] rounded-xl overflow-hidden shadow-xs">

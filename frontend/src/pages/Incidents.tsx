@@ -14,7 +14,8 @@ import {
 import { incidentApi } from '../services/api';
 import { Incident } from '../types';
 import { 
-  KPICard, 
+  MetricStrip, 
+  MetricItem, 
   RiskBadge, 
   ErrorState, 
   LoadingBlock 
@@ -145,41 +146,41 @@ export const Incidents: React.FC = () => {
         <ErrorState message={errorMessage} onRetry={() => loadIncidents(false)} />
       )}
 
-      {/* KPI Cards Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard
-          label="Total Incidents"
+      {/* Hazard Telemetry Console Strip */}
+      <MetricStrip>
+        <MetricItem
+          label="Total Hazard Records"
           value={kpis.total}
           unit="logged"
-          subtext="Catalog hazard records"
+          subtext="Surveillance Audit Archive"
           icon={AlertTriangle}
-          tone="neutral"
+          tone="slate"
         />
-        <KPICard
+        <MetricItem
           label="Critical Severity"
           value={kpis.critical}
           unit="events"
-          subtext="Immediate intervention"
+          subtext="Immediate Safety Response"
           icon={ShieldAlert}
-          tone="rose"
+          tone={kpis.critical > 0 ? 'burgundy' : 'neutral'}
         />
-        <KPICard
+        <MetricItem
           label="High Severity"
           value={kpis.high}
           unit="events"
-          subtext="Sustained escalation"
+          subtext="Sustained Escalation Band"
           icon={SlidersHorizontal}
-          tone="amber"
+          tone={kpis.high > 0 ? 'rose' : 'neutral'}
         />
-        <KPICard
+        <MetricItem
           label="Open / Awaiting Action"
           value={kpis.open}
           unit="unresolved"
-          subtext="Requires operator sign-off"
+          subtext="Requires Operator Sign-off"
           icon={Clock}
-          tone={kpis.open > 0 ? 'cyan' : 'emerald'}
+          tone={kpis.open > 0 ? 'amber' : 'emerald'}
         />
-      </div>
+      </MetricStrip>
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col sm:flex-row items-center gap-3">
