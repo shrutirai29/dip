@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { 
   LineChart, 
@@ -46,12 +46,21 @@ export const Analytics: React.FC = () => {
   const [loadingFrames, setLoadingFrames] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Load telemetry frames for a specific session
+  const contextAnalysisRef = useRef<Analysis | null>(contextAnalysis);
+  useEffect(() => {
+    contextAnalysisRef.current = contextAnalysis;
+  }, [contextAnalysis]);
+
+  const hasLoadedRef = useRef<boolean>(false);
+  const loadedFrameIdRef = useRef<string | null>(null);
+
+  // Load telemetry frames for a specific session without recreating
   const loadFrames = useCallback(async (id: string) => {
     setLoadingFrames(true);
     try {
       const frames = await analysisApi.getResults(id);
       setFrameData(frames);
+      loadedFrameIdRef.current = id;
     } catch (e) {
       console.error('Failed to load frames:', e);
       setFrameData([]);
@@ -60,34 +69,43 @@ export const Analytics: React.FC = () => {
     }
   }, []);
 
-  // Load catalog of analyses
-  const loadAnalyses = useCallback(async () => {
-    setLoadingList(true);
+  // Load catalog of analyses with stable reference to prevent infinite rerender loops
+  const loadAnalyses = useCallback(async (isManualRefresh = false) => {
+    if (!hasLoadedRef.current) {
+      setLoadingList(true);
+    }
     setErrorMessage(null);
     try {
       const data = await analysisApi.getAll();
       setAnalyses(data);
       if (data.length > 0) {
+        const currentCtxId = contextAnalysisRef.current?.id;
         const target = queryAnalysisId 
           ? data.find((a) => a.id === queryAnalysisId) || data[0]
-          : contextAnalysis 
-            ? data.find((a) => a.id === contextAnalysis.id) || data[0]
+          : currentCtxId 
+            ? data.find((a) => a.id === currentCtxId) || data[0]
             : data[0];
 
         setSelectedAnalysis(target);
-        setContextAnalysis(target);
-        loadFrames(target.id);
+        if (currentCtxId !== target.id) {
+          setContextAnalysis(target);
+        }
+        if (loadedFrameIdRef.current !== target.id || isManualRefresh) {
+          loadFrames(target.id);
+        }
       } else {
         setSelectedAnalysis(null);
         setFrameData([]);
+        loadedFrameIdRef.current = null;
       }
+      hasLoadedRef.current = true;
     } catch (e) {
       console.error('Failed to load analyses:', e);
       setErrorMessage('Unable to retrieve surveillance analytics data from the backend.');
     } finally {
       setLoadingList(false);
     }
-  }, [queryAnalysisId, contextAnalysis, setContextAnalysis, loadFrames]);
+  }, [queryAnalysisId, setContextAnalysis, loadFrames]);
 
   useEffect(() => {
     loadAnalyses();
@@ -97,7 +115,9 @@ export const Analytics: React.FC = () => {
     const found = analyses.find((a) => a.id === id);
     if (found) {
       setSelectedAnalysis(found);
-      setContextAnalysis(found);
+      if (contextAnalysisRef.current?.id !== found.id) {
+        setContextAnalysis(found);
+      }
       setSearchParams({ analysisId: found.id });
       loadFrames(found.id);
     }
@@ -121,7 +141,7 @@ export const Analytics: React.FC = () => {
     const flow = frameData.reduce((acc, f) => acc + (f.optical_flow_magnitude || 0), 0) / count;
     const entropy = frameData.reduce((acc, f) => acc + (f.directional_entropy || 0), 0) / count;
     const accel = frameData.reduce((acc, f) => acc + (f.mean_acceleration || 0), 0) / count;
-    const maxForecast = Math.max(...frameData.map(f => f.forecast_risk_10s || 0));
+    const maxForecast = Math.max(0, ...frameData.map(f => f.forecast_risk_10s || 0));
 
     return {
       meanSpeed: speed.toFixed(1),
@@ -196,8 +216,9 @@ export const Analytics: React.FC = () => {
           </div>
 
           <button
-            onClick={() => selectedAnalysis && loadFrames(selectedAnalysis.id)}
+            onClick={() => selectedAnalysis && loadAnalyses(true)}
             disabled={loadingFrames}
+            aria-label="Refresh telemetry analytics"
             className="p-2 bg-[#0E1622] hover:bg-[#141E2B] text-slate-300 hover:text-white border border-[#1E2D40] rounded-lg text-xs transition cursor-pointer"
             title="Refresh Analytics"
           >
@@ -278,7 +299,7 @@ export const Analytics: React.FC = () => {
             </span>
           </div>
 
-          <div className="h-64">
+          <div className="h-64 min-h-[256px] w-full min-w-0 relative">
             {frameData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={frameData}>
@@ -313,6 +334,7 @@ export const Analytics: React.FC = () => {
                     stroke="#f59e0b" 
                     strokeWidth={2} 
                     dot={false} 
+                    isAnimationActive={false}
                   />
                   <Line 
                     type="monotone" 
@@ -322,6 +344,7 @@ export const Analytics: React.FC = () => {
                     strokeWidth={1.5}
                     strokeDasharray="3 3" 
                     dot={false} 
+                    isAnimationActive={false}
                   />
                   <Line 
                     type="monotone" 
@@ -331,6 +354,7 @@ export const Analytics: React.FC = () => {
                     strokeWidth={2} 
                     strokeDasharray="4 4" 
                     dot={false} 
+                    isAnimationActive={false}
                   />
                   <Line 
                     type="monotone" 
@@ -340,6 +364,7 @@ export const Analytics: React.FC = () => {
                     strokeWidth={1.5}
                     strokeDasharray="2 2" 
                     dot={false} 
+                    isAnimationActive={false}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -371,7 +396,7 @@ export const Analytics: React.FC = () => {
             Shannon entropy values &gt; 0.65 indicate multidirectional vector dispersion or panic agitation. Values &lt; 0.35 indicate uniform, structured pedestrian movement.
           </div>
 
-          <div className="h-64">
+          <div className="h-64 min-h-[256px] w-full min-w-0 relative">
             {frameData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={frameData}>
@@ -383,8 +408,16 @@ export const Analytics: React.FC = () => {
                     unit="s" 
                   />
                   <YAxis 
-                    stroke="#64748B" 
-                    tick={{ fontSize: 10, fill: '#64748B' }} 
+                    yAxisId="entropy"
+                    stroke="#c084fc" 
+                    domain={[0, 1]} 
+                    tick={{ fontSize: 10, fill: '#c084fc' }} 
+                  />
+                  <YAxis 
+                    yAxisId="variance"
+                    orientation="right"
+                    stroke="#06b6d4" 
+                    tick={{ fontSize: 10, fill: '#06b6d4' }} 
                   />
                   <Tooltip
                     contentStyle={{ 
@@ -399,20 +432,24 @@ export const Analytics: React.FC = () => {
                     wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} 
                   />
                   <Line 
+                    yAxisId="entropy"
                     type="monotone" 
                     dataKey="directional_entropy" 
                     name="Directional Entropy (0-1)" 
                     stroke="#c084fc" 
                     strokeWidth={2} 
                     dot={false} 
+                    isAnimationActive={false}
                   />
                   <Line 
+                    yAxisId="variance"
                     type="monotone" 
                     dataKey="motion_variance" 
                     name="Motion Variance" 
                     stroke="#06b6d4" 
                     strokeWidth={1.5} 
                     dot={false} 
+                    isAnimationActive={false}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -440,7 +477,7 @@ export const Analytics: React.FC = () => {
             </span>
           </div>
 
-          <div className="h-64">
+          <div className="h-64 min-h-[256px] w-full min-w-0 relative">
             {frameData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={frameData}>
@@ -475,6 +512,7 @@ export const Analytics: React.FC = () => {
                     stroke="#06b6d4" 
                     fill="#06b6d4" 
                     fillOpacity={0.12} 
+                    isAnimationActive={false}
                   />
                   <Area 
                     type="monotone" 
@@ -483,6 +521,7 @@ export const Analytics: React.FC = () => {
                     stroke="#f59e0b" 
                     fill="#f59e0b" 
                     fillOpacity={0.12} 
+                    isAnimationActive={false}
                   />
                   <Area 
                     type="monotone" 
@@ -491,6 +530,7 @@ export const Analytics: React.FC = () => {
                     stroke="#ef4444" 
                     fill="#ef4444" 
                     fillOpacity={0.12} 
+                    isAnimationActive={false}
                   />
                   <Area 
                     type="monotone" 
@@ -499,6 +539,7 @@ export const Analytics: React.FC = () => {
                     stroke="#c084fc" 
                     fill="#c084fc" 
                     fillOpacity={0.12} 
+                    isAnimationActive={false}
                   />
                 </AreaChart>
               </ResponsiveContainer>
