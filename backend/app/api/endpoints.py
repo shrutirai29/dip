@@ -357,12 +357,22 @@ def export_analysis_csv(analysis_id: str, db: Session = Depends(get_db)):
     )
 
 @router.get("/incidents", response_model=List[IncidentResponse])
-def list_incidents(severity: str = None, status: str = None, db: Session = Depends(get_db)):
+def list_incidents(
+    severity: str = None,
+    status: str = None,
+    camera_id: str = None,
+    analysis_id: str = None,
+    db: Session = Depends(get_db)
+):
     query = db.query(Incident)
     if severity:
         query = query.filter(Incident.severity == severity.upper())
     if status:
         query = query.filter(Incident.status == status)
+    if camera_id:
+        query = query.filter(Incident.camera_id == camera_id)
+    if analysis_id:
+        query = query.filter(Incident.analysis_id == analysis_id)
     return query.order_by(Incident.created_at.desc()).all()
 
 @router.get("/incidents/{incident_id}", response_model=IncidentResponse)
@@ -372,7 +382,18 @@ def get_incident(incident_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Incident not found")
     return inc
 
-@router.patch("/incidents/{incident_id}", response_model=IncidentResponse)
+@router.get("/incidents/{incident_id}/evidence")
+def get_incident_evidence(incident_id: str, db: Session = Depends(get_db)):
+    """Serves evidentiary snapshot image for an incident if present."""
+    inc = db.query(Incident).filter(Incident.id == incident_id).first()
+    if not inc:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    if not inc.evidence_frame_path or not os.path.exists(inc.evidence_frame_path):
+        raise HTTPException(status_code=404, detail=f"Evidence frame for incident {incident_id} not found or expired")
+    return FileResponse(inc.evidence_frame_path, media_type="image/jpeg")
+
+@router.api_route("/incidents/{incident_id}", methods=["PATCH", "PUT"], response_model=IncidentResponse)
+@router.api_route("/incidents/{incident_id}/status", methods=["PATCH", "PUT"], response_model=IncidentResponse)
 def update_incident(incident_id: str, payload: IncidentUpdate, db: Session = Depends(get_db)):
     inc = db.query(Incident).filter(Incident.id == incident_id).first()
     if not inc:

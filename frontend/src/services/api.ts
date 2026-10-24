@@ -98,7 +98,7 @@ export const resolveMediaUrl = (path?: string | null, analysisId?: string): stri
 };
 
 export const incidentApi = {
-  getAll: async (filter?: { severity?: string; status?: string }): Promise<Incident[]> => {
+  getAll: async (filter?: { severity?: string; status?: string; camera_id?: string; analysis_id?: string }): Promise<Incident[]> => {
     const res = await api.get<Incident[]>('/incidents', { params: filter });
     return res.data;
   },
@@ -107,6 +107,8 @@ export const incidentApi = {
     const res = await api.get<Incident>(`/incidents/${id}`);
     return res.data;
   },
+
+  getEvidenceUrl: (id: string): string => `/api/incidents/${id}/evidence`,
 
   update: async (id: string, data: { status?: string; operator_notes?: string }): Promise<Incident> => {
     const res = await api.patch<Incident>(`/incidents/${id}`, data);
@@ -299,6 +301,14 @@ export const benchmarkApi = {
   },
   runPhase48RiskValidation: async (): Promise<any> => {
     const res = await api.post('/benchmark/run-risk-validation-phase48');
+    return res.data;
+  },
+  getPhase49IncidentLifecycle: async (): Promise<any> => {
+    const res = await api.get('/benchmark/incident-lifecycle-phase49');
+    return res.data;
+  },
+  runPhase49IncidentLifecycle: async (): Promise<any> => {
+    const res = await api.post('/benchmark/run-incident-lifecycle-phase49');
     return res.data;
   },
   getPerformance: async (): Promise<any> => {

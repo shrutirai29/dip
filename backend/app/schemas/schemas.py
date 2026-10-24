@@ -96,7 +96,8 @@ class FrameRecordResponse(BaseModel):
 
 class IncidentResponse(BaseModel):
     id: str
-    analysis_id: str
+    analysis_id: Optional[str] = None
+    camera_id: Optional[str] = None
     frame_index: int
     video_timestamp_sec: float
     incident_type: str

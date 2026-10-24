@@ -234,6 +234,47 @@ def run_phase48_risk_validation():
         )
 
 
+@router.get("/incident-lifecycle-phase49")
+def get_phase49_incident_lifecycle():
+    """
+    Retrieves the cached Phase 4.9 comprehensive live monitoring and incident lifecycle validation report.
+    Covers end-to-end data flow, alert sustenance/flicker window (N=3), cooldown deduplication (4.0s),
+    de-escalation reset, state machine (Open -> Acknowledged -> Resolved), snapshot evidence persistence,
+    timestamp monotonicity, camera disconnection/stale flags, multi-camera isolation, and measured latencies.
+    """
+    try:
+        report = evaluation_service.get_phase49_incident_lifecycle_report()
+        if not report:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Phase 4.9 incident lifecycle validation report not found."
+            )
+        return report
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error retrieving Phase 4.9 incident lifecycle validation")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve Phase 4.9 incident lifecycle report: {str(e)}"
+        )
+
+
+@router.post("/run-incident-lifecycle-phase49")
+def run_phase49_incident_lifecycle():
+    """
+    Executes a fresh Phase 4.9 end-to-end live monitoring and incident lifecycle validation pass and updates report.
+    """
+    try:
+        return evaluation_service.validate_phase49_incident_lifecycle(save_report=True)
+    except Exception as e:
+        logger.exception("Error executing Phase 4.9 incident lifecycle validation")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to execute Phase 4.9 incident lifecycle validation: {str(e)}"
+        )
+
+
 @router.get("/performance")
 def get_performance_benchmark():
     """
@@ -451,16 +492,18 @@ def export_evaluation_report():
         accuracy = evaluation_service.evaluate_detection_accuracy(conf_threshold=0.30)
         sweep = evaluation_service.evaluate_confidence_sweep()
         risk = evaluation_service.validate_heuristic_risk_scenarios()
+        incident_lifecycle = evaluation_service.get_phase49_incident_lifecycle_report()
         perf = evaluation_service.get_latest_benchmark_report()
         experiments = evaluation_service.get_optimization_experiment_report()
 
         export_data = {
-            "title": "CROWDGUARD v2.0 - Detection Accuracy, Performance, Risk Validation & Adaptive Inference Report",
-            "version": "4.7.0",
+            "title": "CROWDGUARD v2.0 - Detection Accuracy, Performance, Risk Validation & Incident Lifecycle Report",
+            "version": "4.9.0",
             "export_timestamp": evaluation_service.load_manifest().get("created_at"),
             "detection_accuracy": accuracy,
             "confidence_sweep": sweep,
             "risk_validation": risk,
+            "incident_lifecycle_validation": incident_lifecycle,
             "runtime_performance": perf,
             "sustained_performance": evaluation_service.get_latest_sustained_benchmark_report(),
             "optimization_experiments": experiments,

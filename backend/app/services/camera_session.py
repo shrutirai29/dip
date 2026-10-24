@@ -15,6 +15,7 @@ from app.services.risk_engine import CrowdRiskEngine
 from app.services.dip_service import DIPProcessor
 from app.services.forecasting_service import PatternAndForecastingEngine
 from app.services.inference_scheduler import fair_inference_scheduler
+from app.services.incident_service import IncidentService
 
 logger = logging.getLogger("crowdguard.camera_session")
 
@@ -151,6 +152,11 @@ class CameraSession:
             weight_motion_anomaly=settings.WEIGHT_MOTION_ANOMALY,
             weight_congestion=settings.WEIGHT_CONGESTION,
         )
+        self.incident_service = IncidentService(
+            db=None,
+            sustenance_frames=3,
+            cooldown_sec=4.0
+        )
 
         # Thread-safe processed outputs
         self._telemetry_lock = threading.Lock()
@@ -178,12 +184,16 @@ class CameraSession:
         self._last_capture_to_result_ms: float = 0.0
         self._last_capture_to_published_ms: float = 0.0
         self._last_pipeline_latency_ms: float = 0.0
+        self._last_capture_to_risk_ms: float = 0.0
+        self._last_capture_to_alert_ms: float = 0.0
         self._latency_samples_capture_to_published: List[float] = []
         self._latency_samples_pipeline: List[float] = []
         self._latency_samples_inference_duration: List[float] = []
         self._latency_samples_scheduler_wait: List[float] = []
         self._latency_samples_capture_to_result: List[float] = []
         self._latency_samples_raw_buffer_age: List[float] = []
+        self._latency_samples_capture_to_risk: List[float] = []
+        self._latency_samples_capture_to_alert: List[float] = []
         if self._shared_detector is not None:
             fair_inference_scheduler.set_detector(self._shared_detector)
 
@@ -233,6 +243,8 @@ class CameraSession:
                 self.risk_engine.reset()
             if hasattr(self, 'forecasting_engine') and self.forecasting_engine:
                 self.forecasting_engine.reset()
+            if hasattr(self, 'incident_service') and self.incident_service:
+                self.incident_service.reset()
 
             fair_inference_scheduler.start()
             fair_inference_scheduler.register_camera(self.camera_id)
@@ -473,6 +485,8 @@ class CameraSession:
                         self.risk_engine.reset()
                     if hasattr(self, 'forecasting_engine') and self.forecasting_engine:
                         self.forecasting_engine.reset()
+                    if hasattr(self, 'incident_service') and self.incident_service:
+                        self.incident_service.reset()
                 self._consecutive_failures = 0
                 self._consecutive_successes = 1
                 now = time.time()
@@ -685,6 +699,12 @@ class CameraSession:
                     mean_speed=mean_speed,
                     grid_densities=grid_densities,
                 )
+                t_risk_mono = time.perf_counter()
+                self._last_capture_to_risk_ms = (t_risk_mono - capture_mono) * 1000.0 if capture_mono > 0 else 0.0
+                with self._frame_lock:
+                    self._latency_samples_capture_to_risk.append(self._last_capture_to_risk_ms)
+                    if len(self._latency_samples_capture_to_risk) > 5000:
+                        self._latency_samples_capture_to_risk.pop(0)
 
                 # Feed risk and motion dynamics back to adaptive scheduler
                 fair_inference_scheduler.update_camera_risk(
@@ -702,6 +722,26 @@ class CameraSession:
                     detected_pattern=detected_pattern,
                     sample_interval_sec=sample_interval,
                 )
+
+                # 7b. Sustained Incident & Alert Evaluation
+                self.incident_service.check_and_create_incidents(
+                    analysis_id=None,
+                    camera_id=self.camera_id,
+                    frame_idx=frame_id,
+                    timestamp_sec=timestamp_sec,
+                    risk_data=risk_data,
+                    current_count=person_count,
+                    grid_cells=grid_cells,
+                    pattern_data=pattern_data,
+                    forecast_data=forecast_data,
+                    evidence_frame_path=None
+                )
+                t_alert_mono = time.perf_counter()
+                self._last_capture_to_alert_ms = (t_alert_mono - capture_mono) * 1000.0 if capture_mono > 0 else 0.0
+                with self._frame_lock:
+                    self._latency_samples_capture_to_alert.append(self._last_capture_to_alert_ms)
+                    if len(self._latency_samples_capture_to_alert) > 5000:
+                        self._latency_samples_capture_to_alert.pop(0)
 
                 # 8. Perspective Density Heatmap Splatting (Optimized: only compute/blend when crowd present)
                 if person_count > 0:
@@ -861,6 +901,10 @@ class CameraSession:
                     "capture_to_result_ms": round(self._last_capture_to_result_ms, 2),
                     "capture_to_published_ms": round(self._last_capture_to_published_ms, 2),
                     "pipeline_latency_ms": round(self._last_pipeline_latency_ms, 2),
+                    "capture_to_risk_ms": round(self._last_capture_to_risk_ms, 2),
+                    "capture_to_alert_ms": round(self._last_capture_to_alert_ms, 2),
+                    "active_alerts_count": len(self.incident_service.recent_incidents),
+                    "latest_alert_type": self.incident_service.recent_incidents[-1].incident_type if self.incident_service.recent_incidents else None,
                 }
 
                 # Update published state thread-safely
@@ -1050,6 +1094,8 @@ class CameraSession:
             self._latency_samples_scheduler_wait.clear()
             self._latency_samples_capture_to_result.clear()
             self._latency_samples_raw_buffer_age.clear()
+            self._latency_samples_capture_to_risk.clear()
+            self._latency_samples_capture_to_alert.clear()
 
     def get_latency_distribution_summary(self) -> Dict[str, Any]:
         """Returns statistical distribution summaries (count, mean, p50, p95, min, max, preliminary) for all latencies."""
@@ -1060,6 +1106,8 @@ class CameraSession:
             wait_samples = list(self._latency_samples_scheduler_wait)
             res_samples = list(self._latency_samples_capture_to_result)
             age_samples = list(self._latency_samples_raw_buffer_age)
+            risk_samples = list(self._latency_samples_capture_to_risk)
+            alert_samples = list(self._latency_samples_capture_to_alert)
 
         def _calc_dist(samples: List[float], fallback: float = 0.0) -> Dict[str, Any]:
             n = len(samples)
@@ -1092,4 +1140,6 @@ class CameraSession:
             "scheduler_wait": _calc_dist(wait_samples, self._last_sched_wait_ms),
             "capture_to_result": _calc_dist(res_samples, self._last_capture_to_result_ms),
             "raw_buffer_freshness": _calc_dist(age_samples, 0.0),
+            "capture_to_risk": _calc_dist(risk_samples, self._last_capture_to_risk_ms),
+            "capture_to_alert": _calc_dist(alert_samples, self._last_capture_to_alert_ms),
         }

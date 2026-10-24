@@ -107,7 +107,8 @@ class Incident(Base):
     __tablename__ = "incidents"
 
     id = Column(String, primary_key=True, index=True)
-    analysis_id = Column(String, ForeignKey("analyses.id"), index=True, nullable=False)
+    analysis_id = Column(String, ForeignKey("analyses.id"), index=True, nullable=True)
+    camera_id = Column(String, index=True, nullable=True)
     frame_index = Column(Integer, nullable=False)
     video_timestamp_sec = Column(Float, nullable=False)
     

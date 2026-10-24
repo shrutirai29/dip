@@ -1,5 +1,6 @@
 import uuid
 import datetime
+from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
 from app.models.entities import Incident
 
@@ -12,7 +13,7 @@ class IncidentService:
        preventing isolated noise or single-frame flickering alerts.
        
     2. Incident Taxonomy:
-       - CRITICAL_RISK: Sustained critical overall hazard (Score > 75)
+       - CRITICAL_RISK: Sustained critical overall hazard (Score >= 75)
        - HIGH_CROWD_DENSITY: Sustained spatial saturation
        - RAPID_GROWTH: Rapid influx surge
        - ABNORMAL_MOTION: Turbulent directional disorder / panic vectors
@@ -24,28 +25,42 @@ class IncidentService:
        Generates clear human-operator advisory actions without autonomous unsafe actuation.
     """
 
-    def __init__(self, db: Session, sustenance_frames: int = 3, cooldown_sec: float = 4.0):
+    def __init__(self, db: Optional[Session] = None, sustenance_frames: int = 3, cooldown_sec: float = 4.0):
         self.db = db
         self.sustenance_frames = sustenance_frames
         self.cooldown_sec = cooldown_sec
         
-        # Tracking condition counter: (analysis_id, incident_type) -> consecutive_frames
+        # Tracking condition counter: (session_key, incident_type) -> consecutive_frames
         self.condition_counters: dict[tuple[str, str], int] = {}
-        # Cooldown timer: (analysis_id, incident_type) -> last_triggered_video_sec
+        # Cooldown timer: (session_key, incident_type) -> last_triggered_video_sec
         self.cooldowns: dict[tuple[str, str], float] = {}
+        # Recent in-memory incidents cache for real-time telemetry publishing
+        self.recent_incidents: list[Incident] = []
+
+    def reset(self):
+        """Resets sustained counters and cooldown timers (e.g. on camera reconnection or benchmark start)."""
+        self.condition_counters.clear()
+        self.cooldowns.clear()
+        self.recent_incidents.clear()
 
     def check_and_create_incidents(
         self,
-        analysis_id: str,
-        frame_idx: int,
-        timestamp_sec: float,
-        risk_data: dict,
-        current_count: int,
-        grid_cells: list[dict],
-        pattern_data: dict,
-        forecast_data: dict,
-        evidence_frame_path: str = None
+        analysis_id: Optional[str] = None,
+        frame_idx: int = 0,
+        timestamp_sec: float = 0.0,
+        risk_data: dict = None,
+        current_count: int = 0,
+        grid_cells: list = None,
+        pattern_data: dict = None,
+        forecast_data: dict = None,
+        evidence_frame_path: str = None,
+        camera_id: Optional[str] = None
     ) -> list[Incident]:
+        risk_data = risk_data or {}
+        grid_cells = grid_cells or []
+        pattern_data = pattern_data or {}
+        forecast_data = forecast_data or {}
+
         created = []
         smoothed_score = risk_data.get("smoothed_score", 0.0)
         density_comp = risk_data.get("density_comp", 0.0)
@@ -64,6 +79,7 @@ class IncidentService:
             condition=critical_condition,
             accumulator=created,
             analysis_id=analysis_id,
+            camera_id=camera_id,
             frame_idx=frame_idx,
             timestamp_sec=timestamp_sec,
             incident_type="CRITICAL_RISK",
@@ -72,7 +88,7 @@ class IncidentService:
             forecast_risk=f_risk,
             reason=f"Severe crowd emergency risk threshold exceeded ({smoothed_score:.1f}/100, Forecast +10s: {f_risk:.1f})",
             action="URGENT: Dispatch on-site safety marshals immediately. Open secondary perimeter exit corridors and halt incoming inflow.",
-            measurements={"risk_data": risk_data, "person_count": current_count, "forecast": forecast_data},
+            measurements={"risk_data": risk_data, "person_count": current_count, "forecast": forecast_data, "camera_id": camera_id},
             region="Global Scene",
             evidence_path=evidence_frame_path
         )
@@ -85,6 +101,7 @@ class IncidentService:
             condition=projected_surge_condition,
             accumulator=created,
             analysis_id=analysis_id,
+            camera_id=camera_id,
             frame_idx=frame_idx,
             timestamp_sec=timestamp_sec,
             incident_type="PROJECTED_SURGE_WARNING",
@@ -93,7 +110,7 @@ class IncidentService:
             forecast_risk=f_risk,
             reason=f"Advisory: Linear extrapolation projects potential risk surge (+10s: {f_risk:.1f}) while current risk is moderate ({smoothed_score:.1f}/100)",
             action="ADVISORY: Monitor corridor inflow and prepare standby marshals. Awaiting real-time confirmation before active intervention.",
-            measurements={"risk_data": risk_data, "person_count": current_count, "forecast": forecast_data},
+            measurements={"risk_data": risk_data, "person_count": current_count, "forecast": forecast_data, "camera_id": camera_id},
             region="Global Scene",
             evidence_path=evidence_frame_path
         )
@@ -104,6 +121,7 @@ class IncidentService:
             condition=(len(bottleneck_zones) > 0 or active_pattern == "BOTTLENECK"),
             accumulator=created,
             analysis_id=analysis_id,
+            camera_id=camera_id,
             frame_idx=frame_idx,
             timestamp_sec=timestamp_sec,
             incident_type="LOCALIZED_BOTTLENECK",
@@ -112,7 +130,7 @@ class IncidentService:
             forecast_risk=f_risk,
             reason=f"Dangerous localized bottleneck detected in {', '.join([z['name'] for z in bottleneck_zones]) if bottleneck_zones else 'Monitored Sector'}",
             action="Inspect choke point immediately. Deploy staff to alleviate stationary congestion and guide pedestrian movement.",
-            measurements={"bottlenecks": [z["name"] for z in bottleneck_zones], "congestion_comp": congestion_comp},
+            measurements={"bottlenecks": [z["name"] for z in bottleneck_zones], "congestion_comp": congestion_comp, "camera_id": camera_id},
             region=bottleneck_zones[0]["name"] if bottleneck_zones else "Sector B2",
             evidence_path=evidence_frame_path
         )
@@ -122,6 +140,7 @@ class IncidentService:
             condition=(motion_comp >= 0.72 or active_pattern == "ABNORMAL_DISORDER"),
             accumulator=created,
             analysis_id=analysis_id,
+            camera_id=camera_id,
             frame_idx=frame_idx,
             timestamp_sec=timestamp_sec,
             incident_type="ABNORMAL_MOTION",
@@ -130,7 +149,7 @@ class IncidentService:
             forecast_risk=f_risk,
             reason="High directional Shannon entropy and velocity fluctuations detected (potential panic or turbulence)",
             action="Monitor video feed closely for physical conflict or sudden localized panic. Prepare public address broadcast.",
-            measurements={"motion_comp": motion_comp, "pattern": pattern_data},
+            measurements={"motion_comp": motion_comp, "pattern": pattern_data, "camera_id": camera_id},
             region="Central Passage",
             evidence_path=evidence_frame_path
         )
@@ -140,6 +159,7 @@ class IncidentService:
             condition=(growth_comp >= 0.70 or active_pattern == "RAPID_SURGE"),
             accumulator=created,
             analysis_id=analysis_id,
+            camera_id=camera_id,
             frame_idx=frame_idx,
             timestamp_sec=timestamp_sec,
             incident_type="RAPID_GROWTH",
@@ -148,7 +168,7 @@ class IncidentService:
             forecast_risk=f_risk,
             reason="Abrupt influx surge detected in rolling temporal window",
             action="Temporarily meter entry turnstiles/gates to regulate inflow rate into corridor.",
-            measurements={"growth_comp": growth_comp},
+            measurements={"growth_comp": growth_comp, "camera_id": camera_id},
             region="Entrance Inflow",
             evidence_path=evidence_frame_path
         )
@@ -158,6 +178,7 @@ class IncidentService:
             condition=(active_pattern == "COUNTERFLOW"),
             accumulator=created,
             analysis_id=analysis_id,
+            camera_id=camera_id,
             frame_idx=frame_idx,
             timestamp_sec=timestamp_sec,
             incident_type="COUNTERFLOW_HAZARD",
@@ -166,7 +187,7 @@ class IncidentService:
             forecast_risk=f_risk,
             reason="Opposing bi-directional crowd streams colliding in narrow space",
             action="Establish directional physical barricades or one-way lane guidance to separate opposing flows.",
-            measurements={"pattern": pattern_data},
+            measurements={"pattern": pattern_data, "camera_id": camera_id},
             region="Transit Corridor",
             evidence_path=evidence_frame_path
         )
@@ -177,7 +198,8 @@ class IncidentService:
         self,
         condition: bool,
         accumulator: list,
-        analysis_id: str,
+        analysis_id: Optional[str],
+        camera_id: Optional[str],
         frame_idx: int,
         timestamp_sec: float,
         incident_type: str,
@@ -190,7 +212,8 @@ class IncidentService:
         region: str,
         evidence_path: str
     ):
-        key = (analysis_id, incident_type)
+        session_key = analysis_id or camera_id or "default_session"
+        key = (session_key, incident_type)
         
         if condition:
             self.condition_counters[key] = self.condition_counters.get(key, 0) + 1
@@ -202,7 +225,7 @@ class IncidentService:
         if self.condition_counters[key] < self.sustenance_frames:
             return
 
-        # Check cooldown
+        # Check cooldown to prevent duplicate alerts for a sustained ongoing event
         last_time = self.cooldowns.get(key, -999.0)
         if timestamp_sec - last_time < self.cooldown_sec:
             return
@@ -212,6 +235,7 @@ class IncidentService:
         incident = Incident(
             id=f"inc_{uuid.uuid4().hex[:10]}",
             analysis_id=analysis_id,
+            camera_id=camera_id,
             frame_index=frame_idx,
             video_timestamp_sec=round(timestamp_sec, 2),
             incident_type=incident_type,
@@ -226,11 +250,15 @@ class IncidentService:
             status="Open",
             created_at=datetime.datetime.utcnow()
         )
-        try:
-            self.db.add(incident)
-            self.db.commit()
-            self.db.refresh(incident)
-            accumulator.append(incident)
-        except Exception as e:
-            self.db.rollback()
-            print(f"[IncidentService] Error persisting incident: {e}")
+        
+        if self.db is not None:
+            try:
+                self.db.add(incident)
+                self.db.commit()
+                self.db.refresh(incident)
+            except Exception as e:
+                self.db.rollback()
+                print(f"[IncidentService] Error persisting incident: {e}")
+
+        self.recent_incidents.append(incident)
+        accumulator.append(incident)
