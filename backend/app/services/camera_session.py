@@ -881,6 +881,7 @@ class CameraSession:
             consumed = self._frames_consumed
             dropped = self._frames_dropped
             buffer_overwrites = self._buffer_overwrites
+            pending_frames = 1 if (not self._frame_consumed and self._latest_raw_frame is not None) else 0
             capture_attempts = self._capture_attempts
             capture_failures = self._capture_failures
             frames_inferred = self._frames_inferred
@@ -921,9 +922,13 @@ class CameraSession:
         else:
             staleness_status = "fresh"
 
+        valid_obs_count = len(pub_samples)
         mean_cap_pub = float(np.mean(pub_samples)) if pub_samples else self._last_capture_to_published_ms
         p50_cap_pub = float(np.percentile(pub_samples, 50)) if pub_samples else mean_cap_pub
         p95_cap_pub = float(np.percentile(pub_samples, 95)) if pub_samples else mean_cap_pub
+        p99_cap_pub = float(np.percentile(pub_samples, 99)) if valid_obs_count >= 100 else None
+        min_cap_pub = float(np.min(pub_samples)) if valid_obs_count > 0 else (self._last_capture_to_published_ms if self._last_capture_to_published_ms > 0 else 0.0)
+        max_cap_pub = float(np.max(pub_samples)) if valid_obs_count > 0 else (self._last_capture_to_published_ms if self._last_capture_to_published_ms > 0 else 0.0)
 
         mean_pipe = float(np.mean(pipe_samples)) if pipe_samples else self._last_pipeline_latency_ms
         p50_pipe = float(np.percentile(pipe_samples, 50)) if pipe_samples else mean_pipe
@@ -947,10 +952,18 @@ class CameraSession:
             "frames_captured": captured,
             "frames_consumed": consumed,
             "buffer_overwrites": buffer_overwrites,
+            "pending_frames": pending_frames,
+            "accounting_identity_holds": (captured == consumed + buffer_overwrites + pending_frames),
             "frames_dropped": dropped,
             "frames_inferred": frames_inferred,
             "frames_published": frames_published,
             "inference_coverage_percent": inference_coverage,
+            "capture_to_published_p50_ms": round(p50_cap_pub, 2),
+            "capture_to_published_p95_ms": round(p95_cap_pub, 2),
+            "capture_to_published_p99_ms": round(p99_cap_pub, 2) if p99_cap_pub is not None else None,
+            "capture_to_published_min_ms": round(min_cap_pub, 2),
+            "capture_to_published_max_ms": round(max_cap_pub, 2),
+            "latency_sample_count": valid_obs_count,
             "frames_replaced_pending": sched_telem.get("total_replaced_pending", 0),
             "frames_replaced_obsolete": sched_telem.get("total_replaced_pending", 0),
             "total_dropped_stale": sched_telem.get("total_dropped_stale", 0),
@@ -1037,6 +1050,7 @@ class CameraSession:
                     "mean_ms": fallback,
                     "p50_ms": fallback,
                     "p95_ms": fallback,
+                    "p99_ms": None,
                     "min_ms": fallback,
                     "max_ms": fallback,
                     "preliminary": True
@@ -1046,6 +1060,7 @@ class CameraSession:
                 "mean_ms": round(float(np.mean(samples)), 2),
                 "p50_ms": round(float(np.percentile(samples, 50)), 2),
                 "p95_ms": round(float(np.percentile(samples, 95)), 2),
+                "p99_ms": round(float(np.percentile(samples, 99)), 2) if n >= 100 else None,
                 "min_ms": round(float(np.min(samples)), 2),
                 "max_ms": round(float(np.max(samples)), 2),
                 "preliminary": n < 20

@@ -41,6 +41,18 @@ class DetectionService:
             logger.exception(f"Error initializing YOLO model: {e}")
             raise e
 
+    def warmup(self, imgsz: int = 640) -> float:
+        """
+        Executes a dummy inference pass to compile kernels, allocate anchor buffers,
+        and absorb the initial cold-start latency spike. Returns warmup duration in ms.
+        """
+        t0 = time.perf_counter()
+        dummy = np.zeros((480, 640, 3), dtype=np.uint8)
+        self.detect_persons(dummy, imgsz=imgsz)
+        duration_ms = (time.perf_counter() - t0) * 1000.0
+        logger.info(f"DetectionService warmed up in {duration_ms:.1f}ms.")
+        return duration_ms
+
     def detect_persons(
         self,
         frame: np.ndarray,
@@ -81,13 +93,14 @@ class DetectionService:
         effective_conf = max(0.05, min(1.0, effective_conf))
 
         # Run inference filtering for class 0
-        results = self.model(
-            frame,
-            classes=[0],
-            conf=effective_conf,
-            imgsz=imgsz,
-            verbose=False
-        )
+        with torch.inference_mode():
+            results = self.model(
+                frame,
+                classes=[0],
+                conf=effective_conf,
+                imgsz=imgsz,
+                verbose=False
+            )
 
         detections: List[Dict[str, Any]] = []
         raw_candidates: List[Dict[str, Any]] = []

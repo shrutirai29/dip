@@ -171,6 +171,66 @@ def run_performance_benchmark(
         )
 
 
+@router.get("/cold-start")
+def get_cold_start_benchmark():
+    """
+    Measures isolated model weight load time and first-inference forward pass latency
+    to quantify PyTorch/CUDA JIT compilation overhead versus warm steady-state latency.
+    """
+    try:
+        return evaluation_service.measure_cold_start()
+    except Exception as e:
+        logger.exception("Error measuring cold-start latency")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Cold-start measurement failed: {str(e)}"
+        )
+
+
+@router.get("/reliable")
+def get_reliable_benchmark():
+    """
+    Retrieves the latest Phase 4.7C multi-repetition reliable benchmark report.
+    """
+    report = evaluation_service.get_reliable_benchmark_report()
+    if not report:
+        # Fall back to latest benchmark report if reliable report not yet generated
+        report = evaluation_service.get_latest_benchmark_report()
+    if not report:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No benchmark run found. Trigger a benchmark run first."
+        )
+    return report
+
+
+@router.post("/run-reliable")
+def run_reliable_benchmark(
+    max_cameras: int = Query(4, ge=1, le=4),
+    duration_sec: float = Query(5.0, ge=2.0, le=15.0),
+    warmup_sec: float = Query(4.0, ge=2.0, le=10.0),
+    repetitions: int = Query(3, ge=1, le=5)
+):
+    """
+    Triggers an active Phase 4.7C multi-repetition benchmark across 1 to max_cameras.
+    Includes cold-start measurement, stage separation, 3 repetitions with empirical variance,
+    and frame accounting verification.
+    """
+    try:
+        return evaluation_service.run_reliable_multicamera_benchmark(
+            max_cameras=max_cameras,
+            sample_duration_sec=duration_sec,
+            warmup_duration_sec=warmup_sec,
+            repetitions=repetitions
+        )
+    except Exception as e:
+        logger.exception("Error executing reliable multi-camera benchmark")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Reliable benchmark execution failed: {str(e)}"
+        )
+
+
 @router.get("/sustained")
 def get_sustained_benchmark():
     """

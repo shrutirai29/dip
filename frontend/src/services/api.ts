@@ -333,6 +333,25 @@ export const benchmarkApi = {
     const res = await api.get('/benchmark/adaptive-report');
     return res.data;
   },
+  getColdStart: async (): Promise<any> => {
+    const res = await api.get('/benchmark/cold-start');
+    return res.data;
+  },
+  getReliable: async (): Promise<any> => {
+    const res = await api.get('/benchmark/reliable');
+    return res.data;
+  },
+  runReliable: async (maxCameras = 4, durationSec = 5.0, warmupSec = 4.0, repetitions = 3): Promise<any> => {
+    const res = await api.post('/benchmark/run-reliable', null, {
+      params: {
+        max_cameras: maxCameras,
+        duration_sec: durationSec,
+        warmup_sec: warmupSec,
+        repetitions: repetitions,
+      }
+    });
+    return res.data;
+  },
   getExportUrl: (): string => '/api/benchmark/export',
 };
 

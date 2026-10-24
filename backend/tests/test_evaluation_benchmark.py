@@ -420,3 +420,113 @@ def test_multicamera_benchmark_metric_integrity():
     with open(base_path, "r", encoding="utf-8") as f:
         baseline_recheck = json.load(f)
     assert baseline_recheck["benchmark_run_at"] == baseline_content["benchmark_run_at"]
+
+
+# ---------------------------------------------------------------------------
+# 5. Phase 4.7C Benchmark Reliability & Invariant Tests
+# ---------------------------------------------------------------------------
+
+def test_cold_start_measurement():
+    """Verify that cold-start measures initial PyTorch JIT compilation overhead and separates warm latency."""
+    cs = evaluation_service.measure_cold_start()
+    assert "model_load_ms" in cs
+    assert "first_inference_compilation_ms" in cs
+    assert "cold_start_total_ms" in cs
+    assert "warm_inference_median_ms" in cs
+    assert "cold_to_warm_ratio" in cs
+    assert cs["model_load_ms"] > 0
+    assert cs["first_inference_compilation_ms"] > 0
+    assert cs["warm_inference_median_ms"] > 0
+    # First inference compilation overhead is always significantly larger than warm median
+    assert cs["first_inference_compilation_ms"] > cs["warm_inference_median_ms"]
+
+
+def test_accounting_identity_with_pending_frame():
+    """Verify that pending_frames accounts for the single-frame buffer state strictly: captured == consumed + overwrites + pending."""
+    from app.services.camera_session import CameraSession, CameraConfig, CameraSourceType
+    import numpy as np
+
+    config = CameraConfig(camera_id="cam_acct_test", name="Acct Test", source_type=CameraSourceType.WEBCAM, device_index=0)
+    session = CameraSession(config)
+    dummy = np.zeros((100, 100, 3), dtype=np.uint8)
+
+    # 1. Initially empty
+    st = session.get_status()
+    assert st["frames_captured"] == 0
+    assert st["frames_consumed"] == 0
+    assert st["buffer_overwrites"] == 0
+    assert st["pending_frames"] == 0
+    assert st["accounting_identity_holds"] is True
+
+    # 2. Record 1 frame (not yet consumed -> pending = 1)
+    session._record_frame(dummy, 1.0)
+    st = session.get_status()
+    assert st["frames_captured"] == 1
+    assert st["frames_consumed"] == 0
+    assert st["buffer_overwrites"] == 0
+    assert st["pending_frames"] == 1
+    assert st["accounting_identity_holds"] is True
+
+    # 3. Record 2nd frame without consuming 1st (overwrites = 1, pending = 1, captured = 2)
+    session._record_frame(dummy, 2.0)
+    st = session.get_status()
+    assert st["frames_captured"] == 2
+    assert st["frames_consumed"] == 0
+    assert st["buffer_overwrites"] == 1
+    assert st["pending_frames"] == 1
+    assert st["accounting_identity_holds"] is True
+
+    # 4. Consume frame (consumed = 1, pending = 0, overwrites = 1, captured = 2)
+    session.get_latest_raw_frame(timeout=0.1)
+    st = session.get_status()
+    assert st["frames_captured"] == 2
+    assert st["frames_consumed"] == 1
+    assert st["buffer_overwrites"] == 1
+    assert st["pending_frames"] == 0
+    assert st["accounting_identity_holds"] is True
+
+
+def test_api_cold_start():
+    """Verify API endpoint for cold-start performance."""
+    response = client.get("/api/benchmark/cold-start")
+    assert response.status_code == 200
+    data = response.json()
+    assert "cold_start_total_ms" in data
+    assert "warm_inference_median_ms" in data
+    assert "cold_to_warm_ratio" in data
+
+
+def test_api_reliable_benchmark():
+    """Verify API endpoint for Phase 4.7C reliable benchmark report."""
+    response = client.get("/api/benchmark/reliable")
+    assert response.status_code == 200
+    data = response.json()
+    assert "scaling_results" in data
+    assert len(data["scaling_results"]) > 0
+    assert "cold_start" in data
+    assert "single_stream_discrepancy_investigation" in data
+    assert "frame_accounting_investigation" in data
+    assert "recommended_stream_count" in data
+
+
+def test_reliable_multicamera_benchmark_repeatability():
+    """Verify that steady-state 1-stream benchmark achieves warm performance (>5.0 FPS) and records repetition stats."""
+    rep = evaluation_service.run_reliable_multicamera_benchmark(
+        max_cameras=1,
+        sample_duration_sec=1.5,
+        warmup_duration_sec=1.0,
+        repetitions=2,
+        save_report=False
+    )
+    assert "scaling_results" in rep
+    assert len(rep["scaling_results"]) == 1
+    lvl = rep["scaling_results"][0]
+    assert lvl["active_cameras"] == 1
+    assert lvl["repetitions_completed"] == 2
+    assert lvl["mean_inference_fps_per_cam"] > 4.0 # Rules out the 0.4 FPS cold-start bug
+    assert lvl["all_accounting_invariants_passed"] is True
+    assert "status_badge" in lvl
+    assert "recommendation" in lvl
+    assert len(lvl["runs"]) == 2
+    for r in lvl["runs"]:
+        assert r["accounting_identity_holds"] is True

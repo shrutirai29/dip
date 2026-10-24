@@ -13,6 +13,7 @@ data/processed/*
 !data/processed/.gitkeep
 data/reports/*
 !data/reports/.gitkeep
+!data/reports/phase47c_benchmark_results.json
 data/models/*
 !data/models/.gitkeep
 *.db
