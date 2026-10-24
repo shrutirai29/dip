@@ -229,6 +229,10 @@ class CameraSession:
             self._consecutive_successes = 0
             self._set_state(CameraState.CONNECTING, "Initializing camera stream...")
             self._started_at = time.time()
+            if hasattr(self, 'risk_engine') and self.risk_engine:
+                self.risk_engine.reset()
+            if hasattr(self, 'forecasting_engine') and self.forecasting_engine:
+                self.forecasting_engine.reset()
 
             fair_inference_scheduler.start()
             fair_inference_scheduler.register_camera(self.camera_id)
@@ -464,6 +468,11 @@ class CameraSession:
 
                 self._cap = cap
                 self._set_state(CameraState.CONNECTED, None)
+                if self._retry_count > 0:
+                    if hasattr(self, 'risk_engine') and self.risk_engine:
+                        self.risk_engine.reset()
+                    if hasattr(self, 'forecasting_engine') and self.forecasting_engine:
+                        self.forecasting_engine.reset()
                 self._consecutive_failures = 0
                 self._consecutive_successes = 1
                 now = time.time()
@@ -1016,7 +1025,17 @@ class CameraSession:
 
     def get_telemetry(self) -> Optional[Dict[str, Any]]:
         with self._telemetry_lock:
-            return self._latest_telemetry.copy() if self._latest_telemetry else None
+            if not self._latest_telemetry:
+                return None
+            telemetry = self._latest_telemetry.copy()
+            with self._state_lock:
+                telemetry["camera_state"] = self._state
+                telemetry["is_connected"] = self._state in (CameraState.CONNECTED, CameraState.DEGRADED)
+                if self._state in (CameraState.DISCONNECTED, CameraState.ERROR, CameraState.IDLE, CameraState.STOPPING):
+                    telemetry["is_stale"] = True
+                else:
+                    telemetry["is_stale"] = False
+            return telemetry
 
     def get_latest_jpeg_with_sequence(self) -> Tuple[int, Optional[bytes]]:
         with self._telemetry_lock:

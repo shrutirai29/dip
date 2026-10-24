@@ -293,6 +293,14 @@ export const benchmarkApi = {
     const res = await api.get('/benchmark/risk-validation');
     return res.data;
   },
+  getPhase48RiskValidation: async (): Promise<any> => {
+    const res = await api.get('/benchmark/risk-validation-phase48');
+    return res.data;
+  },
+  runPhase48RiskValidation: async (): Promise<any> => {
+    const res = await api.post('/benchmark/run-risk-validation-phase48');
+    return res.data;
+  },
   getPerformance: async (): Promise<any> => {
     const res = await api.get('/benchmark/performance');
     return res.data;

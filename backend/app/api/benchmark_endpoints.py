@@ -194,6 +194,46 @@ def get_risk_model_validation():
         )
 
 
+@router.get("/risk-validation-phase48")
+def get_phase48_risk_validation():
+    """
+    Retrieves the cached Phase 4.8 comprehensive crowd risk validation report.
+    Covers 14 scenarios, temporal decay dynamics, spatial sensitivity, category boundaries,
+    multi-camera isolation, and detection-to-risk integration.
+    """
+    try:
+        report = evaluation_service.get_phase48_risk_validation_report()
+        if not report:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Phase 4.8 risk validation report not found."
+            )
+        return report
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error retrieving Phase 4.8 risk validation")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve Phase 4.8 risk validation: {str(e)}"
+        )
+
+
+@router.post("/run-risk-validation-phase48")
+def run_phase48_risk_validation():
+    """
+    Executes a fresh Phase 4.8 comprehensive crowd risk validation pass and updates report.
+    """
+    try:
+        return evaluation_service.validate_phase48_risk_engine(save_report=True)
+    except Exception as e:
+        logger.exception("Error executing Phase 4.8 risk validation")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to execute Phase 4.8 risk validation: {str(e)}"
+        )
+
+
 @router.get("/performance")
 def get_performance_benchmark():
     """

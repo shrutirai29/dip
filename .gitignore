@@ -15,6 +15,7 @@ data/reports/*
 !data/reports/.gitkeep
 !data/reports/phase47c_benchmark_results.json
 !data/reports/detection_robustness_results.json
+!data/reports/risk_engine_validation_results.json
 !data/evaluation/diagnostics/*
 data/models/*
 !data/models/.gitkeep
