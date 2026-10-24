@@ -3,7 +3,7 @@ import json
 import logging
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, HTTPException, Query, status
-from fastapi.responses import Response
+from fastapi.responses import Response, FileResponse
 
 from app.services.evaluation_service import evaluation_service
 from app.services.inference_scheduler import fair_inference_scheduler
@@ -117,6 +117,65 @@ def get_detection_accuracy(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Accuracy evaluation failed: {str(e)}"
         )
+
+
+@router.get("/detection-robustness")
+def get_detection_robustness():
+    """
+    Returns the comprehensive Phase 4.7D Detection Robustness & Expanded Evaluation report:
+    - Natural Surveillance vs. Synthetic Negative Control split separation
+    - Crowd Density Subgroup performance (Empty, Sparse, Moderate, Dense)
+    - Occlusion and Boundary Truncation sensitivity
+    - Bounding Box Scale distribution (small vs medium vs large)
+    - Diagnostic False Positive / False Negative attribution and overlay links
+    - Full evaluation provenance, small-sample caveats, and extension roadmap
+    """
+    report = evaluation_service.get_detection_robustness_report()
+    if not report:
+        report = evaluation_service.evaluate_detection_robustness(save_report=True)
+    return report
+
+
+@router.post("/run-detection-robustness")
+def run_detection_robustness(
+    conf_threshold: float = Query(0.30, ge=0.05, le=0.95),
+    iou_threshold: float = Query(0.50, ge=0.10, le=0.90),
+    subset: Optional[str] = Query(None, description="Optional subset filter: 'all', 'natural', or 'synthetic'")
+):
+    """
+    Triggers on-demand Phase 4.7D Detection Robustness & Evaluation execution with custom parameters.
+    """
+    try:
+        return evaluation_service.evaluate_detection_robustness(
+            conf_threshold=conf_threshold,
+            iou_threshold=iou_threshold,
+            subset=subset,
+            save_report=True
+        )
+    except Exception as e:
+        logger.exception("Error executing detection robustness evaluation")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Detection robustness evaluation failed: {str(e)}"
+        )
+
+
+@router.get("/diagnostics/{image_name}")
+def get_diagnostic_image(image_name: str):
+    """
+    Serves generated visual diagnostic overlay JPEG files from data/evaluation/diagnostics/.
+    """
+    safe_name = os.path.basename(image_name)
+    file_path = os.path.join("data/evaluation/diagnostics", safe_name)
+    if not os.path.exists(file_path):
+        # Generate on the fly if missing
+        evaluation_service.generate_diagnostic_overlays()
+    if not os.path.exists(file_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Diagnostic image '{safe_name}' not found."
+        )
+    return FileResponse(file_path, media_type="image/jpeg")
 
 
 @router.get("/risk-validation")

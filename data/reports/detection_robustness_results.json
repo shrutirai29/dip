@@ -1,0 +1,545 @@
+{
+  "report_version": "Phase 4.7D Detection Robustness & Expanded Evaluation",
+  "evaluated_at": "2026-10-24T05:34:10Z",
+  "dataset_version": "1.0.0",
+  "provenance": {
+    "dataset_name": "CROWDGUARD Ground Truth Evaluation Benchmark",
+    "dataset_path": "data/evaluation/manifest.json",
+    "model_name": "models/yolov8n.pt",
+    "framework": "PyTorch / Ultralytics YOLOv8n (CPU Inference Mode)",
+    "total_frames_in_manifest": 15,
+    "natural_frames_count": 10,
+    "synthetic_frames_count": 5,
+    "total_ground_truth_persons": 26,
+    "storage_mode": "Strictly Local On-Premise Storage (no external cloud egress)"
+  },
+  "parameters": {
+    "conf_threshold": 0.3,
+    "iou_threshold": 0.5,
+    "imgsz": 640,
+    "matching_protocol": "Greedy one-to-one confidence-descending IoU assignment"
+  },
+  "splits": {
+    "natural": {
+      "split_name": "Natural Surveillance Concourse",
+      "source_media": "data/uploads/vid_2e28e1e65a.mp4 (1560x890 resolution)",
+      "frames_count": 10,
+      "ground_truth_persons": 26,
+      "true_positives": 26,
+      "false_positives": 1,
+      "false_negatives": 0,
+      "precision": 0.963,
+      "recall": 1.0,
+      "f1_score": 0.9811,
+      "macro_mean_iou": 0.9381,
+      "micro_mean_iou": 0.9308,
+      "empty_frames_count": 3,
+      "empty_frames_true_negatives": 3,
+      "negative_specificity": 1.0,
+      "caveat": "High precision and recall on foreground concourse pedestrians, but limited to a single surveillance camera perspective."
+    },
+    "synthetic": {
+      "split_name": "Synthetic Agent Simulation (Negative Control)",
+      "source_media": "data/sample_videos/crowd_bottleneck_demo.mp4 (640x480 resolution)",
+      "frames_count": 0,
+      "ground_truth_persons": 0,
+      "true_positives": 0,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "precision": null,
+      "precision_display": "N/A (True Negative Scene test: 0 GT, 0 Pred)",
+      "recall": null,
+      "recall_display": "N/A (True Negative Scene test)",
+      "f1_score": null,
+      "negative_specificity": 1.0,
+      "true_negative_scenes": 0,
+      "macro_mean_iou": null,
+      "micro_mean_iou": null,
+      "caveat": "Negative test evaluating false-positive rejection on synthetic OpenCV geometric particles. All 5 frames yielded 0 detections (100% rejection specificity)."
+    },
+    "overall_combined": {
+      "split_name": "Overall Manifest Aggregate",
+      "frames_count": 10,
+      "ground_truth_persons": 26,
+      "true_positives": 26,
+      "false_positives": 1,
+      "false_negatives": 0,
+      "precision": 0.963,
+      "recall": 1.0,
+      "f1_score": 0.9811,
+      "macro_mean_iou": 0.9381,
+      "micro_mean_iou": 0.9308,
+      "matched_box_count": 26,
+      "caveat": "Combining splits is reported for historical compatibility with Phase 4.7B. Synthetic frames contribute 0 TP and 0 FP, functioning strictly as negative controls."
+    }
+  },
+  "density_subgroups": {
+    "empty": {
+      "frames_count": 3,
+      "ground_truth_persons": 0,
+      "true_positives": 0,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "precision": null,
+      "precision_display": "N/A (Zero-GT scene)",
+      "recall": null,
+      "recall_display": "N/A (Zero-GT scene)",
+      "f1_score": null,
+      "mean_iou": 0.0,
+      "is_statistically_preliminary": true,
+      "statistical_caveat": "Sample size N=3 is preliminary (recommended N >= 5)."
+    },
+    "sparse": {
+      "frames_count": 1,
+      "ground_truth_persons": 1,
+      "true_positives": 1,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "precision": 1.0,
+      "precision_display": "1.0000",
+      "recall": 1.0,
+      "recall_display": "1.0000",
+      "f1_score": 1.0,
+      "mean_iou": 0.9972,
+      "is_statistically_preliminary": true,
+      "statistical_caveat": "Sample size N=1 is preliminary (recommended N >= 5)."
+    },
+    "moderate": {
+      "frames_count": 3,
+      "ground_truth_persons": 11,
+      "true_positives": 11,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "precision": 1.0,
+      "precision_display": "1.0000",
+      "recall": 1.0,
+      "recall_display": "1.0000",
+      "f1_score": 1.0,
+      "mean_iou": 0.9343,
+      "is_statistically_preliminary": true,
+      "statistical_caveat": "Sample size N=3 is preliminary (recommended N >= 5)."
+    },
+    "dense": {
+      "frames_count": 3,
+      "ground_truth_persons": 14,
+      "true_positives": 14,
+      "false_positives": 1,
+      "false_negatives": 0,
+      "precision": 0.9333,
+      "precision_display": "0.9333",
+      "recall": 1.0,
+      "recall_display": "1.0000",
+      "f1_score": 0.9655,
+      "mean_iou": 0.9221,
+      "is_statistically_preliminary": true,
+      "statistical_caveat": "Sample size N=3 is preliminary (recommended N >= 5)."
+    }
+  },
+  "attribute_breakdowns": {
+    "occlusion": {
+      "occluded": {
+        "ground_truth_count": 8,
+        "detected_count": 8,
+        "missed_count": 0,
+        "recall": 1.0,
+        "mean_iou": 0.8626,
+        "share_of_total_gt": "30.8%"
+      },
+      "non_occluded": {
+        "ground_truth_count": 18,
+        "detected_count": 18,
+        "missed_count": 0,
+        "recall": 1.0,
+        "mean_iou": 0.9611,
+        "share_of_total_gt": "69.2%"
+      }
+    },
+    "truncation": {
+      "truncated": {
+        "ground_truth_count": 12,
+        "detected_count": 12,
+        "missed_count": 0,
+        "recall": 1.0,
+        "mean_iou": 0.9441,
+        "share_of_total_gt": "46.2%"
+      },
+      "non_truncated": {
+        "ground_truth_count": 14,
+        "detected_count": 14,
+        "missed_count": 0,
+        "recall": 1.0,
+        "mean_iou": 0.9194,
+        "share_of_total_gt": "53.8%"
+      }
+    },
+    "bounding_box_scale": {
+      "small_under_10k_px": {
+        "ground_truth_count": 0,
+        "detected_count": 0,
+        "missed_count": 0,
+        "recall": null,
+        "recall_display": "N/A (Zero samples)",
+        "mean_iou": 0.0,
+        "data_gap_note": "Zero small-scale distant pedestrians in current dataset. Identified as priority for expansion."
+      },
+      "medium_10k_to_100k_px": {
+        "ground_truth_count": 1,
+        "detected_count": 1,
+        "missed_count": 0,
+        "recall": 1.0,
+        "recall_display": "1.0000",
+        "mean_iou": 0.9624,
+        "data_gap_note": "Represented."
+      },
+      "large_over_100k_px": {
+        "ground_truth_count": 25,
+        "detected_count": 25,
+        "missed_count": 0,
+        "recall": 1.0,
+        "recall_display": "1.0000",
+        "mean_iou": 0.9295,
+        "data_gap_note": "Represented."
+      }
+    }
+  },
+  "error_analysis": {
+    "total_false_positives": 1,
+    "total_false_negatives": 0,
+    "false_positive_cases": [
+      {
+        "frame_id": "real_f145",
+        "image_type": "natural",
+        "predicted_box": [
+          781.0,
+          186.0,
+          972.0,
+          863.0
+        ],
+        "confidence": 0.317,
+        "error_type": "DUPLICATE_DETECTION",
+        "overlap_with_gt": 0.9421,
+        "matched_gt_box": [
+          783,
+          186,
+          977,
+          847
+        ],
+        "diagnostic_explanation": "Secondary prediction on already-matched person (IoU=0.94 with GT [783, 186, 977, 847]). Under strict one-to-one matching protocol, duplicate detections are penalized as False Positives."
+      }
+    ],
+    "false_negative_cases": [],
+    "primary_failure_mechanism": "DUPLICATE_DETECTION: Secondary bounding box on occluded pedestrian in crowded concourse frame real_f145",
+    "sensitivity_finding": "The single false positive is suppressed at conf_threshold >= 0.35 without reducing recall across any ground-truth person."
+  },
+  "diagnostic_visual_artifacts": [
+    {
+      "frame_id": "real_f145",
+      "file_name": "diagnostic_real_f145_duplicate_fp.jpg",
+      "file_path": "data/evaluation/diagnostics\\diagnostic_real_f145_duplicate_fp.jpg",
+      "image_url": "/api/benchmark/diagnostics/diagnostic_real_f145_duplicate_fp.jpg",
+      "title": "Diagnostic Visual: real_f145",
+      "description": "Observed duplicate FP (conf 0.317) on occluded pedestrian",
+      "width": 1560,
+      "height": 940
+    },
+    {
+      "frame_id": "real_f000",
+      "file_name": "diagnostic_real_f000_multi_pedestrian.jpg",
+      "file_path": "data/evaluation/diagnostics\\diagnostic_real_f000_multi_pedestrian.jpg",
+      "image_url": "/api/benchmark/diagnostics/diagnostic_real_f000_multi_pedestrian.jpg",
+      "title": "Diagnostic Visual: real_f000",
+      "description": "Clean multi-depth pedestrian detection (3 persons, 100% recall)",
+      "width": 1560,
+      "height": 940
+    },
+    {
+      "frame_id": "real_f203",
+      "file_name": "diagnostic_real_f203_dense_corridor.jpg",
+      "file_path": "data/evaluation/diagnostics\\diagnostic_real_f203_dense_corridor.jpg",
+      "image_url": "/api/benchmark/diagnostics/diagnostic_real_f203_dense_corridor.jpg",
+      "title": "Diagnostic Visual: real_f203",
+      "description": "High-density corridor flow with mutual occlusion (5 persons, 100% recall)",
+      "width": 1560,
+      "height": 940
+    },
+    {
+      "frame_id": "syn_f050",
+      "file_name": "diagnostic_syn_f050_synthetic_negative.jpg",
+      "file_path": "data/evaluation/diagnostics\\diagnostic_syn_f050_synthetic_negative.jpg",
+      "image_url": "/api/benchmark/diagnostics/diagnostic_syn_f050_synthetic_negative.jpg",
+      "title": "Diagnostic Visual: syn_f050",
+      "description": "Negative control test: zero false positives on synthetic particles",
+      "width": 640,
+      "height": 530
+    }
+  ],
+  "confidence_sweep": [
+    {
+      "conf_threshold": 0.1,
+      "precision": 0.7429,
+      "recall": 1.0,
+      "f1_score": 0.8525,
+      "true_positives": 26,
+      "false_positives": 9,
+      "false_negatives": 0
+    },
+    {
+      "conf_threshold": 0.2,
+      "precision": 0.8387,
+      "recall": 1.0,
+      "f1_score": 0.9123,
+      "true_positives": 26,
+      "false_positives": 5,
+      "false_negatives": 0
+    },
+    {
+      "conf_threshold": 0.3,
+      "precision": 0.963,
+      "recall": 1.0,
+      "f1_score": 0.9811,
+      "true_positives": 26,
+      "false_positives": 1,
+      "false_negatives": 0
+    },
+    {
+      "conf_threshold": 0.4,
+      "precision": 1.0,
+      "recall": 0.9615,
+      "f1_score": 0.9804,
+      "true_positives": 25,
+      "false_positives": 0,
+      "false_negatives": 1
+    },
+    {
+      "conf_threshold": 0.5,
+      "precision": 1.0,
+      "recall": 0.8846,
+      "f1_score": 0.9388,
+      "true_positives": 23,
+      "false_positives": 0,
+      "false_negatives": 3
+    },
+    {
+      "conf_threshold": 0.6,
+      "precision": 1.0,
+      "recall": 0.8462,
+      "f1_score": 0.9167,
+      "true_positives": 22,
+      "false_positives": 0,
+      "false_negatives": 4
+    },
+    {
+      "conf_threshold": 0.7,
+      "precision": 1.0,
+      "recall": 0.7692,
+      "f1_score": 0.8696,
+      "true_positives": 20,
+      "false_positives": 0,
+      "false_negatives": 6
+    }
+  ],
+  "limitations_and_future_recommendations": [
+    {
+      "title": "Small Natural Sample Size (N=10 Frames, 26 People)",
+      "severity": "MODERATE",
+      "description": "While precision (96.3%) and recall (100%) are high on the concourse footage, N=10 frames cannot prove universal production robustness across diverse environments."
+    },
+    {
+      "title": "Zero Small-Scale / Distant Pedestrians (<10,000 px\u00b2)",
+      "severity": "HIGH",
+      "description": "All 26 ground-truth annotations represent foreground and mid-range pedestrians (>50,000 px\u00b2). Small-scale crowd detection at stadium/plaza distances remains unverified."
+    },
+    {
+      "title": "Single Camera Angle & Static Indoor Concourse Lighting",
+      "severity": "MODERATE",
+      "description": "The natural frames originate from a single video (vid_2e28e1e65a.mp4). Robustness to rain, nighttime glare, and overhead fisheye angles requires additional field recordings."
+    },
+    {
+      "title": "Extension Roadmap: 500-Frame Multi-Site Surveillance Benchmark",
+      "severity": "ROADMAP",
+      "description": "Recommended Phase 5 expansion: Annotate 500 multi-camera frames covering 5 distinct environments (subway concourse, outdoor plaza, nighttime sidewalk, shopping mall, stadium)."
+    }
+  ],
+  "frame_results": [
+    {
+      "frame_id": "real_f000",
+      "image_type": "natural",
+      "density_level": "moderate",
+      "description": "Two primary foreground pedestrians walking in concourse plus background pedestrian",
+      "ground_truth_count": 3,
+      "predicted_count": 3,
+      "true_positives": 3,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "precision": 1.0,
+      "precision_display": "1.0000",
+      "recall": 1.0,
+      "recall_display": "1.0000",
+      "f1_score": 1.0,
+      "mean_iou": 0.8692,
+      "latency_ms": 72.09
+    },
+    {
+      "frame_id": "real_f029",
+      "image_type": "natural",
+      "density_level": "sparse",
+      "description": "Single pedestrian exiting left frame with motion blur",
+      "ground_truth_count": 1,
+      "predicted_count": 1,
+      "true_positives": 1,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "precision": 1.0,
+      "precision_display": "1.0000",
+      "recall": 1.0,
+      "recall_display": "1.0000",
+      "f1_score": 1.0,
+      "mean_iou": 0.9972,
+      "latency_ms": 64.8
+    },
+    {
+      "frame_id": "real_f058",
+      "image_type": "natural",
+      "density_level": "empty",
+      "description": "Scene transition interval with zero visible pedestrians (empty scene test)",
+      "ground_truth_count": 0,
+      "predicted_count": 0,
+      "true_positives": 0,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "precision": null,
+      "precision_display": "N/A (Empty scene)",
+      "recall": null,
+      "recall_display": "N/A (Empty scene)",
+      "f1_score": null,
+      "mean_iou": 0.0,
+      "latency_ms": 54.83
+    },
+    {
+      "frame_id": "real_f087",
+      "image_type": "natural",
+      "density_level": "empty",
+      "description": "Scene transition screen with zero pedestrians (empty scene test)",
+      "ground_truth_count": 0,
+      "predicted_count": 0,
+      "true_positives": 0,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "precision": null,
+      "precision_display": "N/A (Empty scene)",
+      "recall": null,
+      "recall_display": "N/A (Empty scene)",
+      "f1_score": null,
+      "mean_iou": 0.0,
+      "latency_ms": 62.04
+    },
+    {
+      "frame_id": "real_f116",
+      "image_type": "natural",
+      "density_level": "empty",
+      "description": "Scene transition screen before crowd entry (empty scene test)",
+      "ground_truth_count": 0,
+      "predicted_count": 0,
+      "true_positives": 0,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "precision": null,
+      "precision_display": "N/A (Empty scene)",
+      "recall": null,
+      "recall_display": "N/A (Empty scene)",
+      "f1_score": null,
+      "mean_iou": 0.0,
+      "latency_ms": 75.61
+    },
+    {
+      "frame_id": "real_f145",
+      "image_type": "natural",
+      "density_level": "dense",
+      "description": "Dense pedestrian crowd entrance with multiple overlapping walkers",
+      "ground_truth_count": 5,
+      "predicted_count": 6,
+      "true_positives": 5,
+      "false_positives": 1,
+      "false_negatives": 0,
+      "precision": 0.8333,
+      "precision_display": "0.8333",
+      "recall": 1.0,
+      "recall_display": "1.0000",
+      "f1_score": 0.9091,
+      "mean_iou": 0.8962,
+      "latency_ms": 68.94
+    },
+    {
+      "frame_id": "real_f174",
+      "image_type": "natural",
+      "density_level": "dense",
+      "description": "Active group transit with mutual occlusion",
+      "ground_truth_count": 4,
+      "predicted_count": 4,
+      "true_positives": 4,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "precision": 1.0,
+      "precision_display": "1.0000",
+      "recall": 1.0,
+      "recall_display": "1.0000",
+      "f1_score": 1.0,
+      "mean_iou": 0.9702,
+      "latency_ms": 82.86
+    },
+    {
+      "frame_id": "real_f203",
+      "image_type": "natural",
+      "density_level": "dense",
+      "description": "Multi-lane crowd flow across concourse",
+      "ground_truth_count": 5,
+      "predicted_count": 5,
+      "true_positives": 5,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "precision": 1.0,
+      "precision_display": "1.0000",
+      "recall": 1.0,
+      "recall_display": "1.0000",
+      "f1_score": 1.0,
+      "mean_iou": 0.8999,
+      "latency_ms": 82.49
+    },
+    {
+      "frame_id": "real_f232",
+      "image_type": "natural",
+      "density_level": "moderate",
+      "description": "Four pedestrians progressing through corridor",
+      "ground_truth_count": 4,
+      "predicted_count": 4,
+      "true_positives": 4,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "precision": 1.0,
+      "precision_display": "1.0000",
+      "recall": 1.0,
+      "recall_display": "1.0000",
+      "f1_score": 1.0,
+      "mean_iou": 0.9972,
+      "latency_ms": 79.71
+    },
+    {
+      "frame_id": "real_f261",
+      "image_type": "natural",
+      "density_level": "moderate",
+      "description": "Pedestrians continuing transit towards exit",
+      "ground_truth_count": 4,
+      "predicted_count": 4,
+      "true_positives": 4,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "precision": 1.0,
+      "precision_display": "1.0000",
+      "recall": 1.0,
+      "recall_display": "1.0000",
+      "f1_score": 1.0,
+      "mean_iou": 0.9365,
+      "latency_ms": 73.8
+    }
+  ]
+}

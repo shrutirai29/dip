@@ -275,6 +275,20 @@ export const benchmarkApi = {
     });
     return res.data;
   },
+  getDetectionRobustness: async (): Promise<any> => {
+    const res = await api.get('/benchmark/detection-robustness');
+    return res.data;
+  },
+  runDetectionRobustness: async (confThreshold = 0.30, iouThreshold = 0.50, subset?: string): Promise<any> => {
+    const res = await api.post('/benchmark/run-detection-robustness', null, {
+      params: {
+        conf_threshold: confThreshold,
+        iou_threshold: iouThreshold,
+        subset: subset,
+      }
+    });
+    return res.data;
+  },
   getRiskValidation: async (): Promise<any> => {
     const res = await api.get('/benchmark/risk-validation');
     return res.data;
