@@ -392,7 +392,28 @@ export const benchmarkApi = {
     });
     return res.data;
   },
+  getPhase51Resilience: async (): Promise<any> => {
+    const res = await api.get('/benchmark/phase51-resilience');
+    return res.data;
+  },
+  runPhase51Resilience: async (): Promise<any> => {
+    const res = await api.post('/benchmark/run-phase51-resilience');
+    return res.data;
+  },
   getExportUrl: (): string => '/api/benchmark/export',
+};
+
+export const eventApi = {
+  getRecent: async (lastEventId?: string, limit = 50): Promise<{ count: number; last_event_id: string | null; events: any[] }> => {
+    const res = await api.get('/events/recent', {
+      params: { last_event_id: lastEventId, limit }
+    });
+    return res.data;
+  },
+  getStatus: async (): Promise<any> => {
+    const res = await api.get('/events/status');
+    return res.data;
+  }
 };
 
 export default api;

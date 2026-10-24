@@ -18,6 +18,7 @@ data/reports/*
 !data/reports/risk_engine_validation_results.json
 !data/reports/incident_lifecycle_validation_results.json
 !data/reports/operational_readiness_results.json
+!data/reports/realtime_delivery_and_resilience_results.json
 !data/reports/evidence/*
 !data/evaluation/diagnostics/*
 data/models/*

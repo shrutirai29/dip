@@ -316,6 +316,55 @@ def run_phase50_operational_readiness():
         )
 
 
+
+@router.get("/phase51-resilience")
+def get_phase51_resilience_report():
+    """
+    Retrieves the cached Phase 5.1 real-time event delivery and multi-camera resilience report.
+    Covers WebSocket push delivery, reconnection replay (?last_event_id), slow consumer queue bounding,
+    multi-stream throughput, camera disconnection/reconnection fault tolerance, and Category A-D deduplication.
+    """
+    try:
+        report = evaluation_service.get_phase51_resilience_report()
+        if not report:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Phase 5.1 resilience report not found."
+            )
+        return report
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error loading Phase 5.1 resilience report")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to load Phase 5.1 resilience report: {str(e)}"
+        )
+
+
+@router.post("/run-phase51-resilience")
+def run_phase51_resilience(
+    max_cameras: int = Query(4, ge=1, le=4),
+    duration_sec: float = Query(4.0, ge=2.0, le=10.0)
+):
+    """
+    Executes a fresh Phase 5.1 real-time event delivery and multi-camera resilience benchmark.
+    """
+    try:
+        return evaluation_service.run_phase51_multicamera_and_resilience_benchmark(
+            save_report=True,
+            max_cameras=max_cameras,
+            warmup_duration_sec=2.0,
+            measurement_duration_sec=duration_sec
+        )
+    except Exception as e:
+        logger.exception("Error executing Phase 5.1 resilience benchmark")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to execute Phase 5.1 resilience benchmark: {str(e)}"
+        )
+
+
 @router.get("/performance")
 def get_performance_benchmark():
     """
@@ -535,18 +584,20 @@ def export_evaluation_report():
         risk = evaluation_service.validate_heuristic_risk_scenarios()
         incident_lifecycle = evaluation_service.get_phase49_incident_lifecycle_report()
         operational_readiness = evaluation_service.get_phase50_operational_readiness_report()
+        phase51_resilience = evaluation_service.get_phase51_resilience_report()
         perf = evaluation_service.get_latest_benchmark_report()
         experiments = evaluation_service.get_optimization_experiment_report()
 
         export_data = {
             "title": "CROWDGUARD v2.0 - Comprehensive Operational Readiness, Benchmarks & Scenario Validation Report",
-            "version": "5.0.0",
+            "version": "5.1.0",
             "export_timestamp": evaluation_service.load_manifest().get("created_at"),
             "detection_accuracy": accuracy,
             "confidence_sweep": sweep,
             "risk_validation": risk,
             "incident_lifecycle_validation": incident_lifecycle,
             "operational_readiness": operational_readiness,
+            "phase51_resilience": phase51_resilience,
             "runtime_performance": perf,
             "sustained_performance": evaluation_service.get_latest_sustained_benchmark_report(),
             "optimization_experiments": experiments,

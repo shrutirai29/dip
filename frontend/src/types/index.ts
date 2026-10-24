@@ -87,6 +87,7 @@ export interface FrameRecord {
 export interface Incident {
   id: string;
   analysis_id: string;
+  camera_id?: string;
   frame_index: number;
   video_timestamp_sec: number;
   incident_type: string;

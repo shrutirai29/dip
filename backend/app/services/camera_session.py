@@ -168,6 +168,7 @@ class CameraSession:
 
         # Explicit timestamps and staleness tracking
         self._staleness_threshold_sec: float = self.config.staleness_threshold_sec
+        self._last_stale_flag: Optional[bool] = None
         self._latest_captured_timestamp: float = 0.0
         self._latest_captured_monotonic: float = 0.0
         self._latest_inference_start_monotonic: float = 0.0
@@ -217,12 +218,40 @@ class CameraSession:
             )
 
     def _set_state(self, new_state: str, error_msg: Optional[str] = None):
+        old_state = self._state
         with self._state_lock:
             self._state = new_state
             self._error_message = error_msg
             if new_state in (CameraState.IDLE, CameraState.DISCONNECTED, CameraState.ERROR):
                 self._measured_fps = 0.0
                 self._processing_fps = 0.0
+
+        if new_state != old_state:
+            try:
+                from app.services.event_broadcaster import event_broadcaster, RealtimeEventType
+                if new_state in (CameraState.DISCONNECTED, CameraState.ERROR):
+                    event_broadcaster.publish(
+                        event_type=RealtimeEventType.CAMERA_DISCONNECTED,
+                        camera_id=self.camera_id,
+                        data={
+                            "state": new_state,
+                            "error_message": error_msg,
+                            "camera_name": self.config.name
+                        }
+                    )
+                elif new_state == CameraState.CONNECTED and old_state in (
+                    CameraState.DISCONNECTED, CameraState.RECONNECTING, CameraState.CONNECTING, CameraState.ERROR
+                ):
+                    event_broadcaster.publish(
+                        event_type=RealtimeEventType.CAMERA_RECONNECTED,
+                        camera_id=self.camera_id,
+                        data={
+                            "state": new_state,
+                            "camera_name": self.config.name
+                        }
+                    )
+            except Exception as e:
+                logger.debug(f"Failed to publish camera state event: {e}")
 
     def start(self):
         """Starts the capture and inference threads for this camera session."""
@@ -921,6 +950,25 @@ class CameraSession:
                         self._processing_fps = fps_counter / elapsed
                         fps_start = now_t
                         fps_counter = 0
+
+                # Notify on staleness state transition
+                if self._last_stale_flag is not None and is_stale != self._last_stale_flag:
+                    self._last_stale_flag = is_stale
+                    try:
+                        from app.services.event_broadcaster import event_broadcaster, RealtimeEventType
+                        event_broadcaster.publish(
+                            event_type=RealtimeEventType.CAMERA_STALE_CHANGED,
+                            camera_id=self.camera_id,
+                            data={
+                                "is_stale": is_stale,
+                                "camera_name": self.config.name,
+                                "detection_age_seconds": round(det_age, 3)
+                            }
+                        )
+                    except Exception:
+                        pass
+                elif self._last_stale_flag is None:
+                    self._last_stale_flag = is_stale
 
             except Exception as e:
                 logger.exception(f"Error in inference worker on camera {self.camera_id}: {e}")

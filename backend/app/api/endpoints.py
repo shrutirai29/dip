@@ -18,10 +18,12 @@ from app.services.video_processor import VideoProcessor
 from app.services.report_service import ReportService
 from app.api.camera_endpoints import router as camera_router
 from app.api.multi_camera_endpoints import router as multi_camera_router
+from app.api.event_endpoints import router as event_router
 
 router = APIRouter()
 router.include_router(camera_router, prefix="/camera", tags=["Camera Ingestion"])
 router.include_router(multi_camera_router, prefix="/cameras", tags=["Multi-Camera Surveillance"])
+router.include_router(event_router, tags=["Realtime Events"])
 from app.api.benchmark_endpoints import router as benchmark_router
 router.include_router(benchmark_router, prefix="/benchmark", tags=["Evaluation"])
 
@@ -398,12 +400,45 @@ def update_incident(incident_id: str, payload: IncidentUpdate, db: Session = Dep
     inc = db.query(Incident).filter(Incident.id == incident_id).first()
     if not inc:
         raise HTTPException(status_code=404, detail="Incident not found")
+    old_status = inc.status
     if payload.status:
         inc.status = payload.status
     if payload.operator_notes is not None:
         inc.operator_notes = payload.operator_notes
     db.commit()
     db.refresh(inc)
+
+    # Publish real-time lifecycle event to WebSocket subscribers
+    from app.services.event_broadcaster import event_broadcaster, RealtimeEventType
+    if inc.status == "Acknowledged" and old_status != "Acknowledged":
+        event_broadcaster.publish(
+            event_type=RealtimeEventType.INCIDENT_ACKNOWLEDGED,
+            camera_id=inc.camera_id,
+            incident_id=inc.id,
+            hazard_type=inc.incident_type,
+            severity=inc.severity,
+            incident_status=inc.status,
+            data={
+                "operator_notes": inc.operator_notes,
+                "risk_score": inc.risk_score,
+                "region": inc.relevant_region
+            }
+        )
+    elif inc.status == "Resolved" and old_status != "Resolved":
+        event_broadcaster.publish(
+            event_type=RealtimeEventType.INCIDENT_RESOLVED,
+            camera_id=inc.camera_id,
+            incident_id=inc.id,
+            hazard_type=inc.incident_type,
+            severity=inc.severity,
+            incident_status=inc.status,
+            data={
+                "operator_notes": inc.operator_notes,
+                "risk_score": inc.risk_score,
+                "region": inc.relevant_region
+            }
+        )
+
     return inc
 
 @router.get("/analytics/summary")

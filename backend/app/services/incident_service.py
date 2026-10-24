@@ -257,6 +257,31 @@ class IncidentService:
                     self.db.rollback()
                     print(f"[IncidentService] Error updating continuing incident: {e}")
 
+            # Publish Category B continuing incident notification event
+            try:
+                from app.services.event_broadcaster import event_broadcaster, RealtimeEventType
+                event_broadcaster.publish(
+                    event_type=RealtimeEventType.INCIDENT_CONTINUATION,
+                    camera_id=camera_id,
+                    incident_id=existing_incident.id,
+                    hazard_type=incident_type,
+                    severity=severity,
+                    incident_status=existing_incident.status,
+                    is_continuation=True,
+                    repeat_event_count=updated_measurements.get("repeat_event_count", 1),
+                    data={
+                        "risk_score": existing_incident.risk_score,
+                        "forecast_risk": existing_incident.forecast_risk,
+                        "reason": reason,
+                        "action": action,
+                        "region": region,
+                        "measurements": updated_measurements
+                    },
+                    timestamp_sec=timestamp_sec
+                )
+            except Exception as e:
+                print(f"[IncidentService] Error broadcasting continuation event: {e}")
+
             accumulator.append(existing_incident)
             return
 
@@ -294,6 +319,31 @@ class IncidentService:
             except Exception as e:
                 self.db.rollback()
                 print(f"[IncidentService] Error persisting incident: {e}")
+
+        # Publish initial incident creation event to WebSocket subscribers
+        try:
+            from app.services.event_broadcaster import event_broadcaster, RealtimeEventType
+            event_broadcaster.publish(
+                event_type=RealtimeEventType.INCIDENT_CREATED,
+                camera_id=camera_id,
+                incident_id=incident.id,
+                hazard_type=incident_type,
+                severity=severity,
+                incident_status=incident.status,
+                is_continuation=False,
+                repeat_event_count=1,
+                data={
+                    "risk_score": incident.risk_score,
+                    "forecast_risk": incident.forecast_risk,
+                    "reason": reason,
+                    "action": action,
+                    "region": region,
+                    "measurements": measurements_copy
+                },
+                timestamp_sec=timestamp_sec
+            )
+        except Exception as e:
+            print(f"[IncidentService] Error broadcasting created event: {e}")
 
         self.active_incidents[key] = incident
         self.recent_incidents.append(incident)

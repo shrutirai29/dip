@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.database.session import engine, Base
 from app.api.endpoints import router as api_router
+from app.api.event_endpoints import router as event_router
 
 # Initialize database schema
 Base.metadata.create_all(bind=engine)
@@ -31,6 +32,7 @@ if os.path.exists(settings.SAMPLE_VIDEOS_DIR):
     app.mount("/data/sample_videos", StaticFiles(directory=settings.SAMPLE_VIDEOS_DIR), name="sample_videos")
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
+app.include_router(event_router)
 
 @app.get("/")
 def root():

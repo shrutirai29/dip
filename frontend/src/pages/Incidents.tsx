@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { incidentApi } from '../services/api';
 import { Incident } from '../types';
+import { realtimeClient, RealtimeEvent, ConnectionStatus } from '../services/websocket';
 import { 
   MetricStrip, 
   MetricItem, 
@@ -23,6 +24,8 @@ import {
 
 export const Incidents: React.FC = () => {
   const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [wsStatus, setWsStatus] = useState<ConnectionStatus>(realtimeClient.getStatus());
+  const [liveBanner, setLiveBanner] = useState<{ message: string; tone: 'rose' | 'amber' | 'emerald' | 'cyan' } | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [severityFilter, setSeverityFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -61,6 +64,96 @@ export const Incidents: React.FC = () => {
 
   useEffect(() => {
     loadIncidents();
+
+    const unsubStatus = realtimeClient.onStatusChange((status) => {
+      setWsStatus(status);
+      if (status === 'connected') {
+        loadIncidents(true);
+      }
+    });
+
+    const unsubEvents = realtimeClient.subscribe((event: RealtimeEvent) => {
+      if (event.event_type === 'incident_created') {
+        setLiveBanner({
+          message: `LIVE ALERT: ${event.hazard_type || 'Incident'} detected in ${event.data?.region || 'Sector'} (Risk: ${event.data?.risk_score || 'High'})`,
+          tone: event.severity === 'CRITICAL' ? 'rose' : 'amber'
+        });
+        setTimeout(() => setLiveBanner(null), 5000);
+
+        const newInc: Incident = {
+          id: event.incident_id || `inc_${Date.now()}`,
+          analysis_id: event.data?.analysis_id || 'live_stream',
+          camera_id: event.camera_id || undefined,
+          frame_index: 0,
+          video_timestamp_sec: 0,
+          incident_type: event.hazard_type || 'CRITICAL_RISK',
+          severity: ((event.severity || 'HIGH').toUpperCase() as any),
+          risk_score: event.data?.risk_score || 75.0,
+          forecast_risk: event.data?.forecast_risk || 80.0,
+          trigger_reason: event.data?.reason || 'Critical hazard condition sustained',
+          recommended_action: event.data?.action || 'Inspect sector immediately',
+          measurements: event.data?.measurements || {},
+          relevant_region: event.data?.region || 'Sector',
+          evidence_frame_path: undefined,
+          status: 'Open',
+          created_at: event.timestamp
+        };
+        setIncidents(prev => {
+          if (prev.some(i => i.id === newInc.id)) return prev;
+          return [newInc, ...prev];
+        });
+      } else if (event.event_type === 'incident_continuation') {
+        setLiveBanner({
+          message: `CONTINUING HAZARD (x${event.repeat_event_count || 2}): ${event.hazard_type || 'Incident'} sustained in ${event.data?.region || 'Sector'}`,
+          tone: 'amber'
+        });
+        setTimeout(() => setLiveBanner(null), 4000);
+
+        if (event.incident_id) {
+          setIncidents(prev => prev.map(inc => {
+            if (inc.id === event.incident_id) {
+              return {
+                ...inc,
+                risk_score: event.data?.risk_score !== undefined ? event.data.risk_score : inc.risk_score,
+                forecast_risk: event.data?.forecast_risk !== undefined ? event.data.forecast_risk : inc.forecast_risk,
+                measurements: {
+                  ...inc.measurements,
+                  ...(event.data?.measurements || {}),
+                  repeat_event_count: event.repeat_event_count,
+                  is_continuation: true
+                }
+              };
+            }
+            return inc;
+          }));
+        }
+      } else if (event.event_type === 'incident_acknowledged') {
+        if (event.incident_id) {
+          setIncidents(prev => prev.map(inc => inc.id === event.incident_id ? { ...inc, status: 'Acknowledged' } : inc));
+        }
+      } else if (event.event_type === 'incident_resolved') {
+        if (event.incident_id) {
+          setIncidents(prev => prev.map(inc => inc.id === event.incident_id ? { ...inc, status: 'Resolved' } : inc));
+        }
+      } else if (event.event_type === 'camera_disconnected') {
+        setLiveBanner({
+          message: `CAMERA OFFLINE: ${event.data?.camera_name || event.camera_id} disconnected`,
+          tone: 'rose'
+        });
+        setTimeout(() => setLiveBanner(null), 6000);
+      } else if (event.event_type === 'camera_reconnected') {
+        setLiveBanner({
+          message: `CAMERA RESTORED: ${event.data?.camera_name || event.camera_id} reconnected`,
+          tone: 'emerald'
+        });
+        setTimeout(() => setLiveBanner(null), 4000);
+      }
+    });
+
+    return () => {
+      unsubStatus();
+      unsubEvents();
+    };
   }, [loadIncidents]);
 
   const handleUpdateStatus = async (id: string, newStatus: string) => {
@@ -132,15 +225,53 @@ export const Incidents: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={() => loadIncidents(true)}
-          disabled={refreshing}
-          className="inline-flex items-center space-x-2 px-3 py-1.5 bg-white dark:bg-[#152729] hover:bg-[#F1F4F5] dark:hover:bg-[#1C3336] text-[#2F4454] dark:text-[#EDF4F5] border border-[#CBD5D8] dark:border-[#2C4B4E] shadow-2xs rounded-lg text-xs font-medium transition cursor-pointer self-start lg:self-auto"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-cyan-400' : ''}`} />
-          <span>Refresh Feed</span>
-        </button>
+        <div className="flex items-center space-x-3 self-start lg:self-auto">
+          <div className={`inline-flex items-center space-x-2 px-2.5 py-1 rounded-full text-[10px] font-mono border ${
+            wsStatus === 'connected' ? 'bg-emerald-950/40 text-emerald-300 border-emerald-500/40' :
+            wsStatus === 'connecting' ? 'bg-amber-950/40 text-amber-300 border-amber-500/40' :
+            wsStatus === 'error' ? 'bg-rose-950/40 text-rose-300 border-rose-500/40' :
+            'bg-slate-800 text-slate-300 border-slate-700'
+          }`}>
+            <span className={`w-2 h-2 rounded-full ${
+              wsStatus === 'connected' ? 'bg-emerald-400 animate-pulse' :
+              wsStatus === 'connecting' ? 'bg-amber-400 animate-ping' :
+              wsStatus === 'error' ? 'bg-rose-400' :
+              'bg-slate-400'
+            }`} />
+            <span className="uppercase font-semibold">
+              {wsStatus === 'connected' ? 'Live Stream (WS)' :
+               wsStatus === 'connecting' ? 'Connecting (WS)...' :
+               wsStatus === 'error' ? 'WS Reconnecting' : 'Polling (REST)'}
+            </span>
+          </div>
+
+          <button
+            onClick={() => loadIncidents(true)}
+            disabled={refreshing}
+            className="inline-flex items-center space-x-2 px-3 py-1.5 bg-white dark:bg-[#152729] hover:bg-[#F1F4F5] dark:hover:bg-[#1C3336] text-[#2F4454] dark:text-[#EDF4F5] border border-[#CBD5D8] dark:border-[#2C4B4E] shadow-2xs rounded-lg text-xs font-medium transition cursor-pointer"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-cyan-400' : ''}`} />
+            <span>Refresh Feed</span>
+          </button>
+        </div>
       </div>
+
+      {liveBanner && (
+        <div className={`p-3 rounded-xl border flex items-center justify-between text-xs font-mono ${
+          liveBanner.tone === 'rose' ? 'bg-rose-950/50 border-rose-500/40 text-rose-200' :
+          liveBanner.tone === 'amber' ? 'bg-amber-950/50 border-amber-500/40 text-amber-200' :
+          liveBanner.tone === 'emerald' ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-200' :
+          'bg-cyan-950/50 border-cyan-500/40 text-cyan-200'
+        }`}>
+          <div className="flex items-center space-x-2">
+            <span className="w-2 h-2 rounded-full bg-current animate-pulse" />
+            <span className="font-bold">{liveBanner.message}</span>
+          </div>
+          <button onClick={() => setLiveBanner(null)} className="text-[10px] text-slate-400 hover:text-white px-2 py-0.5 cursor-pointer">
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {errorMessage && (
         <ErrorState message={errorMessage} onRetry={() => loadIncidents(false)} />
