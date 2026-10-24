@@ -311,6 +311,14 @@ export const benchmarkApi = {
     const res = await api.post('/benchmark/run-incident-lifecycle-phase49');
     return res.data;
   },
+  getPhase50OperationalReadiness: async (): Promise<any> => {
+    const res = await api.get('/benchmark/operational-readiness-phase50');
+    return res.data;
+  },
+  runPhase50OperationalReadiness: async (): Promise<any> => {
+    const res = await api.post('/benchmark/run-operational-readiness-phase50');
+    return res.data;
+  },
   getPerformance: async (): Promise<any> => {
     const res = await api.get('/benchmark/performance');
     return res.data;

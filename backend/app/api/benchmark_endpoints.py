@@ -275,6 +275,47 @@ def run_phase49_incident_lifecycle():
         )
 
 
+@router.get("/operational-readiness-phase50")
+def get_phase50_operational_readiness():
+    """
+    Retrieves the cached Phase 5.0 comprehensive operational readiness report.
+    Covers 18 deterministic crowd scenarios, tracking continuity, detection evaluation,
+    end-to-end component latency percentiles, multi-camera scalability, continuing incident deduplication,
+    camera resilience, and operational readiness checklist verdicts.
+    """
+    try:
+        report = evaluation_service.get_phase50_operational_readiness_report()
+        if not report:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Phase 5.0 operational readiness report not found."
+            )
+        return report
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error retrieving Phase 5.0 operational readiness report")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve Phase 5.0 operational readiness report: {str(e)}"
+        )
+
+
+@router.post("/run-operational-readiness-phase50")
+def run_phase50_operational_readiness():
+    """
+    Executes a fresh Phase 5.0 comprehensive operational readiness and crowd scenario validation pass.
+    """
+    try:
+        return evaluation_service.validate_phase50_operational_readiness(save_report=True)
+    except Exception as e:
+        logger.exception("Error executing Phase 5.0 operational readiness validation")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to execute Phase 5.0 operational readiness validation: {str(e)}"
+        )
+
+
 @router.get("/performance")
 def get_performance_benchmark():
     """
@@ -493,17 +534,19 @@ def export_evaluation_report():
         sweep = evaluation_service.evaluate_confidence_sweep()
         risk = evaluation_service.validate_heuristic_risk_scenarios()
         incident_lifecycle = evaluation_service.get_phase49_incident_lifecycle_report()
+        operational_readiness = evaluation_service.get_phase50_operational_readiness_report()
         perf = evaluation_service.get_latest_benchmark_report()
         experiments = evaluation_service.get_optimization_experiment_report()
 
         export_data = {
-            "title": "CROWDGUARD v2.0 - Detection Accuracy, Performance, Risk Validation & Incident Lifecycle Report",
-            "version": "4.9.0",
+            "title": "CROWDGUARD v2.0 - Comprehensive Operational Readiness, Benchmarks & Scenario Validation Report",
+            "version": "5.0.0",
             "export_timestamp": evaluation_service.load_manifest().get("created_at"),
             "detection_accuracy": accuracy,
             "confidence_sweep": sweep,
             "risk_validation": risk,
             "incident_lifecycle_validation": incident_lifecycle,
+            "operational_readiness": operational_readiness,
             "runtime_performance": perf,
             "sustained_performance": evaluation_service.get_latest_sustained_benchmark_report(),
             "optimization_experiments": experiments,

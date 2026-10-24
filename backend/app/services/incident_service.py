@@ -34,13 +34,16 @@ class IncidentService:
         self.condition_counters: dict[tuple[str, str], int] = {}
         # Cooldown timer: (session_key, incident_type) -> last_triggered_video_sec
         self.cooldowns: dict[tuple[str, str], float] = {}
+        # Active incident tracking: (session_key, incident_type) -> active Incident instance
+        self.active_incidents: dict[tuple[str, str], Incident] = {}
         # Recent in-memory incidents cache for real-time telemetry publishing
         self.recent_incidents: list[Incident] = []
 
     def reset(self):
-        """Resets sustained counters and cooldown timers (e.g. on camera reconnection or benchmark start)."""
+        """Resets sustained counters, active incidents, and cooldown timers (e.g. on camera reconnection or benchmark start)."""
         self.condition_counters.clear()
         self.cooldowns.clear()
+        self.active_incidents.clear()
         self.recent_incidents.clear()
 
     def check_and_create_incidents(
@@ -219,6 +222,8 @@ class IncidentService:
             self.condition_counters[key] = self.condition_counters.get(key, 0) + 1
         else:
             self.condition_counters[key] = 0
+            # Condition normalized: clear active continuous incident session
+            self.active_incidents.pop(key, None)
             return
 
         # Condition must be sustained for minimum consecutive frames
@@ -232,6 +237,36 @@ class IncidentService:
 
         self.cooldowns[key] = timestamp_sec
 
+        # Stage 5 Deduplication: If hazard is already active, update existing incident
+        # (continuing incident Category A / repeated notification Category B)
+        # rather than creating redundant new ticket records.
+        if key in self.active_incidents:
+            existing_incident = self.active_incidents[key]
+            updated_measurements = dict(existing_incident.measurements or {})
+            updated_measurements["repeat_event_count"] = updated_measurements.get("repeat_event_count", 1) + 1
+            updated_measurements["last_observed_sec"] = round(timestamp_sec, 2)
+            updated_measurements["is_continuation"] = True
+            existing_incident.measurements = updated_measurements
+            existing_incident.risk_score = max(existing_incident.risk_score, round(risk_score, 1))
+            existing_incident.forecast_risk = round(forecast_risk, 1)
+
+            if self.db is not None:
+                try:
+                    self.db.commit()
+                except Exception as e:
+                    self.db.rollback()
+                    print(f"[IncidentService] Error updating continuing incident: {e}")
+
+            accumulator.append(existing_incident)
+            return
+
+        # Category C / Initial Onset: Create fresh incident record
+        measurements_copy = dict(measurements) if measurements else {}
+        measurements_copy["repeat_event_count"] = 1
+        measurements_copy["first_observed_sec"] = round(timestamp_sec, 2)
+        measurements_copy["last_observed_sec"] = round(timestamp_sec, 2)
+        measurements_copy["is_continuation"] = False
+
         incident = Incident(
             id=f"inc_{uuid.uuid4().hex[:10]}",
             analysis_id=analysis_id,
@@ -244,7 +279,7 @@ class IncidentService:
             forecast_risk=round(forecast_risk, 1),
             trigger_reason=reason,
             recommended_action=action,
-            measurements=measurements,
+            measurements=measurements_copy,
             relevant_region=region,
             evidence_frame_path=evidence_path,
             status="Open",
@@ -260,5 +295,6 @@ class IncidentService:
                 self.db.rollback()
                 print(f"[IncidentService] Error persisting incident: {e}")
 
+        self.active_incidents[key] = incident
         self.recent_incidents.append(incident)
         accumulator.append(incident)
