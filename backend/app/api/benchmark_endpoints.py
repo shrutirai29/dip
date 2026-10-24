@@ -365,6 +365,48 @@ def run_phase51_resilience(
         )
 
 
+
+
+@router.get("/phase52-reliability")
+def get_phase52_reliability_report():
+    """
+    Retrieves the cached Phase 5.2 reliability under load and physical crowd intelligence report.
+    Covers end-to-end 7-stage event delivery latencies, frame-dropping vs critical event detection
+    across 3 queue policies and 7 scenarios, sustained multi-camera stress test, and planar homography
+    ground-plane metrology (physical density in persons/m2 and pedestrian speeds in m/s).
+    """
+    try:
+        report = evaluation_service.get_phase52_report()
+        if not report:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Phase 5.2 reliability and physical intelligence report not found."
+            )
+        return report
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error loading Phase 5.2 reliability report")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to load Phase 5.2 reliability report: {str(e)}"
+        )
+
+
+@router.post("/run-phase52-reliability")
+def run_phase52_reliability():
+    """
+    Executes a fresh Phase 5.2 reliability under load and physical crowd intelligence benchmark pass.
+    """
+    try:
+        return evaluation_service.run_phase52_reliability_and_physical_intelligence_benchmark(save_report=True)
+    except Exception as e:
+        logger.exception("Error executing Phase 5.2 reliability benchmark")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to execute Phase 5.2 reliability benchmark: {str(e)}"
+        )
+
 @router.get("/performance")
 def get_performance_benchmark():
     """

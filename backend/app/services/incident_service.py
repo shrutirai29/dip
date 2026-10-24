@@ -215,6 +215,8 @@ class IncidentService:
         region: str,
         evidence_path: str
     ):
+        import time
+        t_hazard_detected_mono = time.perf_counter()
         session_key = analysis_id or camera_id or "default_session"
         key = (session_key, incident_type)
         
@@ -235,6 +237,7 @@ class IncidentService:
         if timestamp_sec - last_time < self.cooldown_sec:
             return
 
+        t_alert_decision_mono = time.perf_counter()
         self.cooldowns[key] = timestamp_sec
 
         # Stage 5 Deduplication: If hazard is already active, update existing incident
@@ -277,7 +280,12 @@ class IncidentService:
                         "region": region,
                         "measurements": updated_measurements
                     },
-                    timestamp_sec=timestamp_sec
+                    timestamp_sec=timestamp_sec,
+                    stage_timings={
+                        "t_hazard_detected_mono": t_hazard_detected_mono,
+                        "t_alert_decision_mono": t_alert_decision_mono,
+                        "t_event_created_mono": time.perf_counter()
+                    }
                 )
             except Exception as e:
                 print(f"[IncidentService] Error broadcasting continuation event: {e}")
@@ -340,7 +348,12 @@ class IncidentService:
                     "region": region,
                     "measurements": measurements_copy
                 },
-                timestamp_sec=timestamp_sec
+                timestamp_sec=timestamp_sec,
+                stage_timings={
+                    "t_hazard_detected_mono": t_hazard_detected_mono,
+                    "t_alert_decision_mono": t_alert_decision_mono,
+                    "t_event_created_mono": time.perf_counter()
+                }
             )
         except Exception as e:
             print(f"[IncidentService] Error broadcasting created event: {e}")

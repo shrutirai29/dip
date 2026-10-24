@@ -24,10 +24,18 @@ class RealtimeEventType:
 
 class EventBroadcaster:
     """
-    Thread-safe, bounded, multi-subscriber WebSocket event broadcaster.
+    Thread-safe, bounded, multi-subscriber WebSocket event broadcaster with
+    microsecond monotonic delivery stage profiling (Phase 5.2 Track A).
+    
+    Delivery Stages Tracked:
+    Stage 1: Hazard condition detected (t_hazard_detected_mono)
+    Stage 2: Alert decision completed (t_alert_decision_mono)
+    Stage 3: Incident or continuation event created (t_event_created_mono)
+    Stage 4: Event published to broadcaster (t_published_mono)
+    Stage 5: Event transmitted to WebSocket client (t_sent_mono)
     
     Guarantees:
-    1. Bounded memory: Ring buffer of recent events (default maxlen=200) prevents memory leaks.
+    1. Bounded memory: Ring buffer of recent events (maxlen=200) prevents memory growth.
     2. Slow consumer isolation: Each subscriber has a bounded queue (maxsize=100). If a client
        fails to consume in time, oldest items are dropped for that client without blocking camera
        ingestion or affecting other subscribers.
@@ -52,11 +60,22 @@ class EventBroadcaster:
         # Event loop reference for sync thread publishing
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         
-        # Delivery metrics
+        # Delivery metrics & Stage latency profiling
         self._total_published: int = 0
         self._total_delivered: int = 0
         self._total_dropped_slow_consumers: int = 0
-        self._publication_latencies: deque[float] = deque(maxlen=100)
+        self._publication_latencies: deque[float] = deque(maxlen=200)
+        
+        # Stage latency buffers
+        self._lat_hazard_to_decision: deque[float] = deque(maxlen=200)
+        self._lat_decision_to_creation: deque[float] = deque(maxlen=200)
+        self._lat_creation_to_publication: deque[float] = deque(maxlen=200)
+        self._lat_publication_to_send: deque[float] = deque(maxlen=200)
+        self._lat_server_total: deque[float] = deque(maxlen=200)
+        
+        # Cold start (first 5 events) vs Warmed-up (subsequent events)
+        self._cold_start_latencies: List[float] = []
+        self._warmed_up_latencies: deque[float] = deque(maxlen=200)
 
     def set_event_loop(self, loop: asyncio.AbstractEventLoop):
         """Registers the running asyncio event loop."""
@@ -83,10 +102,11 @@ class EventBroadcaster:
         is_continuation: bool = False,
         repeat_event_count: int = 1,
         data: Optional[Dict[str, Any]] = None,
-        timestamp_sec: Optional[float] = None
+        timestamp_sec: Optional[float] = None,
+        stage_timings: Optional[Dict[str, float]] = None
     ) -> Dict[str, Any]:
         """
-        Publishes a real-time event to all connected subscribers.
+        Publishes a real-time event to all connected subscribers with monotonic stage timestamps.
         Can be called synchronously from any background worker thread.
         """
         now_wall = datetime.datetime.utcnow().isoformat() + "Z"
@@ -97,11 +117,24 @@ class EventBroadcaster:
         unique_suffix = uuid.uuid4().hex[:6]
         event_id = f"evt_{ts_ms}_{unique_suffix}"
         
+        # Reconcile stage timings (Stages 1-4)
+        timings = stage_timings or {}
+        t_hazard = timings.get("t_hazard_detected_mono", now_mono)
+        t_decision = timings.get("t_alert_decision_mono", now_mono)
+        t_created = timings.get("t_event_created_mono", now_mono)
+        t_published = now_mono
+
         event: Dict[str, Any] = {
             "event_id": event_id,
             "event_type": event_type,
             "timestamp": now_wall,
             "timestamp_mono": now_mono,
+            "stage_timings": {
+                "t_hazard_detected_mono": t_hazard,
+                "t_alert_decision_mono": t_decision,
+                "t_event_created_mono": t_created,
+                "t_published_mono": t_published
+            },
             "camera_id": camera_id,
             "incident_id": incident_id,
             "hazard_type": hazard_type,
@@ -178,23 +211,55 @@ class EventBroadcaster:
         logger.info(f"Unregistered WebSocket subscriber (active: {len(self._subscribers)})")
 
     async def _client_writer_loop(self, websocket: WebSocket, queue: asyncio.Queue):
-        """Pulls events from client queue and transmits over WebSocket."""
+        """Pulls events from client queue, computes stage latencies, and transmits over WebSocket."""
         try:
             while True:
                 event = await queue.get()
-                t_pub_mono = event.get("timestamp_mono", time.perf_counter())
-                t_now_mono = time.perf_counter()
-                pub_latency_ms = max(0.0, (t_now_mono - t_pub_mono) * 1000.0)
+                t_sent_mono = time.perf_counter()
                 
-                # Attach publication latency before sending
+                # Extract stage timings
+                stages = event.get("stage_timings", {})
+                t_hazard = stages.get("t_hazard_detected_mono", t_sent_mono)
+                t_decision = stages.get("t_alert_decision_mono", t_sent_mono)
+                t_created = stages.get("t_event_created_mono", t_sent_mono)
+                t_published = stages.get("t_published_mono", event.get("timestamp_mono", t_sent_mono))
+                
+                # Compute distinct server stage segments (ms)
+                haz_to_dec_ms = max(0.0, (t_decision - t_hazard) * 1000.0)
+                dec_to_create_ms = max(0.0, (t_created - t_decision) * 1000.0)
+                create_to_pub_ms = max(0.0, (t_published - t_created) * 1000.0)
+                pub_to_send_ms = max(0.0, (t_sent_mono - t_published) * 1000.0)
+                server_total_ms = max(0.0, (t_sent_mono - t_hazard) * 1000.0)
+                
+                # Record in metrics history
+                with self._lock:
+                    self._publication_latencies.append(pub_to_send_ms)
+                    self._lat_hazard_to_decision.append(haz_to_dec_ms)
+                    self._lat_decision_to_creation.append(dec_to_create_ms)
+                    self._lat_creation_to_publication.append(create_to_pub_ms)
+                    self._lat_publication_to_send.append(pub_to_send_ms)
+                    self._lat_server_total.append(server_total_ms)
+                    
+                    if len(self._cold_start_latencies) < 5:
+                        self._cold_start_latencies.append(server_total_ms)
+                    else:
+                        self._warmed_up_latencies.append(server_total_ms)
+
+                # Assemble payload with explicit delivery stage breakdown
                 send_payload = dict(event)
-                send_payload["delivery_latency_ms"] = round(pub_latency_ms, 3)
+                send_payload["delivery_latency_ms"] = round(pub_to_send_ms, 3)
+                send_payload["delivery_stages"] = {
+                    "stage1_hazard_to_decision_ms": round(haz_to_dec_ms, 3),
+                    "stage2_decision_to_creation_ms": round(dec_to_create_ms, 3),
+                    "stage3_creation_to_publication_ms": round(create_to_pub_ms, 3),
+                    "stage4_publication_to_send_ms": round(pub_to_send_ms, 3),
+                    "server_total_ms": round(server_total_ms, 3),
+                    "clock_domain": "server_monotonic (perf_counter)"
+                }
                 
                 await asyncio.wait_for(websocket.send_json(send_payload), timeout=2.0)
                 
                 self._total_delivered += 1
-                with self._lock:
-                    self._publication_latencies.append(pub_latency_ms)
                 queue.task_done()
         except (WebSocketDisconnect, ConnectionResetError, asyncio.CancelledError):
             pass
@@ -233,30 +298,52 @@ class EventBroadcaster:
             return events_list[-max(1, limit):]
 
     def get_status(self) -> Dict[str, Any]:
-        """Returns broadcaster operational telemetry."""
+        """Returns broadcaster operational telemetry and stage latency distributions."""
         with self._lock:
             active_clients = len(self._subscribers)
             buf_len = len(self._event_buffer)
             total_pub = self._total_published
             total_del = self._total_delivered
             dropped = self._total_dropped_slow_consumers
-            latencies = list(self._publication_latencies)
+            
+            pub_lats = list(self._publication_latencies)
+            server_totals = list(self._lat_server_total)
+            cold_lats = list(self._cold_start_latencies)
+            warm_lats = list(self._warmed_up_latencies)
 
-        mean_lat = round(sum(latencies) / max(1, len(latencies)), 3) if latencies else 0.0
-        p95_lat = round(sorted(latencies)[int(len(latencies) * 0.95)], 3) if len(latencies) >= 20 else mean_lat
+            def _summary(samples: List[float]) -> Dict[str, Any]:
+                if not samples:
+                    return {"mean": 0.0, "p50": 0.0, "p95": 0.0, "count": 0}
+                s_sorted = sorted(samples)
+                n = len(s_sorted)
+                mean_v = sum(s_sorted) / n
+                p50_v = s_sorted[n // 2]
+                p95_v = s_sorted[int(n * 0.95)] if n >= 20 else mean_v
+                return {
+                    "mean": round(mean_v, 3),
+                    "p50": round(p50_v, 3),
+                    "p95": round(p95_v, 3),
+                    "count": n
+                }
 
-        return {
-            "active_subscribers": active_clients,
-            "buffer_capacity": self._buffer_capacity,
-            "buffer_current_size": buf_len,
-            "total_events_published": total_pub,
-            "total_events_delivered": total_del,
-            "total_dropped_slow_consumers": dropped,
-            "publication_latency_ms": {
-                "mean": mean_lat,
-                "p95": p95_lat
+            return {
+                "active_subscribers": active_clients,
+                "buffer_capacity": self._buffer_capacity,
+                "buffer_current_size": buf_len,
+                "total_events_published": total_pub,
+                "total_events_delivered": total_del,
+                "total_dropped_slow_consumers": dropped,
+                "publication_latency_ms": _summary(pub_lats),
+                "server_total_latency_ms": _summary(server_totals),
+                "cold_start_latency_ms": _summary(cold_lats),
+                "warmed_up_latency_ms": _summary(warm_lats),
+                "stage_latencies_ms": {
+                    "hazard_to_decision": _summary(list(self._lat_hazard_to_decision)),
+                    "decision_to_creation": _summary(list(self._lat_decision_to_creation)),
+                    "creation_to_publication": _summary(list(self._lat_creation_to_publication)),
+                    "publication_to_send": _summary(list(self._lat_publication_to_send))
+                }
             }
-        }
 
     def reset(self):
         """Resets the broadcaster state (for testing)."""
@@ -266,6 +353,13 @@ class EventBroadcaster:
             self._total_delivered = 0
             self._total_dropped_slow_consumers = 0
             self._publication_latencies.clear()
+            self._lat_hazard_to_decision.clear()
+            self._lat_decision_to_creation.clear()
+            self._lat_creation_to_publication.clear()
+            self._lat_publication_to_send.clear()
+            self._lat_server_total.clear()
+            self._cold_start_latencies.clear()
+            self._warmed_up_latencies.clear()
 
 
 # Global singleton instance

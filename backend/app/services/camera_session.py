@@ -882,6 +882,17 @@ class CameraSession:
                     if len(self._latency_samples_raw_buffer_age) > MAX_SAMPLES:
                         self._latency_samples_raw_buffer_age.pop(0)
 
+                # Phase 5.2 Physical Intelligence Metrology (Planar ground-plane density and speed)
+                try:
+                    from app.services.calibration_service import calibration_service
+                    box_list = [[float(d[0]), float(d[1]), float(d[2]-d[0]), float(d[3]-d[1])] for d in confirmed_detections] if confirmed_detections else []
+                    track_list = [{'track_id': trk['id'], 'bbox': [float(trk['bbox'][0]), float(trk['bbox'][1]), float(trk['bbox'][2]-trk['bbox'][0]), float(trk['bbox'][3]-trk['bbox'][1])]} for trk in active_tracks]
+                    phys_density_data = calibration_service.calculate_physical_density(self.camera_id, box_list)
+                    phys_speed_data = calibration_service.update_and_calculate_speeds(self.camera_id, track_list, current_mono_time=publish_mono)
+                except Exception as e:
+                    phys_density_data = {'status': 'unavailable', 'is_calibrated': False, 'reason': str(e), 'density_persons_per_m2': None}
+                    phys_speed_data = {'status': 'unavailable', 'is_calibrated': False, 'reason': str(e), 'mean_speed_m_per_s': None}
+
                 # Assemble Telemetry Object
                 sched_telem = fair_inference_scheduler.get_telemetry(self.camera_id)
                 current_weight = sched_telem.get("priority_weight", 1.0)
@@ -934,6 +945,8 @@ class CameraSession:
                     "capture_to_alert_ms": round(self._last_capture_to_alert_ms, 2),
                     "active_alerts_count": len(self.incident_service.recent_incidents),
                     "latest_alert_type": self.incident_service.recent_incidents[-1].incident_type if self.incident_service.recent_incidents else None,
+                    "physical_density": phys_density_data,
+                    "physical_speed": phys_speed_data,
                 }
 
                 # Update published state thread-safely

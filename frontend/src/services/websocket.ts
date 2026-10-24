@@ -1,11 +1,8 @@
 /**
- * CROWDGUARD v2.0 — Phase 5.1 Real-Time WebSocket Client
+ * CROWDGUARD v2.0 — Phase 5.1 & Phase 5.2 Real-Time WebSocket Client
  * 
- * Provides resilient, low-latency push event delivery for:
- * - New incident creation
- * - Category B continuing hazard notifications
- * - Operator incident acknowledgement & resolution
- * - Camera connection / disconnection / staleness state changes
+ * Provides resilient, low-latency push event delivery and microsecond
+ * client-side stage profiling (Phase 5.2 Track A).
  * 
  * Features:
  * - Automatic reconnection with exponential backoff (1s - 10s)
@@ -13,6 +10,7 @@
  * - Client-side event deduplication via stable event_id tracking
  * - Ping / Pong heartbeat watchdog
  * - Graceful fallback to REST polling when disconnected
+ * - Microsecond client-side receipt-to-render latency instrumentation
  */
 
 export type RealtimeEventType =
@@ -24,6 +22,15 @@ export type RealtimeEventType =
   | 'camera_reconnected'
   | 'camera_stale_changed'
   | 'system_status';
+
+export interface DeliveryStages {
+  stage1_hazard_to_decision_ms?: number;
+  stage2_decision_to_creation_ms?: number;
+  stage3_creation_to_publication_ms?: number;
+  stage4_publication_to_send_ms?: number;
+  server_total_ms?: number;
+  clock_domain?: string;
+}
 
 export interface RealtimeEvent {
   event_id: string;
@@ -39,6 +46,9 @@ export interface RealtimeEvent {
   repeat_event_count?: number;
   data?: Record<string, any>;
   delivery_latency_ms?: number;
+  delivery_stages?: DeliveryStages;
+  browser_received_ms?: number;
+  browser_render_ms?: number;
   is_replay?: boolean;
 }
 
@@ -63,6 +73,9 @@ class RealtimeEventClient {
   private maxBackoffMs = 10000;
   private shouldReconnect = true;
 
+  // Phase 5.2 Track A: Client-side stage latency accounting (performance.now)
+  private clientRenderLatencies: number[] = [];
+
   constructor() {
     // Automatically connect when in browser environment
     if (typeof window !== 'undefined') {
@@ -76,6 +89,23 @@ class RealtimeEventClient {
 
   public getLastEventId(): string | null {
     return this.lastEventId;
+  }
+
+  public getClientStageMetrics(): { mean_ms: number; p50_ms: number; p95_ms: number; count: number } {
+    if (this.clientRenderLatencies.length === 0) {
+      return { mean_ms: 0.0, p50_ms: 0.0, p95_ms: 0.0, count: 0 };
+    }
+    const sorted = [...this.clientRenderLatencies].sort((a, b) => a - b);
+    const count = sorted.length;
+    const mean = sorted.reduce((sum, v) => sum + v, 0) / count;
+    const p50 = sorted[Math.floor(count * 0.5)];
+    const p95 = sorted[Math.min(count - 1, Math.floor(count * 0.95))];
+    return {
+      mean_ms: Math.round(mean * 1000) / 1000,
+      p50_ms: Math.round(p50 * 1000) / 1000,
+      p95_ms: Math.round(p95 * 1000) / 1000,
+      count
+    };
   }
 
   public subscribe(onEvent: EventCallback): () => void {
@@ -125,6 +155,7 @@ class RealtimeEventClient {
     };
 
     this.ws.onmessage = (event: MessageEvent) => {
+      const tReceive = typeof performance !== 'undefined' ? performance.now() : Date.now();
       try {
         const payload: RealtimeEvent = JSON.parse(event.data);
         if (payload.event_id) {
@@ -136,7 +167,9 @@ class RealtimeEventClient {
           this.lastEventId = payload.event_id;
         }
 
-        // Notify subscribers
+        payload.browser_received_ms = tReceive;
+
+        // Notify subscribers and measure browser render dispatch
         this.eventListeners.forEach((cb) => {
           try {
             cb(payload);
@@ -144,6 +177,14 @@ class RealtimeEventClient {
             console.error('[RealtimeEventClient] Listener exception:', e);
           }
         });
+
+        const tRender = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        const renderDelay = Math.max(0, tRender - tReceive);
+        payload.browser_render_ms = renderDelay;
+        this.clientRenderLatencies.push(renderDelay);
+        if (this.clientRenderLatencies.length > 200) {
+          this.clientRenderLatencies.shift();
+        }
       } catch (err) {
         console.warn('[RealtimeEventClient] Message parse error:', err);
       }
@@ -178,16 +219,23 @@ class RealtimeEventClient {
   private setStatus(newStatus: ConnectionStatus): void {
     if (this.status !== newStatus) {
       this.status = newStatus;
-      this.statusListeners.forEach((cb) => cb(newStatus));
+      this.statusListeners.forEach((cb) => {
+        try {
+          cb(newStatus);
+        } catch (e) {
+          console.error('[RealtimeEventClient] Status listener exception:', e);
+        }
+      });
     }
   }
 
-  private recordSeenEvent(eventId: string): void {
-    this.seenEventIds.add(eventId);
+  private recordSeenEvent(id: string): void {
+    this.seenEventIds.add(id);
     if (this.seenEventIds.size > this.maxSeenSize) {
-      const iter = this.seenEventIds.values();
-      const oldest = iter.next().value;
-      if (oldest) this.seenEventIds.delete(oldest);
+      const first = this.seenEventIds.values().next().value;
+      if (first) {
+        this.seenEventIds.delete(first);
+      }
     }
   }
 
@@ -195,7 +243,7 @@ class RealtimeEventClient {
     if (this.reconnectTimer) return;
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
-      this.backoffDelayMs = Math.min(this.backoffDelayMs * 2, this.maxBackoffMs);
+      this.backoffDelayMs = Math.min(this.backoffDelayMs * 1.5, this.maxBackoffMs);
       this.connect();
     }, this.backoffDelayMs);
   }
@@ -204,7 +252,7 @@ class RealtimeEventClient {
     this.heartbeatTimer = setInterval(() => {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         try {
-          this.ws.send(JSON.stringify({ type: 'ping' }));
+          this.ws.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
         } catch {}
       }
     }, 15000);

@@ -7,6 +7,7 @@ from app.core.config import settings
 from app.database.session import engine, Base
 from app.api.endpoints import router as api_router
 from app.api.event_endpoints import router as event_router
+from app.api.calibration_endpoints import calibration_router
 
 # Initialize database schema
 Base.metadata.create_all(bind=engine)
@@ -33,6 +34,7 @@ if os.path.exists(settings.SAMPLE_VIDEOS_DIR):
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 app.include_router(event_router)
+app.include_router(calibration_router)
 
 @app.get("/")
 def root():

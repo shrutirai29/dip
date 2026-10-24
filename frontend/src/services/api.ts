@@ -400,7 +400,48 @@ export const benchmarkApi = {
     const res = await api.post('/benchmark/run-phase51-resilience');
     return res.data;
   },
+  getPhase52Reliability: async (): Promise<any> => {
+    const res = await api.get('/benchmark/phase52-reliability');
+    return res.data;
+  },
+  runPhase52Reliability: async (): Promise<any> => {
+    const res = await api.post('/benchmark/run-phase52-reliability');
+    return res.data;
+  },
   getExportUrl: (): string => '/api/benchmark/export',
+};
+
+export const calibrationApi = {
+  get: async (cameraId: string): Promise<any> => {
+    const res = await api.get(`/calibration/${cameraId}`);
+    return res.data;
+  },
+  set: async (cameraId: string, payload: {
+    image_points: number[][];
+    ground_points: number[][];
+    image_width?: number;
+    image_height?: number;
+    units?: string;
+    ground_roi_polygon?: number[][];
+    notes?: string;
+  }): Promise<any> => {
+    const res = await api.post(`/calibration/${cameraId}`, payload);
+    return res.data;
+  },
+  validate: async (cameraId: string, payload: {
+    image_points: number[][];
+    ground_points: number[][];
+    image_width?: number;
+    image_height?: number;
+  }): Promise<any> => {
+    const res = await api.post(`/calibration/${cameraId}/validate`, payload);
+    return res.data;
+  },
+  reset: async (cameraId: string): Promise<any> => {
+    const res = await api.delete(`/calibration/${cameraId}`);
+    return res.data;
+  },
+  getReferenceFrameUrl: (cameraId: string): string => `/api/calibration/${cameraId}/reference-frame`,
 };
 
 export const eventApi = {

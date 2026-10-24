@@ -1,0 +1,86 @@
+{
+  "camera_id": "cam_synthetic_calib_p52",
+  "calibration_status": "valid",
+  "status_message": "Calibration valid. Reprojection error: 0.0 px (0.0 m).",
+  "is_calibrated": true,
+  "image_width": 1280,
+  "image_height": 720,
+  "units": "meters",
+  "image_points": [
+    [
+      200.0,
+      600.0
+    ],
+    [
+      1080.0,
+      600.0
+    ],
+    [
+      800.0,
+      200.0
+    ],
+    [
+      480.0,
+      200.0
+    ]
+  ],
+  "ground_points": [
+    [
+      0.0,
+      0.0
+    ],
+    [
+      10.0,
+      0.0
+    ],
+    [
+      10.0,
+      10.0
+    ],
+    [
+      0.0,
+      10.0
+    ]
+  ],
+  "homography_matrix": [
+    [
+      0.2499999999999968,
+      0.1749999999999978,
+      -154.99999999999798
+    ],
+    [
+      0.0,
+      -0.19999999999999754,
+      119.9999999999986
+    ],
+    [
+      0.0,
+      0.03499999999999956,
+      1.0
+    ]
+  ],
+  "reprojection_error_px": 0.0,
+  "reprojection_error_m": 0.0,
+  "ground_roi_polygon": [
+    [
+      0.0,
+      0.0
+    ],
+    [
+      10.0,
+      0.0
+    ],
+    [
+      10.0,
+      10.0
+    ],
+    [
+      0.0,
+      10.0
+    ]
+  ],
+  "ground_roi_area_m2": 100.0,
+  "version": "1.0.0",
+  "updated_at": "2026-10-24T09:51:54Z",
+  "notes": "Phase 5.2 Synthetic Ground Truth Calibration Test Quad (10m x 10m = 100 m2)"
+}

@@ -19,11 +19,13 @@ from app.services.report_service import ReportService
 from app.api.camera_endpoints import router as camera_router
 from app.api.multi_camera_endpoints import router as multi_camera_router
 from app.api.event_endpoints import router as event_router
+from app.api.calibration_endpoints import calibration_router
 
 router = APIRouter()
 router.include_router(camera_router, prefix="/camera", tags=["Camera Ingestion"])
 router.include_router(multi_camera_router, prefix="/cameras", tags=["Multi-Camera Surveillance"])
 router.include_router(event_router, tags=["Realtime Events"])
+router.include_router(calibration_router, tags=["Ground Plane Calibration"])
 from app.api.benchmark_endpoints import router as benchmark_router
 router.include_router(benchmark_router, prefix="/benchmark", tags=["Evaluation"])
 
