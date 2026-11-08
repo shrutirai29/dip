@@ -16,7 +16,7 @@ router = APIRouter()
 
 class CameraRegisterRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=64, description="Display name for the camera")
-    source_type: str = Field(..., pattern="^(webcam|rtsp)$", description="Camera source type ('webcam' or 'rtsp')")
+    source_type: str = Field(..., pattern="^(webcam|rtsp|file)$", description="Camera source type ('webcam', 'rtsp', or 'file')")
     device_index: Optional[int] = Field(0, ge=0, description="Local webcam device index")
     rtsp_url: Optional[str] = Field(None, description="RTSP feed URL for network cameras")
     username: Optional[str] = Field(None, max_length=64)

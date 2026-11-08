@@ -1,0 +1,145 @@
+{
+  "benchmark_metadata": {
+    "phase": "5.3A",
+    "benchmark_name": "Reproducible CPU Inference Baseline",
+    "timestamp_utc": "2026-10-24T14:28:08Z",
+    "device": "cpu",
+    "execution_provider": "PyTorch CPU Native",
+    "model_architecture": "YOLOv8n (Ultralytics)",
+    "model_weights_path": "yolov8n.pt",
+    "model_weights_sha256": "F59B3D833E2FF32E194B5BB8E08D211DC7C5BDF144B90D2C8412C47CCFC83B36",
+    "model_weights_bytes": 6549796,
+    "input_resolution": "640x640",
+    "conf_threshold": 0.25,
+    "iou_threshold": 0.5
+  },
+  "hardware_environment": {
+    "os_platform": "Windows-10-10.0.26300-SP0",
+    "os_system": "Windows",
+    "os_release": "10",
+    "cpu_processor": "Intel64 Family 6 Model 170 Stepping 4, GenuineIntel",
+    "cpu_physical_cores": 16,
+    "cpu_logical_cores": 22,
+    "ram_total_gb": 15.59,
+    "ram_available_gb": 1.45,
+    "python_version": "3.11.9",
+    "torch_version": "2.14.1+cpu",
+    "cuda_available": false,
+    "opencv_version": "5.0.0"
+  },
+  "model_loading_and_warmup": {
+    "load_duration_ms": 51.81,
+    "cold_start_warmup_duration_ms": 2325.78,
+    "warmup_policy": "Single-frame cold-start absorption on zero-filled 640x480 frame"
+  },
+  "pure_inference_benchmark": {
+    "trials_count": 50,
+    "total_elapsed_sec": 2.378,
+    "throughput_fps": 21.03,
+    "latency_mean_ms": 47.55,
+    "latency_p50_ms": 44.18,
+    "latency_p95_ms": 65.94,
+    "latency_p99_ms": 97.44,
+    "latency_min_ms": 35.74,
+    "latency_max_ms": 112.05
+  },
+  "end_to_end_pipeline_benchmark": {
+    "trials_count": 30,
+    "total_elapsed_sec": 3.527,
+    "pipeline_throughput_fps": 8.51,
+    "pipeline_latency_mean_ms": 117.56,
+    "pipeline_latency_p50_ms": 119.35,
+    "pipeline_latency_p95_ms": 133.96,
+    "pipeline_latency_p99_ms": 138.18,
+    "pipeline_latency_min_ms": 65.47,
+    "pipeline_latency_max_ms": 139.38,
+    "stage_latency_means_ms": {
+      "dip_preprocess_ms": 31.53,
+      "optical_flow_ms": 29.89,
+      "yolo_detection_ms": 55.32,
+      "bytetrack_update_ms": 0.14,
+      "density_analysis_ms": 0.28,
+      "risk_engine_ms": 0.39
+    }
+  },
+  "resource_footprint": {
+    "rss_memory_mb": 501.3,
+    "vms_memory_mb": 1202.39,
+    "system_ram_util_percent": 91.4
+  },
+  "detection_accuracy_baseline": {
+    "dataset_version": "1.0.0",
+    "total_frames_evaluated": 15,
+    "ground_truth_persons_count": 26,
+    "true_positives": 26,
+    "false_positives": 3,
+    "false_negatives": 0,
+    "precision": 0.8966,
+    "recall": 1.0,
+    "f1_score": 0.9455,
+    "mean_iou": 0.9381,
+    "category_metrics": {
+      "multi_person": {
+        "frames_count": 3,
+        "ground_truth_persons": 11,
+        "true_positives": 11,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "mean_iou": 0.9343
+      },
+      "sparse": {
+        "frames_count": 1,
+        "ground_truth_persons": 1,
+        "true_positives": 1,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "mean_iou": 0.9972
+      },
+      "empty": {
+        "frames_count": 3,
+        "ground_truth_persons": 0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0,
+        "mean_iou": 0.0
+      },
+      "dense_occluded": {
+        "frames_count": 3,
+        "ground_truth_persons": 14,
+        "true_positives": 14,
+        "false_positives": 3,
+        "false_negatives": 0,
+        "precision": 0.8235,
+        "recall": 1.0,
+        "f1_score": 0.9032,
+        "mean_iou": 0.9221
+      },
+      "synthetic_simulation": {
+        "frames_count": 5,
+        "ground_truth_persons": 0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0,
+        "mean_iou": 0.0
+      }
+    }
+  },
+  "unmeasured_dimensions_and_limitations": {
+    "tensorrt_directml_openvino": "NOT MEASURED in Phase 5.3A (Scheduled for Phase 5.3B)",
+    "real_world_field_surveyor_calibration": "NOT MEASURED (Surveyor physical ground-truth tape unavailable)",
+    "browser_display_scanout_latency": "NOT MEASURED (Client performance.now() measures JS event dispatch, not monitor scan-out)",
+    "multi_camera_concurrent_inference": "Anchored to Phase 5.1 CPU baseline (1.75 - 5.25 FPS/cam); synthetic dispatch (~249 dispatch/s) measures scheduler only"
+  }
+}

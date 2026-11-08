@@ -1,0 +1,255 @@
+{
+  "timestamp": "2026-10-25T04:53:59Z",
+  "phase": "5.7",
+  "milestone": "Final Evidence Audit & Demonstration Readiness",
+  "git_status": {
+    "branch": "fix/crowdguard-phase-5-2-benchmark-integrity",
+    "head": "8512cc83b900e2950075d6401eed7d3f9552431b",
+    "working_tree": "preserved_uncommitted"
+  },
+  "soak_test_audit": {
+    "status": "VERIFIED",
+    "duration_seconds": 900.01,
+    "total_checkpoints_sampled": 90,
+    "invariant_violations_count": 0,
+    "all_checkpoints_balanced": true,
+    "final_frame_accounting": {
+      "captured": 11794,
+      "processed_success": 3380,
+      "buffer_overwrites": 8413,
+      "rejected": 0,
+      "processing_failed": 0,
+      "pending": 0,
+      "in_flight": 1,
+      "disposition_sum": 11794,
+      "is_balanced": true,
+      "identity_formula": "captured = processed_success + buffer_overwrites + rejected + processing_failed + pending + in_flight"
+    },
+    "throughput_metrics": {
+      "sample_mean_input_fps": 13.15,
+      "sample_mean_processing_fps": 3.89,
+      "cumulative_overall_input_fps": 13.1,
+      "cumulative_overall_processing_fps": 3.76
+    },
+    "pipeline_latency_ms": {
+      "count": 90,
+      "mean": 323.71,
+      "p50": 321.34,
+      "p95": 533.3,
+      "min": 122.29,
+      "max": 2573.11,
+      "warm_p50_excl_cold_start": 320.22,
+      "warm_p95_excl_cold_start": 528.88,
+      "warm_max_excl_cold_start": 616.52
+    },
+    "cpu_utilization": {
+      "mean_percent": 57.68,
+      "peak_percent": 75.0,
+      "min_percent": 17.8,
+      "measurement_method": "psutil.Process and psutil.cpu_percent interval average across logical cores"
+    },
+    "memory_working_set_investigation": {
+      "initial_rss_mb": 275.46,
+      "sample_0_rss_mb": 415.08,
+      "peak_rss_mb": 483.52,
+      "peak_sample_index": 11,
+      "peak_elapsed_seconds": 121.8,
+      "min_rss_mb": 131.52,
+      "final_sample_rss_mb": 152.29,
+      "reported_final_rss_mb": 137.66,
+      "observed_rss_drift_mb": -137.8,
+      "working_set_transitions": [
+        {
+          "from_t": 11.8,
+          "to_t": 21.8,
+          "from_rss": 415.08,
+          "to_rss": 480.6,
+          "delta_mb": 65.5,
+          "event": "Warmup and buffer initialization"
+        },
+        {
+          "from_t": 522.1,
+          "to_t": 532.1,
+          "from_rss": 471.74,
+          "to_rss": 270.46,
+          "delta_mb": -201.28,
+          "event": "Windows OS working set trimming"
+        },
+        {
+          "from_t": 822.6,
+          "to_t": 832.6,
+          "from_rss": 208.29,
+          "to_rss": 131.52,
+          "delta_mb": -76.77,
+          "event": "Windows OS working set trimming"
+        }
+      ],
+      "technical_root_cause": "The RSS decrease from 275.46 MB to 137.66 MB reflects Windows OS Memory Manager Working Set Trimming rather than Python heap destruction. In Windows, psutil.memory_info().rss measures physical memory pages resident in the process working set. Under background execution and standard Windows paging heuristics, clean inactive memory pages (such as PyTorch model code and DLL mappings) are trimmed from the resident working set to the standby page pool without terminating or degrading the process. Zero frame dropouts or processing errors occurred following either trim event. While this confirms the absence of catastrophic unbounded memory growth, working set size fluctuates according to OS memory manager policies rather than pure application heap allocation."
+    },
+    "telemetry_metric_classification": {
+      "rss_memory_mb": "Instantaneous point-in-time sample from process.memory_info().rss",
+      "cpu_percent": "Interval average calculated over the 10-second sampling period",
+      "input_fps": "Windowed moving average over the preceding 1.0 second capture window",
+      "processing_fps": "Windowed moving average over the preceding 1.0 second processing window",
+      "frames_captured": "Cumulative monotonic frame counter since session start",
+      "frames_processed_success": "Cumulative monotonic frame counter since session start",
+      "buffer_overwrites": "Cumulative monotonic overwrite counter since session start",
+      "accounting_identity_holds": "Instantaneous invariant evaluation at checkpoint"
+    }
+  },
+  "browser_audit": {
+    "status": "VERIFIED_EMPIRICAL",
+    "browser_user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+    "high_res_timer_supported": true,
+    "request_animation_frame_supported": true,
+    "websocket_rtt_ms": {
+      "count": 25,
+      "mean_ms": 127.608,
+      "p50_ms": 0.9,
+      "p95_ms": 538.2,
+      "max_ms": 599.3,
+      "min_ms": 0.6
+    },
+    "browser_receipt_to_render_dispatch_ms": {
+      "count": 15,
+      "mean_ms": 0.073,
+      "p50_ms": 0,
+      "p95_ms": 0.4,
+      "max_ms": 0.4,
+      "min_ms": 0
+    },
+    "browser_receipt_to_raf_paint_ms": {
+      "count": 15,
+      "mean_ms": 4.473,
+      "p50_ms": 0.4,
+      "p95_ms": 15.6,
+      "max_ms": 15.6,
+      "min_ms": 0.1
+    },
+    "duplicate_events_rejected": 1,
+    "background_tab_throttling_note": "Browser requestAnimationFrame is clamped to ~1 Hz when tab is hidden or backgrounded by design to save GPU resources; active tab achieves 60-120 Hz paint commits.",
+    "clock_synchronization_integrity": "All browser timings are measured entirely inside the browser's performance.now() microsecond domain. Server and browser clocks were NOT subtracted cross-domain."
+  },
+  "multicamera_audit": {
+    "status": "VERIFIED_SOFTWARE_ISOLATION",
+    "evaluation_type": "Programmatic Software State-Machine Isolation Unit Test",
+    "distinction": "Simulated Software Disconnect (programmatic state change via session._set_state(DISCONNECTED)) on simulated file feeds. This is NOT a physical hardware network cable pull or physical RTSP switch outage.",
+    "fps_claim_disclaimer": "No multi-camera hardware FPS throughput is claimed from this test. This test strictly verifies per-camera state machine isolation, anti-zeroing metadata persistence, and error message propagation.",
+    "camera_streams": [
+      {
+        "camera_name": "Zone A - West Gate",
+        "source_type": "file (simulated synthetic concourse)",
+        "state_before_fault": "STREAMING",
+        "state_during_fault": "STREAMING",
+        "state_after_fault": "STREAMING",
+        "captured_frames": 2,
+        "latest_frame_id": 2,
+        "impact_of_fault": "Zero impact; uninterrupted frame ingestion"
+      },
+      {
+        "camera_name": "Zone B - Central Plaza",
+        "source_type": "file (simulated synthetic turnstile)",
+        "state_before_fault": "STREAMING",
+        "state_during_fault": "DISCONNECTED",
+        "state_after_fault": "STREAMING (Recovered)",
+        "fault_injected": "Programmatic simulated network partition (session._set_state(DISCONNECTED, 'Simulated network partition'))",
+        "anti_zeroing_behavior": "Preserved last_frame_id=1, frames_captured=1, and captured timestamp without zeroing out telemetry",
+        "recovery_verified": "Reconnected cleanly to STREAMING; advanced to frame_id=2 upon resumption"
+      },
+      {
+        "camera_name": "Zone C - East Concourse",
+        "source_type": "file (simulated synthetic concourse)",
+        "state_before_fault": "STREAMING",
+        "state_during_fault": "STREAMING",
+        "state_after_fault": "STREAMING",
+        "captured_frames": 2,
+        "latest_frame_id": 2,
+        "impact_of_fault": "Zero impact; uninterrupted frame ingestion"
+      }
+    ]
+  },
+  "detection_and_risk": {
+    "detection_audit": {
+      "dataset_provenance": {
+        "dataset_version": "1.0.0",
+        "dataset_name": "CROWDGUARD Ground Truth Evaluation Benchmark",
+        "dataset_path": "data/evaluation/manifest.json",
+        "total_frames": 15,
+        "natural_frames": 10,
+        "synthetic_frames": 5,
+        "total_ground_truth_persons": 26,
+        "model_name": "yolov8n.pt",
+        "conf_threshold": 0.3,
+        "iou_threshold": 0.5,
+        "imgsz": 640
+      },
+      "stratified_results": {
+        "natural_surveillance": {
+          "source": "data/uploads/vid_2e28e1e65a.mp4 (1560x890 concourse camera)",
+          "frames_count": 10,
+          "ground_truth_persons": 26,
+          "true_positives": 26,
+          "false_positives": 1,
+          "false_negatives": 0,
+          "precision": 0.963,
+          "recall": 1.0,
+          "f1_score": 0.9811,
+          "macro_mean_iou": 0.9381
+        },
+        "synthetic_simulation": {
+          "source": "data/sample_videos/crowd_bottleneck_demo.mp4 (640x480 geometric particles)",
+          "frames_count": 5,
+          "ground_truth_persons": 0,
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 0,
+          "precision": "N/A (True Negative Scene test: 0 GT, 0 Pred)",
+          "specificity": 1.0,
+          "rejection_rate": "100% (All 5 synthetic particle frames correctly yielded 0 false person detections)"
+        },
+        "overall_combined": {
+          "frames_count": 15,
+          "ground_truth_persons": 26,
+          "true_positives": 26,
+          "false_positives": 1,
+          "false_negatives": 0,
+          "precision": 0.963,
+          "recall": 1.0,
+          "f1_score": 0.9811,
+          "macro_mean_iou": 0.9381
+        }
+      },
+      "sample_size_limitation": "The evaluation dataset consists of exactly 15 frames with 26 ground truth annotations. While highly suitable for regression testing and CI verification, it is statistically insufficient to claim broad field generalizability across diverse weather, lighting, camera angles, or dense occlusions. Production deployment requires expanding the benchmark to at least 500+ operational frames across diverse CCTV viewpoints."
+    },
+    "risk_engine_audit": {
+      "status": "VERIFIED_DETERMINISTIC",
+      "heuristic_classification": "Explainable Heuristic Index [0, 100]",
+      "probability_disclaimer": "The crowd risk score is explicitly a weighted heuristic index [0, 100], NOT an actuarial stampede probability or disaster likelihood estimate.",
+      "formula_weights": {
+        "density_occupancy_weight": 0.35,
+        "growth_rate_weight": 0.2,
+        "motion_anomaly_weight": 0.25,
+        "spatial_congestion_weight": 0.2
+      },
+      "scenarios_evaluated": 11,
+      "scenarios_passed": 11
+    }
+  },
+  "regression_testing": {
+    "backend_tests": {
+      "passed": 252,
+      "skipped": 1,
+      "failed": 0,
+      "duration_seconds": 565.35
+    },
+    "frontend_build": {
+      "status": "SUCCESS",
+      "errors": 0
+    },
+    "frontend_lint": {
+      "status": "SUCCESS",
+      "errors": 0,
+      "warnings": 38
+    }
+  }
+}

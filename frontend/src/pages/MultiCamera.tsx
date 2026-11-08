@@ -33,7 +33,7 @@ export const MultiCameraPage: React.FC = () => {
 
   // Form registration state
   const [formName, setFormName] = useState<string>('Live Webcam Node');
-  const [formType, setFormType] = useState<'webcam' | 'rtsp'>('webcam');
+  const [formType, setFormType] = useState<'webcam' | 'rtsp' | 'file'>('webcam');
   const [formDeviceIndex, setFormDeviceIndex] = useState<number>(0);
   const [formRtspUrl, setFormRtspUrl] = useState<string>('rtsp://127.0.0.1:8554/live/stream');
   const [formUsername, setFormUsername] = useState<string>('');
@@ -210,7 +210,9 @@ export const MultiCameraPage: React.FC = () => {
   };
 
   const stateColors: Record<string, string> = {
+    STREAMING: 'bg-[#EEF5F5] dark:bg-[#183133] text-[#376E6F] dark:text-[#6EC4C6] border-[#376E6F]/30 dark:border-[#376E6F]/40',
     CONNECTED: 'bg-[#EEF5F5] dark:bg-[#183133] text-[#376E6F] dark:text-[#6EC4C6] border-[#376E6F]/30 dark:border-[#376E6F]/40',
+    STALE: 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 animate-pulse',
     CONNECTING: 'bg-[#FDF3F5] dark:bg-[#2A161D] text-[#B34D66] dark:text-[#F0A4B8] border-[#DA7B93]/35 animate-pulse',
     RECONNECTING: 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 animate-pulse',
     DEGRADED: 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300',
@@ -383,7 +385,7 @@ export const MultiCameraPage: React.FC = () => {
                   <div className="absolute bottom-2 left-2 w-2.5 h-2.5 border-b-2 border-l-2 border-white/50 pointer-events-none z-10" />
                   <div className="absolute bottom-2 right-2 w-2.5 h-2.5 border-b-2 border-r-2 border-white/50 pointer-events-none z-10" />
 
-                  {cam.state === 'CONNECTED' ? (
+                  {cam.state === 'STREAMING' || cam.state === 'CONNECTED' || cam.state === 'STALE' || cam.state === 'DEGRADED' ? (
                     <>
                       <img
                         src={multiCameraApi.getStreamUrl(camId)}
@@ -436,30 +438,59 @@ export const MultiCameraPage: React.FC = () => {
                   <div className="px-1.5">
                     <span className="text-[9px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block font-sans font-medium">Observed</span>
                     <span className="text-xs font-bold text-[#1C3334] dark:text-[#EDF4F5] mt-0.5 block tabular-nums">
-                      {cam.person_count ?? 0}
-                      {isStale && <span className="text-[8px] text-amber-700 dark:text-amber-400 block font-sans font-normal">(Preserved)</span>}
+                      {cam.person_count !== null && cam.person_count !== undefined ? cam.person_count : '—'}
+                      {isStale && <span className="text-[8px] text-amber-700 dark:text-amber-400 block font-sans font-normal">(Stale)</span>}
                     </span>
                   </div>
                   <div className="px-1.5">
                     <span className="text-[9px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block font-sans font-medium">Risk Score</span>
                     <span className={`text-xs font-bold mt-0.5 block tabular-nums ${
-                      (cam.smoothed_risk_score ?? 0) >= 70 ? 'text-[#2E151B] dark:text-rose-400' :
-                      (cam.smoothed_risk_score ?? 0) >= 40 ? 'text-amber-700 dark:text-amber-400' : 'text-[#376E6F] dark:text-[#6EC4C6]'
+                      cam.smoothed_risk_score === null || cam.smoothed_risk_score === undefined ? 'text-slate-400' :
+                      cam.smoothed_risk_score >= 70 ? 'text-[#2E151B] dark:text-rose-400' :
+                      cam.smoothed_risk_score >= 40 ? 'text-amber-700 dark:text-amber-400' : 'text-[#376E6F] dark:text-[#6EC4C6]'
                     }`}>
-                      {(cam.smoothed_risk_score ?? 0).toFixed(1)}
+                      {cam.smoothed_risk_score !== null && cam.smoothed_risk_score !== undefined ? cam.smoothed_risk_score.toFixed(1) : 'UNAVAILABLE'}
                     </span>
                   </div>
                   <div className="px-1.5">
-                    <span className="text-[9px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block font-sans font-medium">Cap / Inf</span>
+                    <span className="text-[9px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block font-sans font-medium">Cap / Proc</span>
                     <span className="text-xs font-bold text-[#1C3334] dark:text-[#EDF4F5] mt-0.5 block tabular-nums">
-                      {cam.measured_fps.toFixed(0)}/{cam.processing_fps.toFixed(0)}
+                      {cam.measured_fps > 0 ? cam.measured_fps.toFixed(0) : '0'}/{cam.processing_fps > 0 ? cam.processing_fps.toFixed(0) : '0'}
                     </span>
                   </div>
                   <div className="px-1.5">
-                    <span className="text-[9px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block font-sans font-medium">Freshness</span>
-                    <span className={`text-xs font-bold mt-0.5 block tabular-nums ${isStale ? 'text-amber-700 dark:text-amber-400' : 'text-[#376E6F] dark:text-[#6EC4C6]'}`}>
-                      {detAge > 0 ? `${detAge.toFixed(1)}s` : '0.0s'}
+                    <span className="text-[9px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block font-sans font-medium">Backend</span>
+                    <span className="text-[10px] font-bold text-[#376E6F] dark:text-[#6EC4C6] mt-0.5 block truncate uppercase" title={cam.backend_fallback_occurred ? `Fallback: ${cam.backend_fallback_reason}` : (cam.inference_backend || 'PyTorch')}>
+                      {cam.inference_backend ? (cam.inference_backend.toLowerCase().includes('onnx') ? 'ONNX' : 'PyTorch') : 'PyTorch'}
+                      {cam.backend_fallback_occurred && <span className="text-[8px] text-amber-500 block">FB</span>}
                     </span>
+                  </div>
+                </div>
+
+                {/* Operational Readiness Metadata Sub-strip */}
+                <div className="px-3 py-1.5 bg-[#F1F3F5] dark:bg-[#0D181A] border-b border-[#E2DBD1] dark:border-[#203638] flex items-center justify-between text-[10px] font-mono text-[#5D757E] dark:text-[#A0B7BC]">
+                  <div className="flex items-center space-x-2">
+                    <span title="Age of latest available analysis result relative to capture timestamp">
+                      Age: {cam.is_active && detAge > 0 ? `${detAge.toFixed(1)}s` : '—'}
+                    </span>
+                    <span>•</span>
+                    <span title="Frames dropped or buffer overwrites due to downstream inference rate">
+                      Drops: {cam.buffer_overwrites ?? cam.frames_dropped ?? 0}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {(cam.active_incidents_count ?? 0) > 0 && (
+                      <span className="px-1.5 py-0.2 rounded bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 font-bold border border-rose-300 dark:border-rose-800 flex items-center space-x-1">
+                        <AlertTriangle className="w-2.5 h-2.5" />
+                        <span>{cam.active_incidents_count} Alert{(cam.active_incidents_count ?? 0) > 1 ? 's' : ''}</span>
+                      </span>
+                    )}
+                    {cam.state === 'STREAMING' && (
+                      <span className="flex items-center space-x-1 text-emerald-600 dark:text-emerald-400 font-sans font-medium text-[9px]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span>INGESTING</span>
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -583,17 +614,20 @@ export const MultiCameraPage: React.FC = () => {
                 <div className="p-2 rounded bg-white dark:bg-[#152729] border border-[#CBD5D8] dark:border-[#233C3F]">
                   <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] font-sans block">Observed Crowd</span>
                   <span className="font-bold text-[#1C3334] dark:text-[#EDF4F5] block mt-0.5">
-                    {selectedCameraForView.person_count ?? 0}
+                    {selectedCameraForView.person_count !== null && selectedCameraForView.person_count !== undefined ? selectedCameraForView.person_count : '—'}
                     {modalIsStale && <span className="text-[9px] text-amber-700 dark:text-amber-400 block font-sans font-normal">(Preserved)</span>}
                   </span>
                 </div>
                 <div className="p-2 rounded bg-white dark:bg-[#152729] border border-[#CBD5D8] dark:border-[#233C3F]">
                   <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] font-sans block">Risk Assessment</span>
                   <span className={`font-bold block mt-0.5 ${
-                    (selectedCameraForView.smoothed_risk_score ?? 0) >= 70 ? 'text-[#2E151B] dark:text-rose-400' :
-                    (selectedCameraForView.smoothed_risk_score ?? 0) >= 40 ? 'text-amber-700 dark:text-amber-400' : 'text-[#376E6F] dark:text-emerald-400'
+                    selectedCameraForView.smoothed_risk_score === null || selectedCameraForView.smoothed_risk_score === undefined ? 'text-slate-400' :
+                    selectedCameraForView.smoothed_risk_score >= 70 ? 'text-[#2E151B] dark:text-rose-400' :
+                    selectedCameraForView.smoothed_risk_score >= 40 ? 'text-amber-700 dark:text-amber-400' : 'text-[#376E6F] dark:text-emerald-400'
                   }`}>
-                    {(selectedCameraForView.smoothed_risk_score ?? 0).toFixed(1)} / 100
+                    {selectedCameraForView.smoothed_risk_score !== null && selectedCameraForView.smoothed_risk_score !== undefined
+                      ? `${selectedCameraForView.smoothed_risk_score.toFixed(1)} / 100`
+                      : 'UNAVAILABLE'}
                   </span>
                 </div>
                 <div className="p-2 rounded bg-white dark:bg-[#152729] border border-[#CBD5D8] dark:border-[#233C3F]">

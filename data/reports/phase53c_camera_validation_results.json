@@ -1,0 +1,121 @@
+{
+  "benchmark_metadata": {
+    "phase": "5.3C",
+    "benchmark_name": "Real-Time Camera Integration & Multi-Stream Validation",
+    "timestamp_utc": "2026-10-24T15:28:45Z",
+    "os_platform": "Windows-10-10.0.26300-SP0",
+    "cpu_processor": "Intel64 Family 6 Model 170 Stepping 4, GenuineIntel",
+    "hardware_webcam": {
+      "physical_webcam_detected": true,
+      "frame_read_successful": true,
+      "device_index": 0,
+      "frame_shape": [
+        480,
+        640,
+        3
+      ]
+    },
+    "resource_utilization": {
+      "process_rss_mb": 502.21,
+      "process_vms_mb": 1254.26,
+      "cpu_util_percent": 21.3,
+      "ram_util_percent": 88.1
+    }
+  },
+  "scenarios": {
+    "scenario_a_single_camera": {
+      "camera_id": "cam_5db740715d",
+      "source_type": "file",
+      "is_physical_hardware": false,
+      "test_duration_sec": 3.5,
+      "state_at_completion": "STREAMING",
+      "frames_captured": 79,
+      "frames_inferred": 10,
+      "frames_published": 9,
+      "buffer_overwrites": 68,
+      "measured_capture_fps": 25.0,
+      "processing_fps": 0.4,
+      "capture_to_published_p50_ms": 89.67,
+      "capture_to_published_p95_ms": 1579.11,
+      "pipeline_latency_p50_ms": 84.56,
+      "inference_backend": "pytorch",
+      "data_status": "available"
+    },
+    "scenario_b_concurrent_cameras": {
+      "concurrent_camera_count": 2,
+      "test_duration_sec": 3.5,
+      "cam1": {
+        "camera_id": "cam_00c7e83c22",
+        "frames_published": 20,
+        "processing_fps": 7.6,
+        "p50_latency_ms": 199.49
+      },
+      "cam2": {
+        "camera_id": "cam_ad1a387b4a",
+        "frames_published": 19,
+        "processing_fps": 7.8,
+        "p50_latency_ms": 204.98
+      },
+      "aggregate_processing_fps": 15.4,
+      "state_isolation_verified": true
+    },
+    "scenario_c_disconnection_resilience": {
+      "cam1_state_after_stop": "IDLE",
+      "cam1_data_status": "unavailable",
+      "cam1_risk_score_is_none": true,
+      "cam2_survived": true,
+      "cam2_frames_published": 15,
+      "cam2_processing_fps": 5.9,
+      "fault_containment_verified": true
+    },
+    "scenario_d_stale_detection": {
+      "staleness_threshold_sec": 0.5,
+      "elapsed_delay_sec": 0.701,
+      "is_stale_detected": true,
+      "reported_state": "STREAMING",
+      "data_status": "stale",
+      "risk_band": "High (Stale)",
+      "preserved_risk_score": 78.4,
+      "no_silent_zeroing_verified": true
+    },
+    "scenario_e_reconnection_backoff": {
+      "max_retries": 3,
+      "exponential_backoff_delays_sec": [
+        1.0,
+        2.0,
+        4.0
+      ],
+      "manual_interrupt_latency_ms": 0.019,
+      "pending_retry_cancelled_on_stop": true
+    },
+    "scenario_f_queue_boundedness": {
+      "frames_pushed": 25,
+      "frames_captured": 25,
+      "buffer_overwrites": 24,
+      "pending_frames": 1,
+      "accounting_identity_holds": true
+    },
+    "scenario_g_backend_fallback": {
+      "requested_backend": "onnx",
+      "active_backend": "pytorch",
+      "fallback_occurred": true,
+      "fallback_reason": "ONNX model file not found at 'nonexistent_invalid_path_abc123.onnx'",
+      "fallback_verified": true
+    },
+    "physical_webcam_validation": {
+      "status": "VALIDATED",
+      "device_index": 0,
+      "test_duration_sec": 3.0,
+      "frames_captured": 18,
+      "frames_published": 9,
+      "measured_capture_fps": 0.5,
+      "processing_fps": 0.4,
+      "capture_to_published_p50_ms": 114.13,
+      "capture_to_published_p95_ms": 156.41
+    },
+    "rtsp_physical_hardware_validation": {
+      "status": "NOT RUN (No external CCTV RTSP server connected)",
+      "note": "RTSP loopback security and client parsing validated via simulated test harness"
+    }
+  }
+}

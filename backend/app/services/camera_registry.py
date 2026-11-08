@@ -95,7 +95,7 @@ class CameraRegistryService:
 
             source_type_clean = source_type.lower().strip()
             if source_type_clean not in (CameraSourceType.WEBCAM, CameraSourceType.RTSP, CameraSourceType.FILE):
-                raise ValueError(f"Invalid source_type '{source_type}'. Must be 'webcam' or 'rtsp'.")
+                raise ValueError(f"Invalid source_type '{source_type}'. Must be 'webcam', 'rtsp', or 'file'.")
 
             # Validate RTSP parameters if source is RTSP
             if source_type_clean == CameraSourceType.RTSP:
@@ -172,7 +172,7 @@ class CameraRegistryService:
         return session.get_status()
 
     def remove_camera(self, camera_id: str) -> bool:
-        """Safely removes an inactive camera session from the registry."""
+        """Safely removes an inactive camera session from the registry, cancelling any pending reconnection attempts."""
         with self._lock:
             session = self._sessions.get(camera_id)
             if not session:
@@ -181,6 +181,7 @@ class CameraRegistryService:
             if session.is_active:
                 raise ValueError(f"Cannot remove active camera '{camera_id}'. Stop the camera first.")
 
+            session.stop()
             del self._sessions[camera_id]
             logger.info(f"Removed camera session {camera_id}.")
             return True

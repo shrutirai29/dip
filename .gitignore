@@ -1,4 +1,4 @@
-venv/
+﻿venv/
 __pycache__/
 *.pyc
 *.pyo
@@ -20,6 +20,19 @@ data/reports/*
 !data/reports/operational_readiness_results.json
 !data/reports/realtime_delivery_and_resilience_results.json
 !data/reports/phase52_reliability_results.json
+!data/reports/phase53a_cpu_baseline_results.json
+!data/reports/phase53b_onnx_runtime_results.json
+!data/reports/phase53c_camera_validation_results.json
+!data/reports/phase54_validation_results.json
+!data/reports/phase55_benchmark_audit_results.json
+!data/reports/phase56_soak_test_telemetry.json
+!data/reports/phase56_validation_results.json
+!data/reports/phase57_final_evidence_audit_results.json
+!data/reports/phase57_real_browser_latency_results.json
+!data/reports/demonstration_smoke_test_results.json
+!data/reports/forecast_evaluation_results.json
+!data/reports/*.png
+!data/reports/*.md
 !data/calibration/*
 !data/reports/evidence/*
 !data/evaluation/diagnostics/*
@@ -29,4 +42,3 @@ data/models/*
 *.pt
 *.crt
 *.key
-

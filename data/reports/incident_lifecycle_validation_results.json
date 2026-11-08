@@ -2,7 +2,7 @@
   "validation_status": "PASSED",
   "phase": "4.9",
   "title": "CROWDGUARD v2.0 Live Monitoring & Incident Lifecycle Validation",
-  "evaluated_at": "2026-10-24T06:38:06Z",
+  "evaluated_at": "2026-10-25T04:35:12Z",
   "total_stages_evaluated": 10,
   "stages_passed": 10,
   "stages_failed": 0,
@@ -92,7 +92,7 @@
       "category": "Incident Lifecycle & Persistence",
       "description": "Verifies complete operator incident workflow transitions from initial Open, operator Acknowledged, to Resolved with audit notes.",
       "inputs": {
-        "test_incident_id": "inc_test_lifecycle_aee352a6"
+        "test_incident_id": "inc_test_lifecycle_e6f44bf6"
       },
       "observed_metrics": {
         "initial_state": "Open",
@@ -109,7 +109,7 @@
       "category": "Evidence & Timestamps",
       "description": "Verifies keyframe evidence snapshot is generated, saved to filesystem, and retrieved cleanly with correct dimensions.",
       "inputs": {
-        "target_path": "data/reports/evidence\\evidence_test_inc_test_lifecycle_aee352a6.jpg"
+        "target_path": "data/reports/evidence\\evidence_test_inc_test_lifecycle_e6f44bf6.jpg"
       },
       "observed_metrics": {
         "file_exists": true,
@@ -129,9 +129,9 @@
         "clock_domains": "Monotonic (perf_counter) and UTC Wall Clock (time.time)"
       },
       "observed_metrics": {
-        "t_capture_to_infer_ms": 5.496,
-        "t_infer_to_risk_ms": 1.505,
-        "t_risk_to_alert_ms": 1.529,
+        "t_capture_to_infer_ms": 5.066,
+        "t_infer_to_risk_ms": 1.57,
+        "t_risk_to_alert_ms": 1.555,
         "strict_monotonicity_holds": true
       },
       "status": "PASSED",
@@ -182,11 +182,11 @@
         "iterations": 25
       },
       "observed_metrics": {
-        "mean_decision_ms": 0.051,
-        "p50_decision_ms": 0.048,
-        "p95_decision_ms": 0.062,
-        "min_decision_ms": 0.043,
-        "max_decision_ms": 0.087
+        "mean_decision_ms": 0.099,
+        "p50_decision_ms": 0.078,
+        "p95_decision_ms": 0.236,
+        "min_decision_ms": 0.065,
+        "max_decision_ms": 0.284
       },
       "status": "PASSED",
       "limitations": "Excludes disk I/O when persistence is deferred; SQLite transaction overhead adds ~2-5ms when writing to database."

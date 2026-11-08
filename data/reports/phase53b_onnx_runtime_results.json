@@ -1,0 +1,167 @@
+{
+  "benchmark_metadata": {
+    "phase": "5.3B",
+    "benchmark_name": "ONNX Runtime Inference Acceleration & Parity Benchmark",
+    "timestamp_utc": "2026-10-24T14:57:18Z",
+    "device": "cpu",
+    "execution_providers_tested": [
+      "PyTorch CPU Native",
+      "ONNX Runtime CPUExecutionProvider"
+    ],
+    "hardware": {
+      "os_platform": "Windows-10-10.0.26300-SP0",
+      "os_system": "Windows",
+      "os_release": "10",
+      "cpu_processor": "Intel64 Family 6 Model 170 Stepping 4, GenuineIntel",
+      "cpu_physical_cores": 16,
+      "cpu_logical_cores": 22,
+      "ram_total_gb": 15.59,
+      "ram_available_gb": 2.56,
+      "python_version": "3.11.9",
+      "torch_version": "2.14.1+cpu",
+      "onnx_version": "1.23.2",
+      "onnxruntime_version": "1.31.0",
+      "onnxruntime_providers": [
+        "AzureExecutionProvider",
+        "CPUExecutionProvider"
+      ],
+      "cuda_available": false,
+      "opencv_version": "5.0.0"
+    }
+  },
+  "model_artifacts": {
+    "pytorch": {
+      "file_path": "yolov8n.pt",
+      "file_size_bytes": 6549796,
+      "sha256": "F59B3D833E2FF32E194B5BB8E08D211DC7C5BDF144B90D2C8412C47CCFC83B36"
+    },
+    "onnx": {
+      "file_path": "yolov8n.onnx",
+      "file_size_bytes": 13053028,
+      "sha256": "8531D74BE387AD1A4C24D56B39E4025EB547A947BBF41EA1C22912DE12B68CF6",
+      "opset_version": 18
+    }
+  },
+  "cold_start_latencies_ms": {
+    "pytorch": {
+      "load_ms": 43.82,
+      "warmup_ms": 2186.42
+    },
+    "onnx": {
+      "load_ms": 121.91,
+      "warmup_ms": 69.85
+    }
+  },
+  "pure_inference_latencies": {
+    "trials_count": 100,
+    "pytorch_cpu": {
+      "throughput_fps": 14.44,
+      "mean_ms": 68.84,
+      "p50_ms": 66.38,
+      "p95_ms": 86.32,
+      "p99_ms": 100.61
+    },
+    "onnx_runtime_cpu": {
+      "throughput_fps": 21.5,
+      "mean_ms": 46.51,
+      "p50_ms": 41.13,
+      "p95_ms": 83.99,
+      "p99_ms": 110.98
+    },
+    "speedup_ratio": {
+      "latency_p50": 1.61,
+      "throughput_fps": 1.49
+    }
+  },
+  "detection_service_latencies": {
+    "trials_count": 100,
+    "pytorch_cpu": {
+      "throughput_fps": 11.78,
+      "mean_ms": 84.87,
+      "p50_ms": 75.46,
+      "p95_ms": 118.64
+    },
+    "onnx_runtime_cpu": {
+      "throughput_fps": 15.6,
+      "mean_ms": 64.08,
+      "p50_ms": 55.38,
+      "p95_ms": 105.49
+    }
+  },
+  "full_pipeline_benchmarks": {
+    "trials_count": 50,
+    "pytorch_cpu": {
+      "name": "PyTorch CPU",
+      "trials": 50,
+      "total_elapsed_sec": 7.962,
+      "pipeline_throughput_fps": 6.28,
+      "pipeline_latency_mean_ms": 159.24,
+      "pipeline_latency_p50_ms": 152.02,
+      "pipeline_latency_p95_ms": 239.66,
+      "pipeline_latency_p99_ms": 310.99,
+      "breakdown_ms": {
+        "dip_preprocess_ms": 31.34,
+        "optical_flow_ms": 36.7,
+        "detection_ms": 90.27,
+        "tracking_ms": 0.14,
+        "density_telemetry_ms": 0.28,
+        "risk_engine_ms": 0.49
+      }
+    },
+    "onnx_runtime_cpu": {
+      "name": "ONNX Runtime CPU",
+      "trials": 50,
+      "total_elapsed_sec": 6.313,
+      "pipeline_throughput_fps": 7.92,
+      "pipeline_latency_mean_ms": 126.26,
+      "pipeline_latency_p50_ms": 122.25,
+      "pipeline_latency_p95_ms": 191.64,
+      "pipeline_latency_p99_ms": 205.0,
+      "breakdown_ms": {
+        "dip_preprocess_ms": 27.84,
+        "optical_flow_ms": 30.28,
+        "detection_ms": 67.33,
+        "tracking_ms": 0.11,
+        "density_telemetry_ms": 0.26,
+        "risk_engine_ms": 0.43
+      }
+    },
+    "speedup_ratio": {
+      "pipeline_p50": 1.24,
+      "pipeline_fps": 1.26
+    }
+  },
+  "detection_accuracy_comparison": {
+    "manifest_frames_count": 15,
+    "pytorch_cpu": {
+      "precision": 0.963,
+      "recall": 1.0,
+      "f1_score": 0.9811,
+      "mean_iou": 0.9381,
+      "true_positives": 26,
+      "false_positives": 1,
+      "false_negatives": 0
+    },
+    "onnx_runtime_cpu": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "mean_iou": 0.9351,
+      "true_positives": 26,
+      "false_positives": 0,
+      "false_negatives": 0
+    },
+    "cross_backend_parity": {
+      "matching_count_rate": 0.9333,
+      "mean_cross_model_iou": 0.9817,
+      "mean_confidence_diff": 0.015,
+      "max_coordinate_pixel_diff": 225.0
+    }
+  },
+  "resource_utilization": {
+    "process_rss_mb": 658.48,
+    "process_vms_mb": 1410.46,
+    "system_cpu_util_percent": 68.8,
+    "system_ram_util_percent": 84.6
+  }
+}

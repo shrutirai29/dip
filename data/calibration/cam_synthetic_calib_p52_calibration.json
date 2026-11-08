@@ -81,6 +81,6 @@
   ],
   "ground_roi_area_m2": 100.0,
   "version": "1.0.0",
-  "updated_at": "2026-10-24T09:51:54Z",
+  "updated_at": "2026-10-25T04:36:34Z",
   "notes": "Phase 5.2 Synthetic Ground Truth Calibration Test Quad (10m x 10m = 100 m2)"
 }

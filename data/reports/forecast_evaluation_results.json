@@ -1,0 +1,34 @@
+{
+  "evaluation_title": "CROWDGUARD Short-Term Forecast Verification Report",
+  "split_methodology": "Held-out split by video sequence (strictly 0 adjacent-frame temporal leakage)",
+  "total_video_catalogs": 3,
+  "development_videos": 1,
+  "held_out_evaluation_videos": 2,
+  "horizons": {
+    "+5s": {
+      "valid_points": 150,
+      "missing_points": 100,
+      "model_mae": 27.8,
+      "model_rmse": 35.67,
+      "persistence_baseline_mae": 11.12,
+      "persistence_baseline_rmse": 12.86
+    },
+    "+10s": {
+      "valid_points": 24,
+      "missing_points": 226,
+      "model_mae": 27.21,
+      "model_rmse": 35.89,
+      "persistence_baseline_mae": 16.99,
+      "persistence_baseline_rmse": 17.03
+    },
+    "+15s": {
+      "valid_points": 0,
+      "missing_points": 250,
+      "model_mae": null,
+      "model_rmse": null,
+      "persistence_baseline_mae": null,
+      "persistence_baseline_rmse": null
+    }
+  },
+  "scientific_integrity_statement": "The evaluated forecast represents a linear trend projection of the heuristic risk index. Because real-world labeled crowd disaster benchmark datasets are not integrated into this local setup, these metrics benchmark mathematical trend stability and extrapolation error against the observed future composite risk score, NOT real-world disaster/stampede probability. No fabricated precision, recall, or disaster prediction percentages are claimed."
+}

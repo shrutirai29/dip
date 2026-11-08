@@ -4480,6 +4480,176 @@ class EvaluationService:
 
 
 
+    @staticmethod
+    def calculate_queue_throughput(
+        processed_frames: int,
+        elapsed_processing_seconds: float
+    ) -> float:
+        """
+        Calculates effective processing throughput (processed_frames / elapsed_processing_seconds).
+        Includes protective guards against zero/negative duration and empty input.
+        """
+        if elapsed_processing_seconds <= 0.0 or processed_frames <= 0:
+            return 0.0
+        return round(processed_frames / elapsed_processing_seconds, 2)
+
+    @classmethod
+    def simulate_queue_policy(
+        cls,
+        policy_name: str,
+        scenarios: dict,
+        capture_fps: float = 30.0,
+        inference_duration_ms: float = 100.0,
+        drain_queue_at_end: bool = True
+    ) -> dict:
+        """
+        Simulates frame arrival, queue ingestion, and asynchronous inference processing.
+        Properly accounts for all frames (input = processed + dropped + remaining_queued).
+        Measures total elapsed processing time including post-arrival queue drain.
+        """
+        import numpy as np
+        dt_arrive_ms = 1000.0 / max(0.001, capture_fps)
+        total_input = 0
+        total_proc = 0
+        total_drop = 0
+        total_queued = 0
+        total_missed = 0
+        total_arrival_ms = 0.0
+        total_elapsed_ms = 0.0
+        total_drain_ms = 0.0
+        latencies_to_alert = []
+        scen_results = {}
+
+        for s_id, s_data in scenarios.items():
+            n_frames = s_data.get("total_frames", 0)
+            haz_set = set(s_data.get("hazard_frames", []))
+            
+            q = []
+            worker_free_ms = 0.0
+            proc_count = 0
+            drop_count = 0
+            alert_detected = False
+            time_to_alert_ms = None
+            max_q_depth = 0
+
+            for f_idx in range(n_frames):
+                t_arrive = f_idx * dt_arrive_ms
+                is_haz = f_idx in haz_set
+
+                # Process any frames the worker could have completed before or at t_arrive
+                while len(q) > 0 and worker_free_ms <= t_arrive:
+                    proc_f, proc_t, proc_haz = q.pop(0)
+                    proc_count += 1
+                    start_t = max(worker_free_ms, proc_t)
+                    worker_free_ms = start_t + inference_duration_ms
+                    if proc_haz and not alert_detected:
+                        alert_detected = True
+                        time_to_alert_ms = round(worker_free_ms - proc_t, 2)
+                        latencies_to_alert.append(time_to_alert_ms)
+
+                # Enqueue arriving frame according to policy
+                if policy_name == "latest_frame_wins":
+                    if len(q) > 0:
+                        drop_count += len(q)
+                        q.clear()
+                    q.append((f_idx, t_arrive, is_haz))
+                elif policy_name == "bounded_fifo":
+                    if len(q) < 5:
+                        q.append((f_idx, t_arrive, is_haz))
+                    else:
+                        drop_count += 1
+                elif policy_name == "adaptive_sampling":
+                    should_sample = is_haz or (f_idx % 2 == 0)
+                    if should_sample:
+                        if len(q) < 3:
+                            q.append((f_idx, t_arrive, is_haz))
+                        else:
+                            q.pop(0)
+                            drop_count += 1
+                            q.append((f_idx, t_arrive, is_haz))
+                    else:
+                        drop_count += 1
+
+                max_q_depth = max(max_q_depth, len(q))
+
+                # If worker is currently idle, start frame from queue
+                if worker_free_ms <= t_arrive and len(q) > 0:
+                    proc_f, proc_t, proc_haz = q.pop(0)
+                    proc_count += 1
+                    start_t = max(worker_free_ms, proc_t)
+                    worker_free_ms = start_t + inference_duration_ms
+                    if proc_haz and not alert_detected:
+                        alert_detected = True
+                        time_to_alert_ms = round(worker_free_ms - proc_t, 2)
+                        latencies_to_alert.append(time_to_alert_ms)
+
+            arrival_end_ms = n_frames * dt_arrive_ms
+
+            # Drain queue if requested
+            if drain_queue_at_end:
+                while len(q) > 0:
+                    proc_f, proc_t, proc_haz = q.pop(0)
+                    proc_count += 1
+                    start_t = max(worker_free_ms, proc_t)
+                    worker_free_ms = start_t + inference_duration_ms
+                    if proc_haz and not alert_detected:
+                        alert_detected = True
+                        time_to_alert_ms = round(worker_free_ms - proc_t, 2)
+                        latencies_to_alert.append(time_to_alert_ms)
+
+            remaining_queued = len(q)
+            scen_drain_ms = max(0.0, worker_free_ms - arrival_end_ms) if drain_queue_at_end else 0.0
+
+            missed = not alert_detected if len(haz_set) > 0 else False
+            if missed:
+                total_missed += 1
+
+            total_input += n_frames
+            total_proc += proc_count
+            total_drop += drop_count
+            total_queued += remaining_queued
+            total_arrival_ms += arrival_end_ms
+            total_elapsed_ms += worker_free_ms
+            total_drain_ms += scen_drain_ms
+
+            scen_results[s_id] = {
+                "scenario_name": s_data.get("name", s_id),
+                "input_frames": n_frames,
+                "processed_frames": proc_count,
+                "dropped_frames": drop_count,
+                "remaining_queued_frames": remaining_queued,
+                "alert_detected": alert_detected,
+                "time_to_first_alert_ms": time_to_alert_ms,
+                "missed_scenario": missed,
+                "max_queue_depth": max_q_depth,
+                "arrival_duration_sec": round(arrival_end_ms / 1000.0, 3),
+                "elapsed_processing_sec": round(worker_free_ms / 1000.0, 3),
+                "drain_duration_sec": round(scen_drain_ms / 1000.0, 3)
+            }
+
+        elapsed_sec = total_elapsed_ms / 1000.0
+        effective_fps = cls.calculate_queue_throughput(total_proc, elapsed_sec)
+
+        return {
+            "policy_name": policy_name,
+            "total_input_frames": total_input,
+            "total_processed_frames": total_proc,
+            "total_dropped_frames": total_drop,
+            "frames_remaining_queued": total_queued,
+            "frames_in_flight": 0,
+            "drop_rate_percent": round((total_drop / max(1, total_input)) * 100.0, 1),
+            "stream_arrival_duration_sec": round(total_arrival_ms / 1000.0, 3),
+            "queue_drain_duration_sec": round(total_drain_ms / 1000.0, 3),
+            "total_elapsed_processing_sec": round(elapsed_sec, 3),
+            "effective_processing_fps": effective_fps,
+            "effective_inference_fps": effective_fps,  # Backwards-compatible alias
+            "workload_completed": total_queued == 0,
+            "accounting_verified": total_input == (total_proc + total_drop + total_queued),
+            "missed_scenarios_count": total_missed,
+            "mean_time_to_first_alert_ms": round(float(np.mean(latencies_to_alert)), 2) if latencies_to_alert else None,
+            "scenarios_breakdown": scen_results
+        }
+
     def run_phase52_reliability_and_physical_intelligence_benchmark(
         self,
         save_report: bool = True
@@ -4608,7 +4778,20 @@ class EvaluationService:
                 "stage2_decision_to_creation": _calc_stats(stage2_samples),
                 "stage3_creation_to_publication": _calc_stats(stage3_samples),
                 "stage4_publication_to_send": _calc_stats(stage4_samples),
-                "stage5_browser_receipt_to_render": _calc_stats(browser_sim_samples)
+                "stage5_browser_receipt_to_render": {
+                    **_calc_stats(browser_sim_samples),
+                    "is_simulated": True,
+                    "measurement_source": "simulated_formula",
+                    "measurement_mode": "headless_cli_simulation",
+                    "browser_measurement_available": False,
+                    "notes": "Simulated formula in headless CLI (0.28 - 0.40 ms). Real browser render measurement requires active DOM WebSocket client."
+                }
+            },
+            "browser_measurement_status": {
+                "browser_measurement_available": False,
+                "measurement_source": "simulated_formula",
+                "is_simulated": True,
+                "notes": "Headless backend CLI does not render a real browser DOM. Real browser render timings must be observed directly in browser console/UI via window.performance.now() and websocket client."
             },
             "clock_domains_specification": {
                 "server_timing": "Monotonic high-resolution clock (time.perf_counter()) on host server",
@@ -4674,126 +4857,31 @@ class EvaluationService:
         policies = ["latest_frame_wins", "bounded_fifo", "adaptive_sampling"]
         policy_comparison_results: Dict[str, Dict[str, Any]] = {}
 
-        # Capture rate: 30 FPS (33.3ms per frame). Inference rate: 10 FPS (100.0ms per frame).
-        # Under this realistic 3:1 capture-to-inference ratio:
         for pol in policies:
-            scen_results = {}
-            total_input = 0
-            total_proc = 0
-            total_drop = 0
-            total_missed = 0
-            latencies_to_alert = []
-
-            for s_id, s_data in scenarios.items():
-                n_frames = s_data["total_frames"]
-                haz_set = set(s_data["hazard_frames"])
-                is_brief = s_data["is_brief"]
-
-                # Queue simulation
-                # Frames arrive at t = i * 33.3 ms
-                # Inference takes 100 ms per processed frame
-                q = []
-                last_inf_finish = 0.0
-                proc_count = 0
-                drop_count = 0
-                alert_detected = False
-                time_to_alert_ms = None
-                max_q_depth = 0
-
-                for f_idx in range(n_frames):
-                    t_arrive = f_idx * 33.33
-                    is_haz = f_idx in haz_set
-
-                    if pol == "latest_frame_wins":
-                        # If queue not empty, overwrite (drop oldest)
-                        if len(q) > 0:
-                            drop_count += len(q)
-                            q.clear()
-                        q.append((f_idx, t_arrive, is_haz))
-                    elif pol == "bounded_fifo":
-                        # Queue cap 5, drop incoming if full
-                        if len(q) < 5:
-                            q.append((f_idx, t_arrive, is_haz))
-                        else:
-                            drop_count += 1
-                    elif pol == "adaptive_sampling":
-                        # If calm, take 1 in 2 frames; if hazard, take 1 in 1; queue cap 3
-                        should_sample = is_haz or (f_idx % 2 == 0)
-                        if should_sample:
-                            if len(q) < 3:
-                                q.append((f_idx, t_arrive, is_haz))
-                            else:
-                                # Replace oldest in adaptive queue
-                                q.pop(0)
-                                drop_count += 1
-                                q.append((f_idx, t_arrive, is_haz))
-                        else:
-                            drop_count += 1
-
-                    max_q_depth = max(max_q_depth, len(q))
-
-                    # If inference worker is idle, process next frame from queue
-                    if t_arrive >= last_inf_finish and len(q) > 0:
-                        proc_f_idx, proc_t_arr, proc_is_haz = q.pop(0)
-                        proc_count += 1
-                        last_inf_finish = t_arrive + 100.0  # 100 ms inference
-                        if proc_is_haz and not alert_detected:
-                            alert_detected = True
-                            # Alert latency: time from hazard frame arrival to inference completion
-                            time_to_alert_ms = round(last_inf_finish - proc_t_arr, 2)
-                            latencies_to_alert.append(time_to_alert_ms)
-
-                # Process remaining in queue after arrival stream stops
-                while len(q) > 0:
-                    proc_f_idx, proc_t_arr, proc_is_haz = q.pop(0)
-                    proc_count += 1
-                    last_inf_finish = max(last_inf_finish, proc_f_idx * 33.33) + 100.0
-                    if proc_is_haz and not alert_detected:
-                        alert_detected = True
-                        time_to_alert_ms = round(last_inf_finish - (proc_f_idx * 33.33), 2)
-                        latencies_to_alert.append(time_to_alert_ms)
-
-                missed = not alert_detected if len(haz_set) > 0 else False
-                if missed:
-                    total_missed += 1
-
-                total_input += n_frames
-                total_proc += proc_count
-                total_drop += drop_count
-
-                scen_results[s_id] = {
-                    "scenario_name": s_data["name"],
-                    "input_frames": n_frames,
-                    "processed_frames": proc_count,
-                    "dropped_frames": drop_count,
-                    "alert_detected": alert_detected,
-                    "time_to_first_alert_ms": time_to_alert_ms,
-                    "missed_scenario": missed,
-                    "max_queue_depth": max_q_depth
-                }
-
-            policy_comparison_results[pol] = {
-                "policy_name": pol,
-                "total_input_frames": total_input,
-                "total_processed_frames": total_proc,
-                "total_dropped_frames": total_drop,
-                "drop_rate_percent": round((total_drop / max(1, total_input)) * 100.0, 1),
-                "effective_inference_fps": round(total_proc / (total_input * 0.03333), 2),
-                "missed_scenarios_count": total_missed,
-                "mean_time_to_first_alert_ms": round(float(np.mean(latencies_to_alert)), 2) if latencies_to_alert else None,
-                "scenarios_breakdown": scen_results
-            }
+            policy_comparison_results[pol] = self.simulate_queue_policy(
+                policy_name=pol,
+                scenarios=scenarios,
+                capture_fps=30.0,
+                inference_duration_ms=100.0,
+                drain_queue_at_end=True
+            )
 
         track_a2_report = {
             "status": "PASSED",
             "capture_fps_simulated": 30.0,
             "inference_duration_ms_simulated": 100.0,
+            "throughput_calculation_formula": "processed_frames / elapsed_processing_seconds (including queue-drain interval)",
+            "timing_methodology_note": (
+                "Corrected in Phase 5.2.1: Throughput is calculated using total elapsed processing time, "
+                "including the post-arrival queue drain interval. Omitting queue drain previously divided by "
+                "arrival duration only, yielding an inflated 12.0 FPS calculation artifact in Phase 5.2."
+            ),
             "policies_evaluated": policy_comparison_results,
             "key_engineering_findings": (
-                "Latest-frame-wins achieves the lowest latency on sustained hazards (100-133 ms), "
+                "Latest-frame-wins achieves low alert latency on sustained hazards (100 ms) and runs at 10.0 FPS, "
                 "but can overwrite isolated 2-frame critical events if inference is busy. "
-                "Bounded FIFO queue preserves brief events, but queues up to 500 ms of latency on sustained events. "
-                "Adaptive sampling provides the optimal trade-off by detecting disturbances and prioritizing burst capture."
+                "Bounded FIFO preserves brief events and processes at 10.0 FPS effective throughput, but incurs queue lag (up to ~695 ms) on sustained events. "
+                "Adaptive sampling balances alert latency (171 ms) and capture density with 10.0 FPS effective processing."
             )
         }
 
@@ -4803,7 +4891,7 @@ class EvaluationService:
         multi_stream_stress_results = []
         for n_cams in [1, 2, 3, 4]:
             t0 = time.perf_counter()
-            # Run 10 inference iterations across N cameras
+            # Run 10 mock dispatch iterations across N cameras
             time.sleep(0.04 * n_cams)
             t1 = time.perf_counter()
             elapsed_sec = t1 - t0
@@ -4815,18 +4903,36 @@ class EvaluationService:
             
             multi_stream_stress_results.append({
                 "concurrent_cameras": n_cams,
+                "benchmark_mode": "synthetic_dispatch_simulation",
+                "is_synthetic": True,
+                "yolo_inference_performed": False,
+                "video_decoding_performed": False,
+                "tracking_performed": False,
+                "real_inference_fps": None,
+                "synthetic_dispatch_fps": agg_fps,
+                "synthetic_per_camera_dispatch_fps": per_cam_fps,
+                # Preserved for backward compatibility with explicit label
                 "aggregate_fps": agg_fps,
                 "per_camera_fps": per_cam_fps,
+                "metric_label": "Synthetic Event Dispatch Capacity (No YOLO inference performed)",
                 "cpu_util_percent": cpu_pct,
                 "ram_rss_mb": rss_mb,
                 "queue_depth_max": min(3, n_cams - 1),
                 "frame_overwrite_rate_percent": round(65.0 + n_cams * 7.0, 1),
                 "camera_isolation_verified": True,
-                "status": "PASSED"
+                "status": "PASSED",
+                "notes": "Synthetic Event Dispatch Capacity: Measures mock scheduling overhead only. No YOLO inference performed."
             })
 
         track_a3_report = {
             "status": "PASSED",
+            "benchmark_type": "synthetic_event_dispatch_capacity",
+            "is_synthetic": True,
+            "yolo_inference_performed": False,
+            "video_decoding_performed": False,
+            "tracking_performed": False,
+            "real_inference_fps": None,
+            "real_inference_status": "NOT MEASURED IN THIS BENCHMARK (Phase 5.1 real baseline: 1.75 - 5.25 FPS/cam on CPU; Phase 5.3 hardware acceleration target)",
             "sustained_duration_sec": 30.0,
             "streams_evaluated": multi_stream_stress_results,
             "invariants_verified": {
@@ -4835,7 +4941,13 @@ class EvaluationService:
                 "slow_consumer_isolation": "Slow WebSocket subscriber queue bounding protects server memory.",
                 "event_replay_integrity": "Replayed events are delivered in causal order without double-rendering.",
                 "incident_id_association": "Category B continuing hazards associate strictly with original incident ticket."
-            }
+            },
+            "engineering_notes": (
+                "Synthetic Event Dispatch Capacity: Measures scheduler and queue dispatch capability (~250 synthetic frames/sec). "
+                "No YOLO inference, video decoding, or optical flow was executed. Real multi-camera inference throughput on CPU "
+                "was independently established in Phase 5.1 as 1.75 to 5.25 FPS per camera (7.0 to 8.5 FPS aggregate). "
+                "Phase 5.3 will evaluate real hardware-accelerated inference."
+            )
         }
 
         # ----------------------------------------------------------------------------------
@@ -4972,9 +5084,14 @@ class EvaluationService:
                 "notes": "Audited latest-frame-wins, bounded FIFO, and adaptive sampling across 7 crowd scenarios."
             },
             {
-                "capability": "Sustained Multi-Camera Concurrency (1 to 4 Streams)",
+                "capability": "Sustained Multi-Camera Concurrency (Synthetic Dispatch)",
                 "status": "VERIFIED PASS",
-                "notes": "1 to 4 concurrent streams benchmarked under real CPU load with memory bounds verified."
+                "notes": "Synthetic event dispatch capacity verified (~250 dispatch/sec). Real YOLO inference was NOT executed in this test (real CPU inference is 1.75-5.25 FPS/cam from Phase 5.1)."
+            },
+            {
+                "capability": "Real Multi-Camera YOLO Inference Benchmark (Phase 5.2.1)",
+                "status": "NOT MEASURED",
+                "notes": "Deferred to Phase 5.3 hardware acceleration milestone (Phase 5.1 CPU baseline remains 1.75 - 5.25 FPS/cam)."
             },
             {
                 "capability": "Fault Isolation & Disconnect Resilience",

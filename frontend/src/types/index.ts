@@ -116,8 +116,8 @@ export interface AnalyticsSummary {
 
 export interface CameraSessionStatus {
   camera_id?: string;
-  state: 'IDLE' | 'CONNECTING' | 'CONNECTED' | 'DEGRADED' | 'RECONNECTING' | 'DISCONNECTED' | 'ERROR' | 'STOPPING';
-  source_type?: 'webcam' | 'rtsp' | null;
+  state: 'IDLE' | 'CONNECTING' | 'CONNECTED' | 'STREAMING' | 'STALE' | 'DEGRADED' | 'RECONNECTING' | 'DISCONNECTED' | 'ERROR' | 'STOPPING';
+  source_type?: 'webcam' | 'rtsp' | 'file' | null;
   device_index?: number | null;
   camera_name?: string | null;
   sanitized_url?: string | null;
@@ -136,14 +136,19 @@ export interface CameraSessionStatus {
   retry_count?: number;
   max_retries?: number;
   next_retry_delay_sec?: number;
-  person_count?: number;
-  smoothed_risk_score?: number;
-  risk_band?: 'Low' | 'Moderate' | 'High' | 'Critical';
+  person_count?: number | null;
+  smoothed_risk_score?: number | null;
+  risk_band?: 'Low' | 'Moderate' | 'High' | 'Critical' | 'Unavailable' | string;
   latest_captured_timestamp?: number | null;
   latest_captured_monotonic?: number | null;
   latest_published_timestamp?: number | null;
   latest_detection_timestamp?: number | null;
   detection_age_seconds?: number | null;
+  result_age_seconds?: number | null;
+  last_successful_frame_timestamp?: number | null;
+  last_successful_analysis_timestamp?: number | null;
+  active_incidents_count?: number;
+  buffer_overwrites?: number;
   staleness_threshold_sec?: number;
   is_stale?: boolean;
   staleness_status?: string;
@@ -153,6 +158,12 @@ export interface CameraSessionStatus {
   active_policy?: string;
   total_dropped_stale?: number;
   stale_drop_rate?: number;
+  inference_backend?: string | null;
+  requested_backend?: string | null;
+  backend_fallback_occurred?: boolean;
+  backend_fallback_reason?: string | null;
+  data_status?: 'available' | 'stale' | 'unavailable';
+  is_available?: boolean;
 }
 
 export interface MultiCameraHealth {

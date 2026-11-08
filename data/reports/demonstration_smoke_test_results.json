@@ -1,0 +1,63 @@
+{
+  "timestamp": "2026-10-25T05:07:15Z",
+  "verdict": "READY FOR CONTROLLED DEMONSTRATION",
+  "steps": {
+    "backend_health": {
+      "status": "PASSED",
+      "response": {
+        "status": "healthy",
+        "system": "Digital Image Processing Crowd Risk System",
+        "version": "2.0.0"
+      }
+    },
+    "backend_transparency": {
+      "status": "PASSED",
+      "active_backend": "pytorch",
+      "fallback_occurred": false,
+      "fallback_reason": null,
+      "transparency_verified": true
+    },
+    "prerecorded_video_workflow": {
+      "status": "PASSED",
+      "video_id": "vid_79af559240",
+      "analysis_id": "anl_722a2a89cb",
+      "processed_frames": 198,
+      "total_frames": 200,
+      "peak_count": 0,
+      "dominant_pattern": "NORMAL_FLOW",
+      "telemetry_count": 100,
+      "csv_export_verified": true
+    },
+    "physical_webcam_workflow": {
+      "status": "PASSED",
+      "source": "Physical Webcam DirectShow Index 0",
+      "frames_captured": 38,
+      "frames_consumed": 23,
+      "input_fps": 12.3,
+      "processing_fps": 9.1,
+      "resource_release_verified": true
+    },
+    "anti_zeroing_verification": {
+      "status": "PASSED",
+      "state": "DISCONNECTED",
+      "preserved_frame_id": 1,
+      "preserved_timestamp": 2000.0,
+      "anti_zeroing_verified": true
+    },
+    "incident_lifecycle": {
+      "status": "PASSED",
+      "incident_id": "inc_02e3f73346",
+      "created_status": "Open",
+      "acknowledged_status": "Acknowledged",
+      "resolved_status": "Resolved",
+      "operator_notes": "Bottleneck cleared; normal egress restored.",
+      "lifecycle_verified": true
+    },
+    "multicamera_fault_isolation": {
+      "status": "PASSED",
+      "cam_a_state": "STREAMING",
+      "cam_b_state": "DISCONNECTED",
+      "isolation_verified": true
+    }
+  }
+}

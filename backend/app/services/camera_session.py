@@ -24,6 +24,8 @@ class CameraState:
     IDLE = "IDLE"
     CONNECTING = "CONNECTING"
     CONNECTED = "CONNECTED"
+    STREAMING = "STREAMING"
+    STALE = "STALE"
     DEGRADED = "DEGRADED"
     RECONNECTING = "RECONNECTING"
     DISCONNECTED = "DISCONNECTED"
@@ -133,6 +135,10 @@ class CameraSession:
         self._frames_inferred: int = 0
         self._frames_published: int = 0
         self._frames_dropped: int = 0  # Preserved as backward-compatible alias to buffer_overwrites
+        self._frames_processed_success: int = 0
+        self._frames_processing_failed: int = 0
+        self._frames_rejected: int = 0
+        self._in_flight_frame: bool = False
         self._consecutive_failures: int = 0
         self._consecutive_successes: int = 0
         self._measured_fps: float = 0.0
@@ -213,6 +219,8 @@ class CameraSession:
             return self._state in (
                 CameraState.CONNECTING,
                 CameraState.CONNECTED,
+                CameraState.STREAMING,
+                CameraState.STALE,
                 CameraState.DEGRADED,
                 CameraState.RECONNECTING
             )
@@ -363,7 +371,7 @@ class CameraSession:
                 raise RuntimeError(f"Unable to open video file at {file_path}")
 
             self._cap = cap
-            self._set_state(CameraState.CONNECTED, None)
+            self._set_state(CameraState.STREAMING, None)
             logger.info(f"File session {self.camera_id} connected to {file_path}.")
 
             while not self._stop_event.is_set():
@@ -382,8 +390,8 @@ class CameraSession:
 
                 now = time.time()
                 mono_now = time.perf_counter()
-                if self.state != CameraState.CONNECTED:
-                    self._set_state(CameraState.CONNECTED, None)
+                if self.state not in (CameraState.STREAMING, CameraState.CONNECTED):
+                    self._set_state(CameraState.STREAMING, None)
 
                 self._record_frame(frame, now, mono_now)
                 fps_frame_counter += 1
@@ -421,7 +429,7 @@ class CameraSession:
 
             cap.set(cv2.CAP_PROP_FPS, self.config.target_fps)
             self._cap = cap
-            self._set_state(CameraState.CONNECTED, None)
+            self._set_state(CameraState.STREAMING, None)
             logger.info(f"Webcam session {self.camera_id} connected on device index {device_idx}.")
 
             while not self._stop_event.is_set():
@@ -444,8 +452,8 @@ class CameraSession:
                 now = time.time()
                 mono_now = time.perf_counter()
                 self._consecutive_failures = 0
-                if self.state != CameraState.CONNECTED:
-                    self._set_state(CameraState.CONNECTED, None)
+                if self.state not in (CameraState.STREAMING, CameraState.CONNECTED):
+                    self._set_state(CameraState.STREAMING, None)
 
                 self._record_frame(frame, now, mono_now)
                 fps_frame_counter += 1
@@ -508,7 +516,7 @@ class CameraSession:
                     raise ConnectionError(f"RTSP stream opened at {self.config.sanitized_url} but returned no initial frame.")
 
                 self._cap = cap
-                self._set_state(CameraState.CONNECTED, None)
+                self._set_state(CameraState.STREAMING, None)
                 if self._retry_count > 0:
                     if hasattr(self, 'risk_engine') and self.risk_engine:
                         self.risk_engine.reset()
@@ -602,9 +610,14 @@ class CameraSession:
         if not self._stop_event.is_set() and self.state not in (CameraState.DISCONNECTED, CameraState.ERROR):
             self._set_state(CameraState.DISCONNECTED, "RTSP stream session ended.")
 
-    def _record_frame(self, frame: np.ndarray, timestamp_sec: float, timestamp_mono: Optional[float] = None):
+    def _record_frame(self, frame: np.ndarray, timestamp_sec: float, timestamp_mono: Optional[float] = None) -> bool:
         mono_ts = timestamp_mono if timestamp_mono is not None else time.perf_counter()
         with self._frame_lock:
+            if frame is None or not isinstance(frame, np.ndarray) or frame.size == 0 or frame.ndim != 3 or frame.shape[0] < 2 or frame.shape[1] < 2:
+                self._frames_captured += 1
+                self._frames_rejected += 1
+                return False
+
             if not self._frame_consumed and self._latest_raw_frame is not None:
                 self._buffer_overwrites += 1
                 self._frames_dropped += 1
@@ -617,13 +630,14 @@ class CameraSession:
             self._frame_consumed = False
             self._frames_captured += 1
             self._frame_available.notify_all()
+            return True
 
     def get_latest_raw_frame(self, timeout: float = 0.5) -> Optional[Tuple[int, float, float, np.ndarray]]:
         with self._frame_lock:
-            if self._latest_raw_frame is None:
+            if self._latest_raw_frame is None or self._frame_consumed:
                 if timeout > 0:
                     self._frame_available.wait(timeout=timeout)
-                if self._latest_raw_frame is None:
+                if self._latest_raw_frame is None or self._frame_consumed:
                     return None
             frame = self._latest_raw_frame.copy()
             fid = self._latest_frame_id
@@ -631,6 +645,7 @@ class CameraSession:
             mono_ts = self._latest_frame_mono
             self._frame_consumed = True
             self._frames_consumed += 1
+            self._in_flight_frame = True
             return fid, ts, mono_ts, frame
 
     def _inference_worker(self):
@@ -936,6 +951,12 @@ class CameraSession:
                     "detected_pattern": detected_pattern,
                     "grid_density": grid_cells,
                     "camera_state": self.state,
+                    "inference_backend": sched_diag.get("backend", getattr(self._shared_detector, "backend", "pytorch") if self._shared_detector else "pytorch"),
+                    "requested_backend": sched_diag.get("requested_backend", getattr(self._shared_detector, "requested_backend", "pytorch") if self._shared_detector else "pytorch"),
+                    "backend_fallback_occurred": sched_diag.get("fallback_occurred", getattr(self._shared_detector, "fallback_occurred", False) if self._shared_detector else False),
+                    "backend_fallback_reason": sched_diag.get("fallback_reason", getattr(self._shared_detector, "fallback_reason", None) if self._shared_detector else None),
+                    "data_status": "stale" if is_stale else "available",
+                    "is_available": not is_stale,
                     "inference_duration_ms": round(self._last_inf_duration_ms, 2),
                     "scheduler_wait_ms": round(self._last_sched_wait_ms, 2),
                     "capture_to_result_ms": round(self._last_capture_to_result_ms, 2),
@@ -983,8 +1004,16 @@ class CameraSession:
                 elif self._last_stale_flag is None:
                     self._last_stale_flag = is_stale
 
+                with self._frame_lock:
+                    self._frames_processed_success += 1
+
             except Exception as e:
                 logger.exception(f"Error in inference worker on camera {self.camera_id}: {e}")
+                with self._frame_lock:
+                    self._frames_processing_failed += 1
+            finally:
+                with self._frame_lock:
+                    self._in_flight_frame = False
 
     def get_status(self) -> Dict[str, Any]:
         """Returns connection, performance, freshness, and scheduling metrics for this camera."""
@@ -995,6 +1024,10 @@ class CameraSession:
             consumed = self._frames_consumed
             dropped = self._frames_dropped
             buffer_overwrites = self._buffer_overwrites
+            processed_success = self._frames_processed_success
+            processing_failed = self._frames_processing_failed
+            rejected = self._frames_rejected
+            in_flight = 1 if self._in_flight_frame else 0
             pending_frames = 1 if (not self._frame_consumed and self._latest_raw_frame is not None) else 0
             capture_attempts = self._capture_attempts
             capture_failures = self._capture_failures
@@ -1050,6 +1083,8 @@ class CameraSession:
 
         capture_failure_rate = round((capture_failures / max(1, capture_attempts)) * 100.0, 2)
         inference_coverage = round((frames_inferred / max(1, captured)) * 100.0, 1) if captured > 0 else 0.0
+        disposition_sum = processed_success + buffer_overwrites + rejected + processing_failed + pending_frames + in_flight
+        disposition_balanced = (disposition_sum == captured)
 
         return {
             "camera_id": self.camera_id,
@@ -1067,7 +1102,25 @@ class CameraSession:
             "frames_consumed": consumed,
             "buffer_overwrites": buffer_overwrites,
             "pending_frames": pending_frames,
-            "accounting_identity_holds": (captured == consumed + buffer_overwrites + pending_frames),
+            "frames_processed_success": processed_success,
+            "frames_processing_failed": processing_failed,
+            "frames_rejected": rejected,
+            "in_flight_frames": in_flight,
+            "disposition_sum": disposition_sum,
+            "disposition_balanced": disposition_balanced,
+            "accounting_identity_holds": (captured == consumed + buffer_overwrites + pending_frames + rejected),
+            "accounting_disposition_breakdown": {
+                "captured": captured,
+                "processed_success": processed_success,
+                "buffer_overwrites": buffer_overwrites,
+                "rejected": rejected,
+                "processing_failed": processing_failed,
+                "pending": pending_frames,
+                "in_flight": in_flight,
+                "disposition_sum": disposition_sum,
+                "is_balanced": disposition_balanced,
+                "balance_delta": captured - disposition_sum,
+            },
             "frames_dropped": dropped,
             "frames_inferred": frames_inferred,
             "frames_published": frames_published,
@@ -1097,6 +1150,9 @@ class CameraSession:
             "latest_detection_timestamp": round(det_ts, 3) if det_ts > 0 else None,
             "latest_detection_monotonic": round(det_mono, 3) if det_mono > 0 else None,
             "detection_age_seconds": det_age,
+            "result_age_seconds": det_age,
+            "last_successful_frame_timestamp": round(latest_ts, 3) if latest_ts > 0 else None,
+            "last_successful_analysis_timestamp": round(det_ts, 3) if det_ts > 0 else None,
             "staleness_threshold_sec": stale_thresh,
             "is_stale": is_stale,
             "staleness_status": staleness_status,
@@ -1123,9 +1179,16 @@ class CameraSession:
             "retry_count": self._retry_count,
             "max_retries": self.config.max_retries,
             "next_retry_delay_sec": self._next_retry_delay_sec,
-            "person_count": latest_telem.get("person_count", 0) if latest_telem else 0,
-            "smoothed_risk_score": latest_telem.get("smoothed_risk_score", 0.0) if latest_telem else 0.0,
-            "risk_band": latest_telem.get("risk_band", "Low") if latest_telem else "Low",
+            "person_count": (latest_telem.get("person_count") if latest_telem else None) if (self.is_active) else None,
+            "smoothed_risk_score": (latest_telem.get("smoothed_risk_score") if latest_telem else None) if (self.is_active) else None,
+            "risk_band": (latest_telem.get("risk_band", "Low") if not is_stale else f"{latest_telem.get('risk_band', 'Low')} (Stale)") if (latest_telem and self.is_active) else "Unavailable",
+            "active_incidents_count": len(self.incident_service.active_incidents) if (self.is_active and hasattr(self, "incident_service") and self.incident_service) else 0,
+            "data_status": ("stale" if is_stale else "available") if (self.is_active and latest_telem is not None) else "unavailable",
+            "is_available": (self.is_active and not is_stale and latest_telem is not None),
+            "inference_backend": getattr(self._shared_detector, "backend", "pytorch") if self._shared_detector else "pytorch",
+            "requested_backend": getattr(self._shared_detector, "requested_backend", "pytorch") if self._shared_detector else "pytorch",
+            "backend_fallback_occurred": getattr(self._shared_detector, "fallback_occurred", False) if self._shared_detector else False,
+            "backend_fallback_reason": getattr(self._shared_detector, "fallback_reason", None) if self._shared_detector else None,
         }
 
     def get_telemetry(self) -> Optional[Dict[str, Any]]:
@@ -1134,17 +1197,62 @@ class CameraSession:
                 return None
             telemetry = self._latest_telemetry.copy()
             with self._state_lock:
-                telemetry["camera_state"] = self._state
-                telemetry["is_connected"] = self._state in (CameraState.CONNECTED, CameraState.DEGRADED)
-                if self._state in (CameraState.DISCONNECTED, CameraState.ERROR, CameraState.IDLE, CameraState.STOPPING):
-                    telemetry["is_stale"] = True
-                else:
-                    telemetry["is_stale"] = False
+                curr_state = self._state
+                telemetry["camera_state"] = curr_state
+                telemetry["is_connected"] = curr_state in (CameraState.CONNECTED, CameraState.STREAMING, CameraState.STALE, CameraState.DEGRADED)
+
+            now_mono = time.perf_counter()
+            with self._frame_lock:
+                det_mono = self._latest_detection_monotonic
+            det_age = (now_mono - det_mono) if det_mono > 0 else None
+            is_stale = (det_age is not None and det_age > self._staleness_threshold_sec) or (curr_state in (CameraState.STALE, CameraState.DISCONNECTED, CameraState.ERROR, CameraState.IDLE, CameraState.STOPPING))
+
+            telemetry["is_stale"] = is_stale
+            if curr_state in (CameraState.DISCONNECTED, CameraState.ERROR, CameraState.IDLE, CameraState.STOPPING):
+                telemetry["data_status"] = "unavailable"
+                telemetry["is_available"] = False
+                telemetry["is_connected"] = False
+                telemetry["display_risk_score"] = None
+                telemetry["display_person_count"] = None
+                telemetry["display_risk_band"] = "Unavailable"
+            elif is_stale:
+                telemetry["data_status"] = "stale"
+                telemetry["is_available"] = False
+                telemetry["is_connected"] = True
+                telemetry["display_risk_score"] = telemetry.get("smoothed_risk_score")
+                telemetry["display_person_count"] = telemetry.get("person_count")
+                telemetry["display_risk_band"] = f"{telemetry.get('risk_band')} (Stale)"
+            else:
+                telemetry["data_status"] = "available"
+                telemetry["is_available"] = True
+                telemetry["is_connected"] = True
+                telemetry["display_risk_score"] = telemetry.get("smoothed_risk_score")
+                telemetry["display_person_count"] = telemetry.get("person_count")
+                telemetry["display_risk_band"] = telemetry.get("risk_band")
+
             return telemetry
 
     def get_latest_jpeg_with_sequence(self) -> Tuple[int, Optional[bytes]]:
         with self._telemetry_lock:
             return self._latest_seq, self._latest_jpeg
+
+    def reset_frame_accounting(self):
+        """Thread-safe reset of all frame accounting and disposition counters."""
+        with self._frame_lock:
+            self._capture_attempts = 0
+            self._capture_failures = 0
+            self._frames_captured = 0
+            self._buffer_overwrites = 0
+            self._frames_consumed = 0
+            self._frames_inferred = 0
+            self._frames_published = 0
+            self._frames_dropped = 0
+            self._frames_processed_success = 0
+            self._frames_processing_failed = 0
+            self._frames_rejected = 0
+            self._in_flight_frame = False
+            self._frame_consumed = True
+            self._latest_raw_frame = None
 
     def reset_benchmark_metrics(self):
         """Clears accumulated latency sample buffers for an isolated benchmark measurement window."""

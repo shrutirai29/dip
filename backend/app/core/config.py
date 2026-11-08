@@ -18,6 +18,8 @@ class Settings:
     
     # YOLO Detection Settings
     YOLO_MODEL_NAME: str = "yolov8n.pt"  # nano model for fast CPU/CUDA inference
+    INFERENCE_BACKEND: str = os.getenv("CROWDGUARD_INFERENCE_BACKEND", "pytorch").lower()  # "pytorch" (default) or "onnx"
+    ONNX_MODEL_PATH: str = os.getenv("CROWDGUARD_ONNX_MODEL_PATH", "yolov8n.onnx")
     DEFAULT_CONF_THRESHOLD: float = 0.30  # Evidence-based baseline to suppress small background clutter
     DEFAULT_IOU_THRESHOLD: float = 0.45
     DEFAULT_INFERENCE_SIZE: int = 640

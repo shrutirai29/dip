@@ -2,7 +2,7 @@
   "validation_status": "PASSED",
   "phase": "4.8",
   "title": "CROWDGUARD v2.0 Crowd Risk Engine Validation & Temporal Reliability",
-  "evaluated_at": "2026-10-24T05:59:10Z",
+  "evaluated_at": "2026-10-25T04:36:57Z",
   "model_type": "Heuristic Explainable Decision-Support Scoring (0-100)",
   "weights_configuration": {
     "w_density": 0.35,

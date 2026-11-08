@@ -1,0 +1,31 @@
+{
+  "browser_user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+  "high_res_timer_supported": true,
+  "request_animation_frame_supported": true,
+  "websocket_rtt": {
+    "count": 25,
+    "mean_ms": 127.608,
+    "p50_ms": 0.9,
+    "p95_ms": 538.2,
+    "max_ms": 599.3,
+    "min_ms": 0.6
+  },
+  "browser_receipt_to_render_dispatch": {
+    "count": 15,
+    "mean_ms": 0.073,
+    "p50_ms": 0,
+    "p95_ms": 0.4,
+    "max_ms": 0.4,
+    "min_ms": 0
+  },
+  "browser_receipt_to_raf_paint": {
+    "count": 15,
+    "mean_ms": 4.473,
+    "p50_ms": 0.4,
+    "p95_ms": 15.6,
+    "max_ms": 15.6,
+    "min_ms": 0.1
+  },
+  "duplicate_events_rejected": 1,
+  "background_tab_throttling_note": "Browser requestAnimationFrame is clamped to ~1 Hz when tab is hidden or backgrounded by design to save GPU resources; active tab achieves 60-120 Hz paint commits."
+}

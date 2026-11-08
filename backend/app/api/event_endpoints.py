@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import time
 import logging
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, status
@@ -52,10 +53,15 @@ async def websocket_events_endpoint(
             data = await websocket.receive_json()
             msg_type = data.get("type", "").lower()
             if msg_type == "ping":
-                await websocket.send_json({
+                client_ts = data.get("client_ts")
+                pong_payload = {
                     "type": "pong",
-                    "server_time": datetime.datetime.utcnow().isoformat() + "Z"
-                })
+                    "server_time": datetime.datetime.utcnow().isoformat() + "Z",
+                    "server_mono": time.perf_counter(),
+                }
+                if client_ts is not None:
+                    pong_payload["client_ts"] = client_ts
+                await websocket.send_json(pong_payload)
     except (WebSocketDisconnect, ConnectionResetError):
         logger.info("WebSocket client disconnected normally.")
     except Exception as e:

@@ -4247,12 +4247,15 @@ export const BenchmarksPage: React.FC = () => {
             </div>
 
             <div className="p-4 bg-[#0A1018] border border-[#192638] rounded-xl space-y-1">
-              <div className="text-[10px] font-mono uppercase text-slate-400">Browser DOM Render</div>
+              <div className="text-[10px] font-mono uppercase text-slate-400 flex items-center justify-between">
+                <span>Browser DOM Render</span>
+                <span className="text-[9px] text-amber-400/90 font-mono">Simulated</span>
+              </div>
               <div className="text-2xl font-bold font-mono text-cyan-400">
                 {phase52Data?.track_a_reliability_under_load?.a1_event_delivery_latency?.stages_breakdown?.stage5_browser_receipt_to_render?.mean_ms?.toFixed(3) || '0.338'} ms
               </div>
               <div className="text-[10px] text-slate-500">
-                p95: {phase52Data?.track_a_reliability_under_load?.a1_event_delivery_latency?.stages_breakdown?.stage5_browser_receipt_to_render?.p95_ms?.toFixed(3) || '0.400'} ms
+                CLI Formula • Real DOM requires live UI
               </div>
             </div>
 
@@ -4325,11 +4328,11 @@ export const BenchmarksPage: React.FC = () => {
               </div>
 
               <div className="p-3 bg-[#0E1724] border border-[#1F2E45] rounded-xl space-y-1">
-                <div className="text-[10px] font-mono text-cyan-300">Stage 5: Browser Receipt → Render</div>
+                <div className="text-[10px] font-mono text-cyan-300">Stage 5: Browser Receipt → Render (Simulated)</div>
                 <div className="text-lg font-bold font-mono text-cyan-400">
                   {phase52Data?.track_a_reliability_under_load?.a1_event_delivery_latency?.stages_breakdown?.stage5_browser_receipt_to_render?.mean_ms?.toFixed(3) || '0.338'} ms
                 </div>
-                <div className="text-[10px] text-slate-500">DOM dispatch p95: 0.400 ms</div>
+                <div className="text-[10px] text-amber-400/80">Simulated in CLI (Real DOM in live UI)</div>
               </div>
             </div>
           </div>
@@ -4355,8 +4358,8 @@ export const BenchmarksPage: React.FC = () => {
                     <th className="p-3">Input</th>
                     <th className="p-3">Processed</th>
                     <th className="p-3">Dropped</th>
-                    <th className="p-3">Drop %</th>
-                    <th className="p-3">Inference FPS</th>
+                    <th className="p-3">Elapsed</th>
+                    <th className="p-3">Effective FPS</th>
                     <th className="p-3">Mean Alert Latency</th>
                     <th className="p-3">Detection Reliability</th>
                   </tr>
@@ -4365,36 +4368,89 @@ export const BenchmarksPage: React.FC = () => {
                   <tr className="hover:bg-slate-900/40">
                     <td className="p-3 font-bold text-white">latest_frame_wins</td>
                     <td className="p-3 text-slate-400">Single frame (drop oldest)</td>
-                    <td className="p-3">240</td>
-                    <td className="p-3 text-cyan-400">68</td>
-                    <td className="p-3 text-rose-400">172</td>
-                    <td className="p-3">71.7%</td>
-                    <td className="p-3">8.5 FPS</td>
-                    <td className="p-3 text-emerald-400">100.0 ms (Fastest)</td>
+                    <td className="p-3">{phase52Data?.track_a_reliability_under_load?.a2_frame_dropping_vs_detection?.policies_evaluated?.latest_frame_wins?.total_input_frames || 240}</td>
+                    <td className="p-3 text-cyan-400">{phase52Data?.track_a_reliability_under_load?.a2_frame_dropping_vs_detection?.policies_evaluated?.latest_frame_wins?.total_processed_frames || 90}</td>
+                    <td className="p-3 text-rose-400">{phase52Data?.track_a_reliability_under_load?.a2_frame_dropping_vs_detection?.policies_evaluated?.latest_frame_wins?.total_dropped_frames || 150}</td>
+                    <td className="p-3 text-slate-300">{phase52Data?.track_a_reliability_under_load?.a2_frame_dropping_vs_detection?.policies_evaluated?.latest_frame_wins?.total_elapsed_processing_sec?.toFixed(1) || '9.0'}s</td>
+                    <td className="p-3 font-bold text-emerald-400">{phase52Data?.track_a_reliability_under_load?.a2_frame_dropping_vs_detection?.policies_evaluated?.latest_frame_wins?.effective_processing_fps?.toFixed(1) || '10.0'} FPS</td>
+                    <td className="p-3 text-emerald-400">{phase52Data?.track_a_reliability_under_load?.a2_frame_dropping_vs_detection?.policies_evaluated?.latest_frame_wins?.mean_time_to_first_alert_ms?.toFixed(1) || '133.3'} ms</td>
                     <td className="p-3 text-amber-400">Drops brief 2-frame hazards</td>
                   </tr>
                   <tr className="hover:bg-slate-900/40">
                     <td className="p-3 font-bold text-white">bounded_fifo</td>
                     <td className="p-3 text-slate-400">FIFO Cap 5 (drop newest)</td>
-                    <td className="p-3">240</td>
-                    <td className="p-3 text-cyan-400">96</td>
-                    <td className="p-3 text-rose-400">144</td>
-                    <td className="p-3">60.0%</td>
-                    <td className="p-3">12.0 FPS</td>
-                    <td className="p-3 text-rose-400">695.2 ms (Queue lag)</td>
-                    <td className="p-3 text-emerald-400">Preserves brief hazards</td>
+                    <td className="p-3">{phase52Data?.track_a_reliability_under_load?.a2_frame_dropping_vs_detection?.policies_evaluated?.bounded_fifo?.total_input_frames || 240}</td>
+                    <td className="p-3 text-cyan-400">{phase52Data?.track_a_reliability_under_load?.a2_frame_dropping_vs_detection?.policies_evaluated?.bounded_fifo?.total_processed_frames || 118}</td>
+                    <td className="p-3 text-rose-400">{phase52Data?.track_a_reliability_under_load?.a2_frame_dropping_vs_detection?.policies_evaluated?.bounded_fifo?.total_dropped_frames || 122}</td>
+                    <td className="p-3 text-slate-300">{phase52Data?.track_a_reliability_under_load?.a2_frame_dropping_vs_detection?.policies_evaluated?.bounded_fifo?.total_elapsed_processing_sec?.toFixed(1) || '11.8'}s</td>
+                    <td className="p-3 font-bold text-emerald-400">{phase52Data?.track_a_reliability_under_load?.a2_frame_dropping_vs_detection?.policies_evaluated?.bounded_fifo?.effective_processing_fps?.toFixed(1) || '10.0'} FPS</td>
+                    <td className="p-3 text-rose-400">{phase52Data?.track_a_reliability_under_load?.a2_frame_dropping_vs_detection?.policies_evaluated?.bounded_fifo?.mean_time_to_first_alert_ms?.toFixed(1) || '600.0'} ms</td>
+                    <td className="p-3 text-emerald-400">Preserves brief hazards (queue lag)</td>
                   </tr>
                   <tr className="hover:bg-slate-900/40 bg-indigo-950/20">
                     <td className="p-3 font-bold text-indigo-300">adaptive_sampling</td>
                     <td className="p-3 text-indigo-300">Motion-gated burst (Cap 3)</td>
-                    <td className="p-3">240</td>
-                    <td className="p-3 text-cyan-400">81</td>
-                    <td className="p-3 text-rose-400">159</td>
-                    <td className="p-3">66.2%</td>
-                    <td className="p-3">10.1 FPS</td>
-                    <td className="p-3 text-cyan-400">171.4 ms (Balanced)</td>
+                    <td className="p-3">{phase52Data?.track_a_reliability_under_load?.a2_frame_dropping_vs_detection?.policies_evaluated?.adaptive_sampling?.total_input_frames || 240}</td>
+                    <td className="p-3 text-cyan-400">{phase52Data?.track_a_reliability_under_load?.a2_frame_dropping_vs_detection?.policies_evaluated?.adaptive_sampling?.total_processed_frames || 103}</td>
+                    <td className="p-3 text-rose-400">{phase52Data?.track_a_reliability_under_load?.a2_frame_dropping_vs_detection?.policies_evaluated?.adaptive_sampling?.total_dropped_frames || 137}</td>
+                    <td className="p-3 text-slate-300">{phase52Data?.track_a_reliability_under_load?.a2_frame_dropping_vs_detection?.policies_evaluated?.adaptive_sampling?.total_elapsed_processing_sec?.toFixed(1) || '10.3'}s</td>
+                    <td className="p-3 font-bold text-emerald-400">{phase52Data?.track_a_reliability_under_load?.a2_frame_dropping_vs_detection?.policies_evaluated?.adaptive_sampling?.effective_processing_fps?.toFixed(1) || '10.0'} FPS</td>
+                    <td className="p-3 text-cyan-400">{phase52Data?.track_a_reliability_under_load?.a2_frame_dropping_vs_detection?.policies_evaluated?.adaptive_sampling?.mean_time_to_first_alert_ms?.toFixed(1) || '200.0'} ms</td>
                     <td className="p-3 text-emerald-400">Burst captures sudden hazards</td>
                   </tr>
+                </tbody>
+              </table>
+              <div className="p-3 bg-[#0E1724] border border-[#1F2E45] rounded-xl text-[11px] text-slate-400 mt-3 font-mono">
+                <span className="text-amber-400 font-bold">Throughput Timing Note:</span> Effective processing FPS = processed_frames / elapsed_processing_seconds, accounting for the post-arrival queue drain interval. Omitting queue drain time previously caused an inflated 12.0 FPS calculation artifact in Phase 5.2.
+              </div>
+            </div>
+          </div>
+
+          {/* TRACK A3: Multi-Camera Event Dispatch Capacity */}
+          <div className="p-5 bg-[#0A1018] border border-[#192638] rounded-2xl space-y-4">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h4 className="text-sm font-bold text-white uppercase tracking-wider flex items-center space-x-2">
+                  <Activity className="w-4 h-4 text-cyan-400" />
+                  <span>Track A3 • Multi-Camera Event Dispatch Capacity (Synthetic Benchmark)</span>
+                </h4>
+                <span className="px-2 py-0.5 text-[9px] font-mono rounded bg-amber-950/60 text-amber-300 border border-amber-500/40">
+                  NO YOLO INFERENCE PERFORMED
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Measures simulated event dispatch &amp; worker scheduler capacity (~249 dispatch/s). Real multi-camera YOLO inference throughput on CPU was established in Phase 5.1 (1.75–5.25 FPS/camera) and is targeted for acceleration in Phase 5.3.
+              </p>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs font-mono">
+                <thead className="bg-[#0E1724] text-slate-300 uppercase text-[10px]">
+                  <tr>
+                    <th className="p-3">Concurrent Cameras</th>
+                    <th className="p-3">Synthetic Dispatch FPS</th>
+                    <th className="p-3">Per-Camera Dispatch</th>
+                    <th className="p-3">CPU Util %</th>
+                    <th className="p-3">RAM RSS (MB)</th>
+                    <th className="p-3">Real Inference Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#1A2638] text-slate-200">
+                  {(phase52Data?.track_a_reliability_under_load?.a3_sustained_multicamera_stress?.streams_evaluated || [
+                    { concurrent_cameras: 1, synthetic_dispatch_fps: 249.2, synthetic_per_camera_dispatch_fps: 249.2, cpu_util_percent: 21.3, ram_rss_mb: 296.9 },
+                    { concurrent_cameras: 2, synthetic_dispatch_fps: 248.8, synthetic_per_camera_dispatch_fps: 124.4, cpu_util_percent: 20.9, ram_rss_mb: 296.9 },
+                    { concurrent_cameras: 3, synthetic_dispatch_fps: 248.2, synthetic_per_camera_dispatch_fps: 82.7, cpu_util_percent: 16.0, ram_rss_mb: 296.9 },
+                    { concurrent_cameras: 4, synthetic_dispatch_fps: 249.6, synthetic_per_camera_dispatch_fps: 62.4, cpu_util_percent: 9.5, ram_rss_mb: 296.9 },
+                  ]).map((s: any, idx: number) => (
+                    <tr key={idx} className="hover:bg-slate-900/40">
+                      <td className="p-3 font-bold text-white">{s.concurrent_cameras} Camera{s.concurrent_cameras > 1 ? 's' : ''}</td>
+                      <td className="p-3 text-cyan-400 font-bold">{(s.synthetic_dispatch_fps || s.aggregate_fps)?.toFixed(1)} FPS (Synthetic)</td>
+                      <td className="p-3 text-slate-300">{(s.synthetic_per_camera_dispatch_fps || s.per_camera_fps)?.toFixed(1)} FPS</td>
+                      <td className="p-3">{s.cpu_util_percent?.toFixed(1)}%</td>
+                      <td className="p-3">{s.ram_rss_mb?.toFixed(1)} MB</td>
+                      <td className="p-3 text-amber-400/90 text-[10px]">Not Measured (Phase 5.1 CPU baseline: 1.75-5.25 FPS/cam)</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

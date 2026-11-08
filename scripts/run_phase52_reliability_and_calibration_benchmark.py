@@ -51,30 +51,34 @@ def main():
     print(f"  Stage 3 (Creation -> Broadcaster Push)  : Mean {stages.get('stage3_creation_to_publication', {}).get('mean_ms', 0):.3f} ms | p95 {stages.get('stage3_creation_to_publication', {}).get('p95_ms', 0):.3f} ms")
     print(f"  Stage 4 (Broadcaster -> WebSocket Send) : Mean {stages.get('stage4_publication_to_send', {}).get('mean_ms', 0):.3f} ms | p95 {stages.get('stage4_publication_to_send', {}).get('p95_ms', 0):.3f} ms")
     print(f"  Server Total Dispatch Latency           : Mean {a1.get('warmed_up_server_latency_ms', {}).get('mean_ms', 0):.3f} ms | p95 {a1.get('warmed_up_server_latency_ms', {}).get('p95_ms', 0):.3f} ms")
-    print(f"  Stage 5 (Browser Receipt -> DOM Render) : Mean {stages.get('stage5_browser_receipt_to_render', {}).get('mean_ms', 0):.3f} ms | p95 {stages.get('stage5_browser_receipt_to_render', {}).get('p95_ms', 0):.3f} ms")
+    print(f"  Stage 5 (Browser Receipt -> DOM Render) : Mean {stages.get('stage5_browser_receipt_to_render', {}).get('mean_ms', 0):.3f} ms | p95 {stages.get('stage5_browser_receipt_to_render', {}).get('p95_ms', 0):.3f} ms [SIMULATED CLI FORMULA]")
 
     # 2. Track A2: Queue Policies
     a2 = track_a.get("a2_frame_dropping_vs_detection", {})
     policies = a2.get("policies_evaluated", {})
     print("\n" + "=" * 90)
-    print("TRACK A2: FRAME-DROPPING vs CRITICAL-EVENT DETECTION QUEUE POLICIES")
+    print("TRACK A2: FRAME-DROPPING vs CRITICAL-EVENT DETECTION QUEUE POLICIES (DRAIN INCLUDED)")
     print("=" * 90)
-    print(f"{'Policy Name':<22} | {'Input':<6} | {'Proc':<6} | {'Drop %':<7} | {'FPS':<6} | {'Missed':<6} | {'Mean Alert Latency'}")
+    print(f"{'Policy Name':<22} | {'Input':<6} | {'Proc':<6} | {'Drop %':<7} | {'Eff FPS':<7} | {'Missed':<6} | {'Mean Alert Latency'}")
     print("-" * 90)
     for p_name, p_data in policies.items():
         lat_str = f"{p_data.get('mean_time_to_first_alert_ms', 0):.1f} ms" if p_data.get('mean_time_to_first_alert_ms') else "N/A"
-        print(f"{p_name:<22} | {p_data.get('total_input_frames', 0):<6} | {p_data.get('total_processed_frames', 0):<6} | {p_data.get('drop_rate_percent', 0):<6.1f}% | {p_data.get('effective_inference_fps', 0):<6.1f} | {p_data.get('missed_scenarios_count', 0):<6} | {lat_str}")
+        print(f"{p_name:<22} | {p_data.get('total_input_frames', 0):<6} | {p_data.get('total_processed_frames', 0):<6} | {p_data.get('drop_rate_percent', 0):<6.1f}% | {p_data.get('effective_processing_fps', p_data.get('effective_inference_fps', 0)):<7.1f} | {p_data.get('missed_scenarios_count', 0):<6} | {lat_str}")
 
     # 3. Track A3: Sustained Multi-Camera Stress
     a3 = track_a.get("a3_sustained_multicamera_stress", {})
     streams = a3.get("streams_evaluated", [])
     print("\n" + "=" * 90)
-    print("TRACK A3: SUSTAINED MULTI-CAMERA CONCURRENT STRESS TEST")
+    print("TRACK A3: SYNTHETIC EVENT DISPATCH CAPACITY (NO YOLO INFERENCE)")
     print("=" * 90)
-    print(f"{'Cameras':<8} | {'Agg FPS':<8} | {'Per-Cam FPS':<11} | {'CPU Util %':<10} | {'Mem RSS (MB)':<12} | {'Queue Max':<9} | {'Isolation'}")
+    print(f"{'Cameras':<8} | {'Synth FPS':<10} | {'Per-Cam FPS':<11} | {'CPU Util %':<10} | {'Mem RSS (MB)':<12} | {'Queue Max':<9} | {'Isolation'}")
     print("-" * 90)
     for s in streams:
-        print(f"{s.get('concurrent_cameras', 0):<8} | {s.get('aggregate_fps', 0):<8.2f} | {s.get('per_camera_fps', 0):<11.2f} | {s.get('cpu_util_percent', 0):<10.1f} | {s.get('ram_rss_mb', 0):<12.1f} | {s.get('queue_depth_max', 0):<9} | {'PASSED' if s.get('camera_isolation_verified') else 'FAILED'}")
+        disp_fps = s.get('synthetic_dispatch_fps', s.get('aggregate_fps', 0))
+        per_disp_fps = s.get('synthetic_per_camera_dispatch_fps', s.get('per_camera_fps', 0))
+        print(f"{s.get('concurrent_cameras', 0):<8} | {disp_fps:<10.2f} | {per_disp_fps:<11.2f} | {s.get('cpu_util_percent', 0):<10.1f} | {s.get('ram_rss_mb', 0):<12.1f} | {s.get('queue_depth_max', 0):<9} | {'PASSED' if s.get('camera_isolation_verified') else 'FAILED'}")
+    print("  [NOTE] Synthetic benchmark: Measures scheduler overhead only. Real inference was NOT executed.")
+    print("         Real CPU baseline remains 1.75 - 5.25 FPS/cam (Phase 5.1). Target for acceleration in Phase 5.3.")
 
     # 4. Track B: Physical Crowd Intelligence
     print("\n" + "=" * 90)

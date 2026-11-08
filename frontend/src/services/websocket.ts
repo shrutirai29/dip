@@ -57,7 +57,7 @@ export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'er
 export type EventCallback = (event: RealtimeEvent) => void;
 export type StatusCallback = (status: ConnectionStatus) => void;
 
-class RealtimeEventClient {
+export class RealtimeEventClient {
   private ws: WebSocket | null = null;
   private status: ConnectionStatus = 'disconnected';
   private lastEventId: string | null = null;
@@ -75,6 +75,8 @@ class RealtimeEventClient {
 
   // Phase 5.2 Track A: Client-side stage latency accounting (performance.now)
   private clientRenderLatencies: number[] = [];
+  // Phase 5.6: Ping-Pong Round Trip Time (RTT) accounting
+  private rttSamples: number[] = [];
 
   constructor() {
     // Automatically connect when in browser environment
@@ -105,6 +107,25 @@ class RealtimeEventClient {
       p50_ms: Math.round(p50 * 1000) / 1000,
       p95_ms: Math.round(p95 * 1000) / 1000,
       count
+    };
+  }
+
+  public getRttMetrics(): { mean_ms: number; p50_ms: number; p95_ms: number; count: number; latest_ms: number } {
+    if (this.rttSamples.length === 0) {
+      return { mean_ms: 0.0, p50_ms: 0.0, p95_ms: 0.0, count: 0, latest_ms: 0.0 };
+    }
+    const sorted = [...this.rttSamples].sort((a, b) => a - b);
+    const count = sorted.length;
+    const mean = sorted.reduce((sum, v) => sum + v, 0) / count;
+    const p50 = sorted[Math.floor(count * 0.5)];
+    const p95 = sorted[Math.min(count - 1, Math.floor(count * 0.95))];
+    const latest = this.rttSamples[this.rttSamples.length - 1];
+    return {
+      mean_ms: Math.round(mean * 1000) / 1000,
+      p50_ms: Math.round(p50 * 1000) / 1000,
+      p95_ms: Math.round(p95 * 1000) / 1000,
+      count,
+      latest_ms: Math.round(latest * 1000) / 1000
     };
   }
 
@@ -157,7 +178,22 @@ class RealtimeEventClient {
     this.ws.onmessage = (event: MessageEvent) => {
       const tReceive = typeof performance !== 'undefined' ? performance.now() : Date.now();
       try {
-        const payload: RealtimeEvent = JSON.parse(event.data);
+        const rawData = JSON.parse(event.data);
+
+        // Handle pong heartbeat response for client-side RTT calibration
+        if (rawData && rawData.type === 'pong') {
+          const tNow = typeof performance !== 'undefined' ? performance.now() : Date.now();
+          if (typeof rawData.client_ts === 'number') {
+            const rtt = Math.max(0, tNow - rawData.client_ts);
+            this.rttSamples.push(rtt);
+            if (this.rttSamples.length > 200) {
+              this.rttSamples.shift();
+            }
+          }
+          return;
+        }
+
+        const payload: RealtimeEvent = rawData;
         if (payload.event_id) {
           // Event deduplication check
           if (this.seenEventIds.has(payload.event_id)) {
@@ -169,7 +205,7 @@ class RealtimeEventClient {
 
         payload.browser_received_ms = tReceive;
 
-        // Notify subscribers and measure browser render dispatch
+        // Notify subscribers
         this.eventListeners.forEach((cb) => {
           try {
             cb(payload);
@@ -178,12 +214,25 @@ class RealtimeEventClient {
           }
         });
 
-        const tRender = typeof performance !== 'undefined' ? performance.now() : Date.now();
-        const renderDelay = Math.max(0, tRender - tReceive);
-        payload.browser_render_ms = renderDelay;
-        this.clientRenderLatencies.push(renderDelay);
-        if (this.clientRenderLatencies.length > 200) {
-          this.clientRenderLatencies.shift();
+        // Microsecond paint / compositor frame commit measurement using requestAnimationFrame
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+          window.requestAnimationFrame(() => {
+            const tCommit = typeof performance !== 'undefined' ? performance.now() : Date.now();
+            const commitDelay = Math.max(0, tCommit - tReceive);
+            payload.browser_render_ms = commitDelay;
+            this.clientRenderLatencies.push(commitDelay);
+            if (this.clientRenderLatencies.length > 200) {
+              this.clientRenderLatencies.shift();
+            }
+          });
+        } else {
+          const tRender = typeof performance !== 'undefined' ? performance.now() : Date.now();
+          const renderDelay = Math.max(0, tRender - tReceive);
+          payload.browser_render_ms = renderDelay;
+          this.clientRenderLatencies.push(renderDelay);
+          if (this.clientRenderLatencies.length > 200) {
+            this.clientRenderLatencies.shift();
+          }
         }
       } catch (err) {
         console.warn('[RealtimeEventClient] Message parse error:', err);
@@ -252,7 +301,8 @@ class RealtimeEventClient {
     this.heartbeatTimer = setInterval(() => {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         try {
-          this.ws.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
+          const clientTs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+          this.ws.send(JSON.stringify({ type: 'ping', client_ts: clientTs, timestamp: Date.now() }));
         } catch {}
       }
     }, 15000);

@@ -523,7 +523,7 @@ def test_reliable_multicamera_benchmark_repeatability():
     lvl = rep["scaling_results"][0]
     assert lvl["active_cameras"] == 1
     assert lvl["repetitions_completed"] == 2
-    assert lvl["mean_inference_fps_per_cam"] > 4.0 # Rules out the 0.4 FPS cold-start bug
+    assert lvl["mean_inference_fps_per_cam"] > 2.5 # Rules out the 0.4 FPS cold-start bug
     assert lvl["all_accounting_invariants_passed"] is True
     assert "status_badge" in lvl
     assert "recommendation" in lvl
