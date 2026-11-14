@@ -189,32 +189,30 @@ export const Analytics: React.FC = () => {
   return (
     <div className="space-y-6 w-full">
       {/* Header with Session Selector, Status, and CSV Export */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-4 border-b border-[#E2DBD1] dark:border-[#203638] gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-4 border-b border-rule dark:border-rule gap-4">
         <div>
-          <div className="flex items-center space-x-2.5">
-            <span className="text-[10px] font-mono font-bold tracking-widest text-[#376E6F] dark:text-[#6EB5B6] uppercase">
-              CROWDGUARD // 04 • CROWD DYNAMICS & FORECASTING
-            </span>
-            {selectedAnalysis && <StatusPill status={selectedAnalysis.status} />}
+          <div className="inline-flex items-center space-x-2 px-2.5 py-0.5 rounded-full bg-burgundy-soft border border-burgundy/20 text-burgundy text-[11px] font-mono font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-burgundy animate-pulse" />
+            <span>Forensic Statistical Workbench</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight text-[#1C3334] dark:text-[#EDF4F5] mt-1">
-            Crowd Dynamics & Predictive Analytics
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink font-display mt-1">
+            Analytics & Forensics
           </h1>
-          <p className="text-xs text-[#5D757E] dark:text-[#A0B7BC] mt-1">
-            Temporal feature decomposition: Farneback optical flow velocity vectors, directional Shannon entropy, and multi-horizon risk projections
+          <p className="text-xs text-muted mt-1 max-w-2xl leading-relaxed">
+            Post-event analysis · Statistical insights · Risk decomposition · Safety reporting. Publication-quality temporal telemetry and hazard verification.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center space-x-2 bg-white dark:bg-[#152729] border border-[#CBD5D8] dark:border-[#2C4B4E] rounded-lg px-2.5 py-1.5 shadow-2xs">
-            <span className="text-[10px] uppercase font-mono tracking-wider text-[#5D757E] dark:text-[#A0B7BC]">Session:</span>
+          <div className="flex items-center space-x-2 bg-white dark:bg-paper-2 border border-rule dark:border-rule rounded-lg px-2.5 py-1.5 shadow-2xs">
+            <span className="text-[10px] uppercase font-mono tracking-wider text-muted">Session:</span>
             <select
               value={selectedAnalysis?.id || ''}
               onChange={(e) => handleSelect(e.target.value)}
-              className="bg-transparent text-xs font-mono text-[#376E6F] dark:text-[#6EB5B6] font-semibold focus:outline-none cursor-pointer"
+              className="bg-transparent text-xs font-mono text-cool font-semibold focus:outline-none cursor-pointer"
             >
               {analyses.map((a) => (
-                <option key={a.id} value={a.id} className="bg-white dark:bg-[#152729] text-[#1C3334] dark:text-[#EEF4F5]">
+                <option key={a.id} value={a.id} className="bg-white dark:bg-paper-2 text-ink">
                   {a.id.slice(0, 16)}... ({a.status.toUpperCase()})
                 </option>
               ))}
@@ -225,19 +223,19 @@ export const Analytics: React.FC = () => {
             onClick={() => selectedAnalysis && loadAnalyses(true)}
             disabled={loadingFrames}
             aria-label="Refresh telemetry analytics"
-            className="p-2 bg-white dark:bg-[#152729] hover:bg-[#F1F4F5] dark:hover:bg-[#1C3336] text-[#2F4454] dark:text-[#EDF4F5] border border-[#CBD5D8] dark:border-[#2C4B4E] rounded-lg text-xs transition cursor-pointer shadow-2xs"
+            className="p-2 bg-white dark:bg-paper-2 hover:bg-paper-3 dark:hover:bg-[#1C3336] text-ink border border-rule dark:border-rule rounded-lg text-xs transition cursor-pointer shadow-2xs"
             title="Refresh Analytics"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loadingFrames ? 'animate-spin text-[#376E6F]' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loadingFrames ? 'animate-spin text-burgundy' : ''}`} />
           </button>
 
           {selectedAnalysis && (
             <a
               href={analysisApi.getExportUrl(selectedAnalysis.id)}
               download
-              className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-[#376E6F]/10 hover:bg-[#376E6F]/20 text-[#376E6F] dark:text-[#6EB5B6] rounded-lg text-xs font-medium border border-[#376E6F]/30 dark:border-[#376E6F]/40 transition shadow-2xs"
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-burgundy text-white hover:bg-burgundy-hover rounded-lg text-xs font-medium shadow-2xs transition shadow-2xs"
             >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-[#376E6F] dark:text-[#6EB5B6]" />
+              <FileSpreadsheet className="w-3.5 h-3.5 text-cool" />
               <span>Export CSV</span>
             </a>
           )}
@@ -291,17 +289,17 @@ export const Analytics: React.FC = () => {
       {/* Analytics Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Forecast Comparison Chart */}
-        <div className="bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl p-5 space-y-3 shadow-xs">
+        <div className="bg-white dark:bg-paper-2 border border-rule dark:border-rule rounded-xl p-5 space-y-3 shadow-xs">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-xs font-semibold text-[#1C3334] dark:text-white uppercase tracking-wider">
+              <h3 className="text-xs font-semibold text-ink uppercase tracking-wider">
                 1. What is the short-term disaster risk trajectory? — Multi-Horizon Projections (+5s, +10s, +15s)
               </h3>
-              <p className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] mt-0.5">
+              <p className="text-[10px] text-muted mt-0.5">
                 Velocity and density gradient trend extrapolation
               </p>
             </div>
-            <span className="text-[10px] font-mono text-[#376E6F] dark:text-[#6EB5B6] px-2 py-0.5 rounded bg-[#376E6F]/10 border border-[#376E6F]/30">
+            <span className="text-[10px] font-mono text-cool px-2 py-0.5 rounded bg-[#376E6F]/10 border border-[#376E6F]/30">
               Multi-Horizon
             </span>
           </div>
@@ -384,7 +382,7 @@ export const Analytics: React.FC = () => {
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-xs text-[#5D757E] dark:text-[#8AA1A7]">
+              <div className="w-full h-full flex items-center justify-center text-xs text-muted">
                 No telemetry time-series points recorded.
               </div>
             )}
@@ -392,22 +390,22 @@ export const Analytics: React.FC = () => {
         </div>
 
         {/* 2. Is the crowd moving in organized laminar flow or turbulent panic? — Shannon Entropy & Velocity Variance */}
-        <div className="bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl p-5 space-y-3 shadow-xs">
+        <div className="bg-white dark:bg-paper-2 border border-rule dark:border-rule rounded-xl p-5 space-y-3 shadow-xs">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-xs font-semibold text-[#1C3334] dark:text-white uppercase tracking-wider">
+              <h3 className="text-xs font-semibold text-ink uppercase tracking-wider">
                 2. Is the crowd moving in organized laminar flow or turbulent panic? — Shannon Entropy & Velocity Variance
               </h3>
-              <p className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] mt-0.5">
+              <p className="text-[10px] text-muted mt-0.5">
                 Quantifying coordinated laminar flow vs chaotic turbulence
               </p>
             </div>
-            <span className="text-[10px] font-mono text-[#DA7B93] px-2 py-0.5 rounded bg-[#DA7B93]/10 border border-[#DA7B93]/30">
+            <span className="text-[10px] font-mono text-accent px-2 py-0.5 rounded bg-[#DA7B93]/10 border border-[#DA7B93]/30">
               Turbulence Index
             </span>
           </div>
 
-          <div className="p-3 rounded-lg bg-[#F8F9FA] dark:bg-[#0B1415] border border-[#E2E8EA] dark:border-[#203638] text-[10px] text-[#5D757E] dark:text-[#A0B7BC]">
+          <div className="p-3 rounded-lg bg-paper-3 dark:bg-paper border border-rule dark:border-rule text-[10px] text-muted">
             Shannon entropy values &gt; 0.65 indicate multidirectional vector dispersion or panic agitation. Values &lt; 0.35 indicate uniform, structured pedestrian movement.
           </div>
 
@@ -470,7 +468,7 @@ export const Analytics: React.FC = () => {
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-xs text-[#5D757E] dark:text-[#8AA1A7]">
+              <div className="w-full h-full flex items-center justify-center text-xs text-muted">
                 No entropy dynamics recorded for this session.
               </div>
             )}
@@ -478,17 +476,17 @@ export const Analytics: React.FC = () => {
         </div>
 
         {/* 4 Normalized Risk Factor Components Progression */}
-        <div className="bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl p-5 space-y-3 lg:col-span-2 shadow-xs">
+        <div className="bg-white dark:bg-paper-2 border border-rule dark:border-rule rounded-xl p-5 space-y-3 lg:col-span-2 shadow-xs">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <h3 className="text-xs font-semibold text-[#1C3334] dark:text-white uppercase tracking-wider">
+              <h3 className="text-xs font-semibold text-ink uppercase tracking-wider">
                 3. Which physical mechanism is driving the composite risk rating? — 4-Factor Heuristic Decomposition
               </h3>
-              <p className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] mt-0.5">
+              <p className="text-[10px] text-muted mt-0.5">
                 Decomposition into Density Pressure (35%), Surge Influx (20%), Motion Anomaly (25%), and Spatial Congestion (20%)
               </p>
             </div>
-            <span className="text-[10px] font-mono text-[#5D757E] dark:text-[#A0B7BC]">
+            <span className="text-[10px] font-mono text-muted">
               Normalized [0.0 - 1.0] Range
             </span>
           </div>
@@ -561,7 +559,7 @@ export const Analytics: React.FC = () => {
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-xs text-[#5D757E] dark:text-[#8AA1A7]">
+              <div className="w-full h-full flex items-center justify-center text-xs text-muted">
                 No component telemetry available.
               </div>
             )}

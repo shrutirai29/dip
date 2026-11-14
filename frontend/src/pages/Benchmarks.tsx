@@ -190,18 +190,17 @@ export const BenchmarksPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-[#E2DBD1] dark:border-[#203638] pb-4">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-rule dark:border-rule pb-4">
         <div>
-          <div className="flex items-center space-x-2.5">
-            <span className="text-[10px] font-mono font-bold tracking-widest text-[#376E6F] dark:text-[#6EB5B6] uppercase">
-              CROWDGUARD // 05 • TECHNICAL EVALUATION & PROFILING
-            </span>
+          <div className="inline-flex items-center space-x-2 px-2.5 py-0.5 rounded-full bg-burgundy-soft border border-burgundy/20 text-burgundy text-[11px] font-mono font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-burgundy animate-pulse" />
+            <span>ML Performance Laboratory</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight text-[#1C3334] dark:text-[#EDF4F5] mt-1">
-            System Evaluation & Benchmarks
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink font-display mt-1">
+            Empirical Benchmarks
           </h1>
-          <p className="text-xs text-[#5D757E] dark:text-[#A0B7BC] mt-1 max-w-2xl leading-relaxed">
-            Quantitative evaluation: Detection accuracy, inference latency breakdown, multi-stream scheduler scaling, and sustained validation.
+          <p className="text-xs text-muted mt-1 max-w-2xl leading-relaxed">
+            Quantitative evaluation: Inference latency, processing throughput, risk forecasting MAE, and model accuracy.
           </p>
         </div>
 
@@ -209,7 +208,7 @@ export const BenchmarksPage: React.FC = () => {
           <button
             onClick={handleRunSustained}
             disabled={runningSustained || runningComparison || runningBenchmark}
-            className="inline-flex items-center space-x-2 px-3.5 py-2 bg-white dark:bg-indigo-950/40 hover:bg-[#F1F4F5] dark:hover:bg-indigo-900/60 border border-[#CBD5D8] dark:border-indigo-500/40 text-[#2F4454] dark:text-indigo-300 shadow-2xs rounded-xl text-xs font-semibold transition cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center space-x-2 px-3.5 py-2 bg-white dark:bg-indigo-950/40 hover:bg-paper-3 dark:hover:bg-indigo-900/60 border border-rule dark:border-indigo-500/40 text-[#2F4454] dark:text-indigo-300 shadow-2xs rounded-xl text-xs font-semibold transition cursor-pointer disabled:opacity-50"
             title="Execute 60-second sustained multi-camera benchmark"
           >
             <Clock className={`w-3.5 h-3.5 ${runningSustained ? 'animate-spin text-indigo-400' : ''}`} />
@@ -219,7 +218,7 @@ export const BenchmarksPage: React.FC = () => {
           <button
             onClick={handleRunOptimizationComparison}
             disabled={runningComparison || runningBenchmark || runningSustained}
-            className="inline-flex items-center space-x-2 px-3.5 py-2 bg-white dark:bg-emerald-950/40 hover:bg-[#F1F4F5] dark:hover:bg-emerald-900/60 border border-[#CBD5D8] dark:border-emerald-500/40 text-[#376E6F] dark:text-emerald-300 shadow-2xs rounded-xl text-xs font-semibold transition cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center space-x-2 px-3.5 py-2 bg-white dark:bg-emerald-950/40 hover:bg-paper-3 dark:hover:bg-emerald-900/60 border border-rule dark:border-emerald-500/40 text-burgundy dark:text-emerald-300 shadow-2xs rounded-xl text-xs font-semibold transition cursor-pointer disabled:opacity-50"
             title="Execute Phase 4.6 optimization comparison benchmark"
           >
             <Zap className={`w-3.5 h-3.5 ${runningComparison ? 'animate-spin text-emerald-400' : ''}`} />
@@ -238,7 +237,7 @@ export const BenchmarksPage: React.FC = () => {
 
           <button
             onClick={handleExportJson}
-            className="inline-flex items-center space-x-2 px-3.5 py-2 bg-[#2F4454] hover:bg-[#1C3334] dark:bg-[#376E6F] dark:hover:bg-[#4A8E8F] text-white rounded-xl text-xs font-semibold transition shadow-xs cursor-pointer"
+            className="inline-flex items-center space-x-2 px-3.5 py-2 bg-ink text-paper hover:opacity-90 dark:bg-[#376E6F] dark:hover:bg-[#4A8E8F] text-white rounded-xl text-xs font-semibold transition shadow-xs cursor-pointer"
             title="Download full benchmark audit report as JSON"
           >
             <Download className="w-3.5 h-3.5" />
@@ -248,13 +247,13 @@ export const BenchmarksPage: React.FC = () => {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex border-b border-[#E2E8EA] dark:border-[#203638] space-x-2 overflow-x-auto">
+      <div className="flex border-b border-rule dark:border-rule space-x-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab('adaptive')}
           className={`flex items-center space-x-2 px-4 py-2.5 text-xs font-medium border-b-2 transition cursor-pointer whitespace-nowrap ${
             activeTab === 'adaptive'
               ? 'border-cyan-400 text-cyan-300 bg-cyan-950/20'
-              : 'border-transparent text-[#5D757E] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-[#EDF4F5]'
+              : 'border-transparent text-muted hover:text-[#1C3334] dark:hover:text-[#EDF4F5]'
           }`}
         >
           <Cpu className="w-4 h-4 text-cyan-400" />
@@ -266,7 +265,7 @@ export const BenchmarksPage: React.FC = () => {
           className={`flex items-center space-x-2 px-4 py-2.5 text-xs font-medium border-b-2 transition cursor-pointer whitespace-nowrap ${
             activeTab === 'sustained'
               ? 'border-indigo-400 text-indigo-300 bg-indigo-950/20'
-              : 'border-transparent text-[#5D757E] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-[#EDF4F5]'
+              : 'border-transparent text-muted hover:text-[#1C3334] dark:hover:text-[#EDF4F5]'
           }`}
         >
           <Clock className="w-4 h-4 text-indigo-400" />
@@ -278,7 +277,7 @@ export const BenchmarksPage: React.FC = () => {
           className={`flex items-center space-x-2 px-4 py-2.5 text-xs font-medium border-b-2 transition cursor-pointer whitespace-nowrap ${
             activeTab === 'experiments'
               ? 'border-emerald-400 text-emerald-300 bg-emerald-950/10'
-              : 'border-transparent text-[#5D757E] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-[#EDF4F5]'
+              : 'border-transparent text-muted hover:text-[#1C3334] dark:hover:text-[#EDF4F5]'
           }`}
         >
           <Zap className="w-4 h-4 text-emerald-400" />
@@ -290,7 +289,7 @@ export const BenchmarksPage: React.FC = () => {
           className={`flex items-center space-x-2 px-4 py-2.5 text-xs font-medium border-b-2 transition cursor-pointer whitespace-nowrap ${
             activeTab === 'accuracy'
               ? 'border-cyan-400 text-cyan-300 bg-cyan-950/10'
-              : 'border-transparent text-[#5D757E] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-[#EDF4F5]'
+              : 'border-transparent text-muted hover:text-[#1C3334] dark:hover:text-[#EDF4F5]'
           }`}
         >
           <Target className="w-4 h-4" />
@@ -302,7 +301,7 @@ export const BenchmarksPage: React.FC = () => {
           className={`flex items-center space-x-2 px-4 py-2.5 text-xs font-medium border-b-2 transition cursor-pointer whitespace-nowrap ${
             activeTab === 'performance'
               ? 'border-cyan-400 text-cyan-300 bg-cyan-950/10'
-              : 'border-transparent text-[#5D757E] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-[#EDF4F5]'
+              : 'border-transparent text-muted hover:text-[#1C3334] dark:hover:text-[#EDF4F5]'
           }`}
         >
           <BarChart2 className="w-4 h-4" />
@@ -314,7 +313,7 @@ export const BenchmarksPage: React.FC = () => {
           className={`flex items-center space-x-2 px-4 py-2.5 text-xs font-medium border-b-2 transition cursor-pointer whitespace-nowrap ${
             activeTab === 'risk'
               ? 'border-cyan-400 text-cyan-300 bg-cyan-950/10'
-              : 'border-transparent text-[#5D757E] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-[#EDF4F5]'
+              : 'border-transparent text-muted hover:text-[#1C3334] dark:hover:text-[#EDF4F5]'
           }`}
         >
           <ShieldCheck className="w-4 h-4" />
@@ -326,7 +325,7 @@ export const BenchmarksPage: React.FC = () => {
           className={`flex items-center space-x-2 px-4 py-2.5 text-xs font-medium border-b-2 transition cursor-pointer whitespace-nowrap ${
             activeTab === 'frames'
               ? 'border-cyan-400 text-cyan-300 bg-cyan-950/10'
-              : 'border-transparent text-[#5D757E] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-[#EDF4F5]'
+              : 'border-transparent text-muted hover:text-[#1C3334] dark:hover:text-[#EDF4F5]'
           }`}
         >
           <Database className="w-4 h-4" />
@@ -337,7 +336,7 @@ export const BenchmarksPage: React.FC = () => {
       {loading && !runningBenchmark && !runningComparison && (
         <div className="p-12 text-center space-y-3">
           <div className="w-8 h-8 rounded-full border-2 border-cyan-500 border-t-transparent animate-spin mx-auto" />
-          <p className="text-xs text-[#5D757E] dark:text-slate-400 font-mono">Loading evaluation benchmarks...</p>
+          <p className="text-xs text-muted font-mono">Loading evaluation benchmarks...</p>
         </div>
       )}
 
@@ -361,7 +360,7 @@ export const BenchmarksPage: React.FC = () => {
                   IoU Resolved (93.81%) • Fairness Guard • Staleness Alerts
                 </span>
               </div>
-              <p className="text-xs text-[#5D757E] dark:text-slate-400 leading-relaxed max-w-3xl">
+              <p className="text-xs text-muted leading-relaxed max-w-3xl">
                 Rigorous empirical resolution of the reported mean-IoU discrepancy, component-level bottleneck profiling, adaptive risk-weighted fair scheduling with starvation prevention, and explicit timestamp freshness contracts.
               </p>
             </div>
@@ -380,14 +379,14 @@ export const BenchmarksPage: React.FC = () => {
 
           {/* 1. IoU Discrepancy Resolution Card */}
           <div className="bg-[#0A1018] border border-[#192638] rounded-xl p-5 space-y-4">
-            <div className="flex items-center justify-between border-b border-[#E2E8EA] dark:border-[#203638] pb-3">
+            <div className="flex items-center justify-between border-b border-rule dark:border-rule pb-3">
               <div className="flex items-center gap-2">
                 <div className="p-1.5 bg-emerald-950/60 border border-emerald-500/40 rounded-lg text-emerald-400">
                   <CheckCircle className="w-4 h-4" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white">1. Mean-IoU Discrepancy Investigation & Resolution</h3>
-                  <p className="text-[11px] text-[#5D757E] dark:text-slate-400 font-mono">Discrepancy: Earlier Reports (93.8%) vs Phase 4.6.2 Narrative (78.4%)</p>
+                  <p className="text-[11px] text-muted font-mono">Discrepancy: Earlier Reports (93.8%) vs Phase 4.6.2 Narrative (78.4%)</p>
                 </div>
               </div>
               <span className="px-2.5 py-1 rounded bg-emerald-950/60 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
@@ -403,30 +402,30 @@ export const BenchmarksPage: React.FC = () => {
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 font-mono text-[11px]">
                   <div className="p-2 rounded bg-black/40 border border-[#192638]">
-                    <span className="text-[#5D757E] dark:text-slate-400 block text-[10px]">Macro-Mean IoU</span>
+                    <span className="text-muted block text-[10px]">Macro-Mean IoU</span>
                     <span className="text-emerald-400 font-bold text-sm">93.81%</span>
                   </div>
                   <div className="p-2 rounded bg-black/40 border border-[#192638]">
-                    <span className="text-[#5D757E] dark:text-slate-400 block text-[10px]">Micro-Mean IoU</span>
+                    <span className="text-muted block text-[10px]">Micro-Mean IoU</span>
                     <span className="text-cyan-400 font-bold text-sm">93.08%</span>
                   </div>
                   <div className="p-2 rounded bg-black/40 border border-[#192638]">
-                    <span className="text-[#5D757E] dark:text-slate-400 block text-[10px]">Recall</span>
+                    <span className="text-muted block text-[10px]">Recall</span>
                     <span className="text-emerald-400 font-bold text-sm">100.0%</span>
                   </div>
                   <div className="p-2 rounded bg-black/40 border border-[#192638]">
-                    <span className="text-[#5D757E] dark:text-slate-400 block text-[10px]">Precision</span>
+                    <span className="text-muted block text-[10px]">Precision</span>
                     <span className="text-emerald-400 font-bold text-sm">96.30%</span>
                   </div>
                 </div>
-                <p className="text-[#5D757E] dark:text-slate-400 leading-relaxed text-[11px] pt-1 border-t border-[#E2E8EA] dark:border-[#203638]">
+                <p className="text-muted leading-relaxed text-[11px] pt-1 border-t border-rule dark:border-rule">
                   <strong className="text-amber-300">Origin of 78.4%:</strong> The 78.4% figure in the Phase 4.6.2 written report was an assistant manual transcription typo. The underlying evaluation service, code, and test suite never produced 78.4%. In fact, <code className="text-cyan-300">test_sustained_stability.py</code> executed <code className="text-cyan-300">assert metrics['mean_iou'] &gt;= 0.90</code> and passed with 0.9381. No code change ever lowered detection accuracy.
                 </p>
               </div>
 
               <div className="p-4 bg-[#0E1622] border border-[#1E2D40] rounded-xl space-y-3 text-xs">
                 <span className="font-bold text-white block">Deterministic Test Suite</span>
-                <p className="text-[#5D757E] dark:text-slate-400 text-[11px] leading-relaxed">
+                <p className="text-muted text-[11px] leading-relaxed">
                   A new dedicated deterministic test suite (<code className="text-cyan-300">test_iou_deterministic.py</code>) covers 10 edge cases with exact geometric bounds:
                 </p>
                 <ul className="space-y-1 text-[11px] font-mono text-[#2F4454] dark:text-slate-300">
@@ -446,14 +445,14 @@ export const BenchmarksPage: React.FC = () => {
 
           {/* 2. Bottleneck Profiling Breakdown Card */}
           <div className="bg-[#0A1018] border border-[#192638] rounded-xl p-5 space-y-4">
-            <div className="flex items-center justify-between border-b border-[#E2E8EA] dark:border-[#203638] pb-3">
+            <div className="flex items-center justify-between border-b border-rule dark:border-rule pb-3">
               <div className="flex items-center gap-2">
                 <div className="p-1.5 bg-cyan-950/60 border border-cyan-500/40 rounded-lg text-cyan-400">
                   <BarChart2 className="w-4 h-4" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white">2. Pipeline Stage Bottleneck Profiling</h3>
-                  <p className="text-[11px] text-[#5D757E] dark:text-slate-400 font-mono">Empirical Per-Stage Latency Breakdown (Intel Core Ultra CPU Mode)</p>
+                  <p className="text-[11px] text-muted font-mono">Empirical Per-Stage Latency Breakdown (Intel Core Ultra CPU Mode)</p>
                 </div>
               </div>
               <span className="text-xs font-mono text-cyan-300">Total: ~121 ms / frame (~8.2 FPS single-worker ceiling)</span>
@@ -476,7 +475,7 @@ export const BenchmarksPage: React.FC = () => {
                     </span>
                     <div className="flex items-center gap-2 font-mono text-[11px]">
                       <span className="text-white font-bold">{c.duration_ms.toFixed(1)} ms</span>
-                      <span className="text-[#5D757E] dark:text-slate-400">({c.percentage.toFixed(1)}%)</span>
+                      <span className="text-muted">({c.percentage.toFixed(1)}%)</span>
                     </div>
                   </div>
                   <div className="w-full bg-[#142032] rounded-full h-1.5 overflow-hidden">
@@ -487,14 +486,14 @@ export const BenchmarksPage: React.FC = () => {
                       style={{ width: `${c.percentage}%` }}
                     />
                   </div>
-                  <p className="text-[11px] text-[#5D757E] dark:text-slate-400">{c.description}</p>
+                  <p className="text-[11px] text-muted">{c.description}</p>
                 </div>
               ))}
             </div>
 
             <div className="p-3 bg-cyan-950/20 border border-cyan-500/20 rounded-lg text-xs text-[#2F4454] dark:text-slate-300 space-y-1">
               <strong className="text-cyan-300">Engineering Takeaway:</strong>
-              <p className="text-[11px] leading-relaxed text-[#5D757E] dark:text-slate-400">
+              <p className="text-[11px] leading-relaxed text-muted">
                 On multi-camera setups (e.g. 4 cameras), the hardware CPU limit for YOLO forward passes is ~11–13 FPS aggregate. 
                 Running a serialized single-worker queue prevents PyTorch OpenMP thread contention, keeping per-frame latency consistent and preventing latency blow-ups.
               </p>
@@ -503,14 +502,14 @@ export const BenchmarksPage: React.FC = () => {
 
           {/* 3. Adaptive Policy & Starvation Prevention Controls */}
           <div className="bg-[#0A1018] border border-[#192638] rounded-xl p-5 space-y-4">
-            <div className="flex items-center justify-between border-b border-[#E2E8EA] dark:border-[#203638] pb-3">
+            <div className="flex items-center justify-between border-b border-rule dark:border-rule pb-3">
               <div className="flex items-center gap-2">
                 <div className="p-1.5 bg-indigo-950/60 border border-indigo-500/40 rounded-lg text-indigo-400">
                   <Sliders className="w-4 h-4" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white">3. Adaptive Fair Inference Policy & Starvation Prevention</h3>
-                  <p className="text-[11px] text-[#5D757E] dark:text-slate-400 font-mono">Dynamic Risk-Weighted Fair Queueing Controls</p>
+                  <p className="text-[11px] text-muted font-mono">Dynamic Risk-Weighted Fair Queueing Controls</p>
                 </div>
               </div>
               <span className="text-xs font-mono text-indigo-300">Active Policy: {activePolicy}</span>
@@ -538,7 +537,7 @@ export const BenchmarksPage: React.FC = () => {
                     />
                     <div className="text-xs space-y-1">
                       <span className="font-semibold block text-indigo-300">Round-Robin (Default)</span>
-                      <p className="text-[11px] text-[#5D757E] dark:text-slate-400 leading-relaxed">
+                      <p className="text-[11px] text-muted leading-relaxed">
                         Strict 1:1 round-robin rotation across active cameras. Equal throughput allocation, zero favoritism.
                       </p>
                     </div>
@@ -561,7 +560,7 @@ export const BenchmarksPage: React.FC = () => {
                     />
                     <div className="text-xs space-y-1">
                       <span className="font-semibold block text-amber-300">Adaptive Risk-Weighted</span>
-                      <p className="text-[11px] text-[#5D757E] dark:text-slate-400 leading-relaxed">
+                      <p className="text-[11px] text-muted leading-relaxed">
                         Cameras with elevated crowd risk or motion surges receive up to 3x higher inference priority. Low-risk streams are protected from starvation by a hard dispatch limit (dispatches ≤ 2 × N).
                       </p>
                     </div>
@@ -587,22 +586,22 @@ export const BenchmarksPage: React.FC = () => {
                     onChange={(e) => setMaxPendingAge(parseFloat(e.target.value))}
                     className="w-full accent-cyan-400"
                   />
-                  <p className="text-[11px] text-[#5D757E] dark:text-slate-400">
+                  <p className="text-[11px] text-muted">
                     Frames waiting in queue longer than this limit are dropped as obsolete before inference, conserving CPU capacity.
                   </p>
                 </div>
 
                 <div className="p-3 bg-black/40 border border-[#192638] rounded-lg space-y-1 text-[11px] font-mono">
                   <div className="flex justify-between">
-                    <span className="text-[#5D757E] dark:text-slate-400">Starvation Limit:</span>
+                    <span className="text-muted">Starvation Limit:</span>
                     <span className="text-emerald-400">2 × Active Streams</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-[#5D757E] dark:text-slate-400">Staleness Alert:</span>
+                    <span className="text-muted">Staleness Alert:</span>
                     <span className="text-amber-400">&gt; 2.0s</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-[#5D757E] dark:text-slate-400">Buffer Depth:</span>
+                    <span className="text-muted">Buffer Depth:</span>
                     <span className="text-cyan-400">Bounded O(1) single slot</span>
                   </div>
                 </div>
@@ -616,7 +615,7 @@ export const BenchmarksPage: React.FC = () => {
                     {savingPolicy ? 'Applying...' : 'Apply Policy Configuration'}
                   </button>
                   {policyMessage && (
-                    <span className="text-[11px] text-emerald-400 font-medium animate-pulse">{policyMessage}</span>
+                    <span className="text-[11px] text-emerald-400 font-medium motion-safe:animate-pulse motion-reduce:animate-none">{policyMessage}</span>
                   )}
                 </div>
               </div>
@@ -625,14 +624,14 @@ export const BenchmarksPage: React.FC = () => {
 
           {/* 4. Frame Freshness & Staleness Contract */}
           <div className="bg-[#0A1018] border border-[#192638] rounded-xl p-5 space-y-4">
-            <div className="flex items-center justify-between border-b border-[#E2E8EA] dark:border-[#203638] pb-3">
+            <div className="flex items-center justify-between border-b border-rule dark:border-rule pb-3">
               <div className="flex items-center gap-2">
                 <div className="p-1.5 bg-amber-950/60 border border-amber-500/40 rounded-lg text-amber-400">
                   <Clock className="w-4 h-4" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white">4. Frame Freshness &amp; Staleness Indicators</h3>
-                  <p className="text-[11px] text-[#5D757E] dark:text-slate-400 font-mono">Operator Safety: Preventing Stale Detections From Being Presented as Real-Time</p>
+                  <p className="text-[11px] text-muted font-mono">Operator Safety: Preventing Stale Detections From Being Presented as Real-Time</p>
                 </div>
               </div>
               <span className="text-xs font-mono text-amber-300">Staleness Threshold: 2.0s</span>
@@ -644,7 +643,7 @@ export const BenchmarksPage: React.FC = () => {
                   <span className="font-bold text-emerald-400">Fresh Frame (&lt; 1.2s)</span>
                   <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-950/60 text-emerald-300">NORMAL</span>
                 </div>
-                <p className="text-[#5D757E] dark:text-slate-400 text-[11px] leading-relaxed">
+                <p className="text-muted text-[11px] leading-relaxed">
                   Inference completed recently. Telemetry overlays display real-time crowd counts, active tracks, and forecast vectors.
                 </p>
               </div>
@@ -654,7 +653,7 @@ export const BenchmarksPage: React.FC = () => {
                   <span className="font-bold text-cyan-300">Aging Frame (1.2s – 2.0s)</span>
                   <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950/60 text-cyan-300">AGING</span>
                 </div>
-                <p className="text-[#5D757E] dark:text-slate-400 text-[11px] leading-relaxed">
+                <p className="text-muted text-[11px] leading-relaxed">
                   Normal jitter or queue wait under 4-camera load. Telemetry is valid and undergoing periodic refresh.
                 </p>
               </div>
@@ -664,7 +663,7 @@ export const BenchmarksPage: React.FC = () => {
                   <span className="font-bold text-amber-400">Stale Frame (&gt; 2.0s)</span>
                   <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-950/60 text-amber-300">ALERT</span>
                 </div>
-                <p className="text-[#5D757E] dark:text-slate-400 text-[11px] leading-relaxed">
+                <p className="text-muted text-[11px] leading-relaxed">
                   Video feed renders prominent amber <strong className="text-amber-400">[STALE X.Xs]</strong> badge on the surveillance HUD and marks counts as <strong className="text-amber-300">(PRESERVED)</strong> to alert operators.
                 </p>
               </div>
@@ -686,7 +685,7 @@ export const BenchmarksPage: React.FC = () => {
                   60s Window • 10s Warmup
                 </span>
               </div>
-              <p className="text-xs text-[#5D757E] dark:text-slate-400 leading-relaxed max-w-3xl">
+              <p className="text-xs text-muted leading-relaxed max-w-3xl">
                 Rigorous empirical validation under sustained 60-second measurement windows. Differential frame accounting, monotonic timing, statistical latency percentiles, and continuous memory leak monitoring.
               </p>
             </div>
@@ -694,7 +693,7 @@ export const BenchmarksPage: React.FC = () => {
             {/* Run Configuration Controls */}
             <div className="flex flex-wrap items-center gap-3 bg-[#0E1622] p-3 rounded-lg border border-[#1E2D40]">
               <div className="flex flex-col">
-                <label className="text-[10px] font-mono text-[#5D757E] dark:text-slate-400">Warm-up (s)</label>
+                <label className="text-[10px] font-mono text-muted">Warm-up (s)</label>
                 <input
                   type="number"
                   min="0"
@@ -707,7 +706,7 @@ export const BenchmarksPage: React.FC = () => {
               </div>
 
               <div className="flex flex-col">
-                <label className="text-[10px] font-mono text-[#5D757E] dark:text-slate-400">Measure (s)</label>
+                <label className="text-[10px] font-mono text-muted">Measure (s)</label>
                 <input
                   type="number"
                   min="10"
@@ -720,7 +719,7 @@ export const BenchmarksPage: React.FC = () => {
               </div>
 
               <div className="flex flex-col">
-                <label className="text-[10px] font-mono text-[#5D757E] dark:text-slate-400">Max Streams</label>
+                <label className="text-[10px] font-mono text-muted">Max Streams</label>
                 <select
                   value={maxCamsConfig}
                   onChange={(e) => setMaxCamsConfig(Number(e.target.value))}
@@ -787,7 +786,7 @@ export const BenchmarksPage: React.FC = () => {
             return (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="p-4 rounded-xl bg-[#0A1018] border border-[#192638]">
-                  <span className="text-[11px] font-mono text-[#5D757E] dark:text-slate-400 block">AGGREGATE THROUGHPUT ({r4.active_cameras} CAMS)</span>
+                  <span className="text-[11px] font-mono text-muted block">AGGREGATE THROUGHPUT ({r4.active_cameras} CAMS)</span>
                   <span className="text-2xl font-black text-indigo-400 mt-1 block">
                     {r4.aggregate_inference_fps.toFixed(2)} FPS
                   </span>
@@ -797,7 +796,7 @@ export const BenchmarksPage: React.FC = () => {
                 </div>
 
                 <div className="p-4 rounded-xl bg-[#0A1018] border border-[#192638]">
-                  <span className="text-[11px] font-mono text-[#5D757E] dark:text-slate-400 block">CAP-TO-PUB LATENCY (p95)</span>
+                  <span className="text-[11px] font-mono text-muted block">CAP-TO-PUB LATENCY (p95)</span>
                   <span className="text-2xl font-black text-emerald-400 mt-1 block">
                     {r4.pooled_latency?.p95_capture_to_published_ms ? `${Math.round(r4.pooled_latency.p95_capture_to_published_ms)} ms` : '--'}
                   </span>
@@ -807,7 +806,7 @@ export const BenchmarksPage: React.FC = () => {
                 </div>
 
                 <div className="p-4 rounded-xl bg-[#0A1018] border border-[#192638]">
-                  <span className="text-[11px] font-mono text-[#5D757E] dark:text-slate-400 block">BUFFER OVERWRITE RATE</span>
+                  <span className="text-[11px] font-mono text-muted block">BUFFER OVERWRITE RATE</span>
                   <span className="text-2xl font-black text-amber-400 mt-1 block">
                     {r4.buffer_overwrite_rate_percent.toFixed(1)}%
                   </span>
@@ -817,7 +816,7 @@ export const BenchmarksPage: React.FC = () => {
                 </div>
 
                 <div className="p-4 rounded-xl bg-[#0A1018] border border-[#192638]">
-                  <span className="text-[11px] font-mono text-[#5D757E] dark:text-slate-400 block">MEMORY STABILITY</span>
+                  <span className="text-[11px] font-mono text-muted block">MEMORY STABILITY</span>
                   <span className="text-2xl font-black text-cyan-400 mt-1 block">
                     {r4.resource_metrics?.memory_growth_mb ? `${r4.resource_metrics.memory_growth_mb > 0 ? '+' : ''}${r4.resource_metrics.memory_growth_mb.toFixed(1)} MB` : '< 2 MB'}
                   </span>
@@ -831,18 +830,18 @@ export const BenchmarksPage: React.FC = () => {
 
           {/* Sustained Scaling Results Table */}
           <div className="bg-[#0A1018] border border-[#192638] rounded-xl overflow-hidden">
-            <div className="p-4 border-b border-[#E2E8EA] dark:border-[#203638] flex flex-col md:flex-row md:items-center justify-between gap-2">
+            <div className="p-4 border-b border-rule dark:border-rule flex flex-col md:flex-row md:items-center justify-between gap-2">
               <div>
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
                   <BarChart2 className="w-4 h-4 text-indigo-400" />
                   <span>Sustained Multi-Camera Scaling (60s Window Empirical Results)</span>
                 </h3>
-                <span className="text-xs text-[#5D757E] dark:text-slate-400">
+                <span className="text-xs text-muted">
                   Rigorous differential accounting: Frame counts strictly measured inside elapsed monotonic measurement window.
                 </span>
               </div>
               <div className="flex items-center gap-2 text-xs font-mono">
-                <span className="px-2 py-0.5 rounded bg-black/40 border border-[#192638] text-[#5D757E] dark:text-slate-400">
+                <span className="px-2 py-0.5 rounded bg-black/40 border border-[#192638] text-muted">
                   Source: {sustainedData?.sustained_validation_metadata?.source_video || 'vid_2e28e1e65a.mp4'}
                 </span>
               </div>
@@ -851,7 +850,7 @@ export const BenchmarksPage: React.FC = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-[#E2E8EA] dark:border-[#203638] bg-[#0E1622] text-[#5D757E] dark:text-slate-400 font-mono text-[11px]">
+                  <tr className="border-b border-rule dark:border-rule bg-[#0E1622] text-muted font-mono text-[11px]">
                     <th className="p-3">Streams</th>
                     <th className="p-3">Duration (Mono)</th>
                     <th className="p-3">Captured (Count / FPS)</th>
@@ -882,7 +881,7 @@ export const BenchmarksPage: React.FC = () => {
                           <td className="p-3 text-[#2F4454] dark:text-slate-300">
                             <div>
                               <span className="font-bold text-white">{row.total_captured_frames.toLocaleString()}</span>
-                              <span className="text-[10px] text-[#5D757E] dark:text-slate-400 block">
+                              <span className="text-[10px] text-muted block">
                                 {perCamCap.toFixed(1)} FPS/cam
                               </span>
                             </div>
@@ -890,7 +889,7 @@ export const BenchmarksPage: React.FC = () => {
                           <td className="p-3 text-[#2F4454] dark:text-slate-300">
                             <div>
                               <span className="font-bold text-emerald-400">{row.total_inferred_frames.toLocaleString()}</span>
-                              <span className="text-[10px] text-[#5D757E] dark:text-slate-400 block">
+                              <span className="text-[10px] text-muted block">
                                 {perCamInf.toFixed(2)} FPS/cam
                               </span>
                             </div>
@@ -969,12 +968,12 @@ export const BenchmarksPage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Latency Stages */}
             <div className="bg-[#0A1018] border border-[#192638] rounded-xl p-5 space-y-4">
-              <div className="flex items-center justify-between border-b border-[#E2E8EA] dark:border-[#203638] pb-3">
+              <div className="flex items-center justify-between border-b border-rule dark:border-rule pb-3">
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
                   <Activity className="w-4 h-4 text-cyan-400" />
                   <span>Latency Breakdown (p50 / p95 Distributions)</span>
                 </h3>
-                <span className="text-[10px] font-mono text-[#5D757E] dark:text-slate-400">4-Stream Pooled</span>
+                <span className="text-[10px] font-mono text-muted">4-Stream Pooled</span>
               </div>
 
               {sustainedData?.sustained_scaling_results && sustainedData.sustained_scaling_results.length > 0 && (() => {
@@ -1004,7 +1003,7 @@ export const BenchmarksPage: React.FC = () => {
                         </div>
                       </div>
                     ))}
-                    <div className="pt-2 text-[11px] text-[#5D757E] dark:text-slate-400 border-t border-[#E2E8EA] dark:border-[#203638] flex items-center justify-between font-mono">
+                    <div className="pt-2 text-[11px] text-muted border-t border-rule dark:border-rule flex items-center justify-between font-mono">
                       <span>Raw Buffer Age:</span>
                       <span className="text-emerald-400 font-bold">
                         {Math.round((lat.mean_raw_buffer_age_seconds || 0.02) * 1000)} ms (fresh single slot)
@@ -1017,7 +1016,7 @@ export const BenchmarksPage: React.FC = () => {
 
             {/* Empirical Memory & Queue Guarantees */}
             <div className="bg-[#0A1018] border border-[#192638] rounded-xl p-5 space-y-4">
-              <div className="flex items-center justify-between border-b border-[#E2E8EA] dark:border-[#203638] pb-3">
+              <div className="flex items-center justify-between border-b border-rule dark:border-rule pb-3">
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-emerald-400" />
                   <span>Pipeline Stability & Memory Health</span>
@@ -1029,9 +1028,9 @@ export const BenchmarksPage: React.FC = () => {
                 <div className="p-3 bg-[#0E1622] border border-[#1E2D40] rounded-lg space-y-1">
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-emerald-400">Bounded Pending Queue O(1)</span>
-                    <span className="text-[10px] font-mono text-[#5D757E] dark:text-slate-400">Pending ≤ N Streams</span>
+                    <span className="text-[10px] font-mono text-muted">Pending ≤ N Streams</span>
                   </div>
-                  <p className="text-[#5D757E] dark:text-slate-400 leading-relaxed text-[11px]">
+                  <p className="text-muted leading-relaxed text-[11px]">
                     Under heavy capture load (100 FPS aggregate), older un-inferred frames are intentionally overwritten in single-slot buffers. Queue depth never grows unboundedly.
                   </p>
                 </div>
@@ -1039,9 +1038,9 @@ export const BenchmarksPage: React.FC = () => {
                 <div className="p-3 bg-[#0E1622] border border-[#1E2D40] rounded-lg space-y-1">
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-cyan-300">Continuous Memory Leak Audit</span>
-                    <span className="text-[10px] font-mono text-[#5D757E] dark:text-slate-400">Growth: &lt; 2 MB / 60s</span>
+                    <span className="text-[10px] font-mono text-muted">Growth: &lt; 2 MB / 60s</span>
                   </div>
-                  <p className="text-[#5D757E] dark:text-slate-400 leading-relaxed text-[11px]">
+                  <p className="text-muted leading-relaxed text-[11px]">
                     Process RSS memory stays flat throughout the 60-second window. Frame arrays are properly garbage-collected and telemetry histories are capped at 5,000 samples.
                   </p>
                 </div>
@@ -1049,9 +1048,9 @@ export const BenchmarksPage: React.FC = () => {
                 <div className="p-3 bg-[#0E1622] border border-[#1E2D40] rounded-lg space-y-1">
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-indigo-400">Stream Isolation & Non-Interference</span>
-                    <span className="text-[10px] font-mono text-[#5D757E] dark:text-slate-400">Independent Lifecycles</span>
+                    <span className="text-[10px] font-mono text-muted">Independent Lifecycles</span>
                   </div>
-                  <p className="text-[#5D757E] dark:text-slate-400 leading-relaxed text-[11px]">
+                  <p className="text-muted leading-relaxed text-[11px]">
                     Stopping, restarting, or dropping one camera stream does not stall adjacent cameras or crash the shared scheduler worker loop.
                   </p>
                 </div>
@@ -1071,7 +1070,7 @@ export const BenchmarksPage: React.FC = () => {
                 <Server className="w-4 h-4" />
                 Benchmark Hardware & Software Runtime
               </span>
-              <span className="text-[#5D757E] dark:text-slate-400 block">
+              <span className="text-muted block">
                 Intel Core Ultra (16 Physical / 22 Logical Cores) • 15.6 GB RAM • Windows 11 x64
               </span>
             </div>
@@ -1095,7 +1094,7 @@ export const BenchmarksPage: React.FC = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="p-4 rounded-xl bg-[#0A1018] border border-emerald-500/30 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/5 rounded-full blur-xl" />
-              <span className="text-[11px] font-mono text-[#5D757E] dark:text-slate-400 block">4-STREAM INFERENCE FPS</span>
+              <span className="text-[11px] font-mono text-muted block">4-STREAM INFERENCE FPS</span>
               <div className="flex items-baseline space-x-2 mt-1">
                 <span className="text-2xl font-black text-emerald-400">3.4 FPS</span>
                 <span className="text-xs text-slate-500 font-mono line-through">0.8 FPS</span>
@@ -1107,7 +1106,7 @@ export const BenchmarksPage: React.FC = () => {
 
             <div className="p-4 rounded-xl bg-[#0A1018] border border-cyan-500/30 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-16 h-16 bg-cyan-500/5 rounded-full blur-xl" />
-              <span className="text-[11px] font-mono text-[#5D757E] dark:text-slate-400 block">4-STREAM CAPTURE FPS</span>
+              <span className="text-[11px] font-mono text-muted block">4-STREAM CAPTURE FPS</span>
               <div className="flex items-baseline space-x-2 mt-1">
                 <span className="text-2xl font-black text-cyan-300">24.2 FPS</span>
                 <span className="text-xs text-slate-500 font-mono line-through">4.7 FPS</span>
@@ -1119,7 +1118,7 @@ export const BenchmarksPage: React.FC = () => {
 
             <div className="p-4 rounded-xl bg-[#0A1018] border border-purple-500/30 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-16 h-16 bg-purple-500/5 rounded-full blur-xl" />
-              <span className="text-[11px] font-mono text-[#5D757E] dark:text-slate-400 block">RAW BUFFER FRESHNESS (p95)</span>
+              <span className="text-[11px] font-mono text-muted block">RAW BUFFER FRESHNESS (p95)</span>
               <div className="flex items-baseline space-x-2 mt-1">
                 <span className="text-2xl font-black text-purple-400">&lt; 39 ms</span>
                 <span className="text-xs text-slate-500 font-mono">Bounded O(1)</span>
@@ -1131,10 +1130,10 @@ export const BenchmarksPage: React.FC = () => {
 
             <div className="p-4 rounded-xl bg-[#0A1018] border border-white/20 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-16 h-16 bg-white/5 rounded-full blur-xl" />
-              <span className="text-[11px] font-mono text-[#5D757E] dark:text-slate-400 block">DETECTION QUALITY</span>
+              <span className="text-[11px] font-mono text-muted block">DETECTION QUALITY</span>
               <div className="flex items-baseline space-x-2 mt-1">
                 <span className="text-2xl font-black text-white">100.0%</span>
-                <span className="text-xs text-[#5D757E] dark:text-slate-400 font-mono">Recall</span>
+                <span className="text-xs text-muted font-mono">Recall</span>
               </div>
               <span className="text-[10px] text-emerald-400 font-mono block mt-1">
                 0.0% Accuracy Degradation
@@ -1144,13 +1143,13 @@ export const BenchmarksPage: React.FC = () => {
 
           {/* Side-by-Side Scaling Table */}
           <div className="bg-[#0A1018] border border-[#192638] rounded-xl overflow-hidden">
-            <div className="p-4 border-b border-[#E2E8EA] dark:border-[#203638] flex items-center justify-between">
+            <div className="p-4 border-b border-rule dark:border-rule flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-emerald-400" />
                   <span>Scalability Progression: Baseline (Phase 4.5) vs Optimized (Phase 4.6)</span>
                 </h3>
-                <p className="text-[11px] text-[#5D757E] dark:text-slate-400 font-mono mt-0.5">
+                <p className="text-[11px] text-muted font-mono mt-0.5">
                   Measured across 1, 2, 3, and 4 concurrent active video streams on local host CPU
                 </p>
               </div>
@@ -1161,7 +1160,7 @@ export const BenchmarksPage: React.FC = () => {
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs font-mono">
-                <thead className="bg-[#070B11] text-[#5D757E] dark:text-slate-400 border-b border-[#E2E8EA] dark:border-[#203638]">
+                <thead className="bg-[#070B11] text-muted border-b border-rule dark:border-rule">
                   <tr>
                     <th className="p-3">Active Streams</th>
                     <th className="p-3">Baseline Cap FPS</th>
@@ -1174,7 +1173,7 @@ export const BenchmarksPage: React.FC = () => {
                     <th className="p-3">CPU Usage</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#E2E8EA] dark:divide-[#192638] text-[#1C3334] dark:text-slate-200">
+                <tbody className="divide-y divide-[#E2E8EA] dark:divide-[#192638] text-ink">
                   {[1, 2, 3, 4].map((cams) => {
                     const base = baselineScaling.find((b: any) => b.active_cameras === cams);
                     const opt = optimizedScaling.find((o: any) => o.active_cameras === cams);
@@ -1183,13 +1182,13 @@ export const BenchmarksPage: React.FC = () => {
                         <td className="p-3 font-sans font-bold text-white">
                           {cams} {cams === 1 ? 'Camera' : 'Cameras'}
                         </td>
-                        <td className="p-3 text-[#5D757E] dark:text-slate-400">
+                        <td className="p-3 text-muted">
                           {base ? `${base.mean_capture_fps.toFixed(1)} FPS` : '--'}
                         </td>
                         <td className="p-3 text-emerald-400 font-bold">
                           {opt ? `${opt.mean_capture_fps.toFixed(1)} FPS` : '--'}
                         </td>
-                        <td className="p-3 text-[#5D757E] dark:text-slate-400">
+                        <td className="p-3 text-muted">
                           {base ? `${base.mean_inference_fps.toFixed(1)} FPS` : '--'}
                         </td>
                         <td className="p-3 text-emerald-400 font-bold">
@@ -1212,7 +1211,7 @@ export const BenchmarksPage: React.FC = () => {
                             </div>
                           ) : '--'}
                         </td>
-                        <td className="p-3 text-[#5D757E] dark:text-slate-400">
+                        <td className="p-3 text-muted">
                           {opt ? (
                             <div>
                               <span>{opt.buffer_overwrite_rate_percent || opt.frame_drop_rate_percent || 86.5}%</span>
@@ -1237,7 +1236,7 @@ export const BenchmarksPage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Profiling Breakdown */}
             <div className="bg-[#0A1018] border border-[#192638] rounded-xl p-5 space-y-4">
-              <div className="flex items-center justify-between border-b border-[#E2E8EA] dark:border-[#203638] pb-3">
+              <div className="flex items-center justify-between border-b border-rule dark:border-rule pb-3">
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
                   <Activity className="w-4 h-4 text-cyan-400" />
                   <span>Measured Component Profiling (Mean ms / Frame)</span>
@@ -1271,7 +1270,7 @@ export const BenchmarksPage: React.FC = () => {
 
             {/* Architectural Innovations */}
             <div className="bg-[#0A1018] border border-[#192638] rounded-xl p-5 space-y-4">
-              <div className="flex items-center justify-between border-b border-[#E2E8EA] dark:border-[#203638] pb-3">
+              <div className="flex items-center justify-between border-b border-rule dark:border-rule pb-3">
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
                   <Layers className="w-4 h-4 text-purple-400" />
                   <span>Key Architectural Enhancements</span>
@@ -1282,28 +1281,28 @@ export const BenchmarksPage: React.FC = () => {
               <div className="space-y-3 text-xs">
                 <div className="p-3 bg-[#0E1622] border border-[#1E2D40] rounded-lg space-y-1">
                   <span className="font-bold text-cyan-300 block">1. Fair Shared-Inference Scheduler</span>
-                  <p className="text-[#5D757E] dark:text-slate-400 leading-relaxed text-[11px]">
+                  <p className="text-muted leading-relaxed text-[11px]">
                     Serialized round-robin dispatcher eliminates PyTorch OpenMP thread contention across CPU cores. Prevents active cameras from starving each other or crashing on corrupted frames.
                   </p>
                 </div>
 
                 <div className="p-3 bg-[#0E1622] border border-[#1E2D40] rounded-lg space-y-1">
                   <span className="font-bold text-emerald-400 block">2. Bounded Single-Slot Buffering (O(1))</span>
-                  <p className="text-[#5D757E] dark:text-slate-400 leading-relaxed text-[11px]">
+                  <p className="text-muted leading-relaxed text-[11px]">
                     Capture threads replace pending un-started frames with newest arrivals. Guarantees end-to-end telemetry latency remains &lt; 40ms without infinite queue explosion.
                   </p>
                 </div>
 
                 <div className="p-3 bg-[#0E1622] border border-[#1E2D40] rounded-lg space-y-1">
                   <span className="font-bold text-amber-400 block">3. Vectorized uint8 Heatmap Blending</span>
-                  <p className="text-[#5D757E] dark:text-slate-400 leading-relaxed text-[11px]">
+                  <p className="text-muted leading-relaxed text-[11px]">
                     Replaced full 1080p float32 array allocations and clipping loops with optimized <code className="text-amber-300">cv2.addWeighted</code> and uint8 masking. Reduced blending from ~60ms to ~8ms.
                   </p>
                 </div>
 
                 <div className="p-3 bg-[#0E1622] border border-[#1E2D40] rounded-lg space-y-1">
                   <span className="font-bold text-purple-400 block">4. Cached 2D Gaussian Kernel Footprints</span>
-                  <p className="text-[#5D757E] dark:text-slate-400 leading-relaxed text-[11px]">
+                  <p className="text-muted leading-relaxed text-[11px]">
                     Precomputed kernel patches by scaled footprint size eliminate dynamic <code className="text-purple-300">np.meshgrid</code> and exponent calls for every individual in the crowd.
                   </p>
                 </div>
@@ -1346,7 +1345,7 @@ export const BenchmarksPage: React.FC = () => {
           {/* KPI Summary Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="p-4 rounded-xl bg-[#0A1018] border border-[#192638]">
-              <span className="text-[11px] font-mono text-[#5D757E] dark:text-slate-400 block">PRECISION (TP / [TP+FP])</span>
+              <span className="text-[11px] font-mono text-muted block">PRECISION (TP / [TP+FP])</span>
               <span className="text-2xl font-black text-cyan-300 mt-1 block">
                 {overall ? `${(overall.precision * 100).toFixed(1)}%` : '--'}
               </span>
@@ -1356,7 +1355,7 @@ export const BenchmarksPage: React.FC = () => {
             </div>
 
             <div className="p-4 rounded-xl bg-[#0A1018] border border-[#192638]">
-              <span className="text-[11px] font-mono text-[#5D757E] dark:text-slate-400 block">RECALL (TP / [TP+FN])</span>
+              <span className="text-[11px] font-mono text-muted block">RECALL (TP / [TP+FN])</span>
               <span className="text-2xl font-black text-emerald-400 mt-1 block">
                 {overall ? `${(overall.recall * 100).toFixed(1)}%` : '--'}
               </span>
@@ -1366,7 +1365,7 @@ export const BenchmarksPage: React.FC = () => {
             </div>
 
             <div className="p-4 rounded-xl bg-[#0A1018] border border-[#192638]">
-              <span className="text-[11px] font-mono text-[#5D757E] dark:text-slate-400 block">F1 SCORE (HARMONIC MEAN)</span>
+              <span className="text-[11px] font-mono text-muted block">F1 SCORE (HARMONIC MEAN)</span>
               <span className="text-2xl font-black text-white mt-1 block">
                 {overall ? overall.f1_score.toFixed(3) : '--'}
               </span>
@@ -1376,7 +1375,7 @@ export const BenchmarksPage: React.FC = () => {
             </div>
 
             <div className="p-4 rounded-xl bg-[#0A1018] border border-[#192638]">
-              <span className="text-[11px] font-mono text-[#5D757E] dark:text-slate-400 block">MEAN IoU (TRUE POSITIVES)</span>
+              <span className="text-[11px] font-mono text-muted block">MEAN IoU (TRUE POSITIVES)</span>
               <span className="text-2xl font-black text-purple-400 mt-1 block">
                 {overall ? `${(overall.mean_iou * 100).toFixed(1)}%` : '--'}
               </span>
@@ -1402,17 +1401,17 @@ export const BenchmarksPage: React.FC = () => {
 
           {/* Category Breakdown Table */}
           <div className="bg-[#0A1018] border border-[#192638] rounded-xl overflow-hidden">
-            <div className="p-4 border-b border-[#E2E8EA] dark:border-[#203638] flex items-center justify-between">
+            <div className="p-4 border-b border-rule dark:border-rule flex items-center justify-between">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 <Layers className="w-4 h-4 text-cyan-400" />
                 <span>Detection Performance by Scene Category</span>
               </h3>
-              <span className="text-[10px] font-mono text-[#5D757E] dark:text-slate-400">Match IoU ≥ 0.50</span>
+              <span className="text-[10px] font-mono text-muted">Match IoU ≥ 0.50</span>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs font-mono">
-                <thead className="bg-[#070B11] text-[#5D757E] dark:text-slate-400 border-b border-[#E2E8EA] dark:border-[#203638]">
+                <thead className="bg-[#070B11] text-muted border-b border-rule dark:border-rule">
                   <tr>
                     <th className="p-3">Category</th>
                     <th className="p-3">Frames</th>
@@ -1426,7 +1425,7 @@ export const BenchmarksPage: React.FC = () => {
                     <th className="p-3">Mean IoU</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#E2E8EA] dark:divide-[#192638] text-[#1C3334] dark:text-slate-200">
+                <tbody className="divide-y divide-[#E2E8EA] dark:divide-[#192638] text-ink">
                   {Object.entries(categories).map(([catName, stats]: [string, any]) => (
                     <tr key={catName} className="hover:bg-[#0E1622] transition">
                       <td className="p-3 font-sans font-medium text-white capitalize">
@@ -1450,13 +1449,13 @@ export const BenchmarksPage: React.FC = () => {
 
           {/* Confidence Threshold Sweep */}
           <div className="bg-[#0A1018] border border-[#192638] rounded-xl p-5 space-y-4">
-            <div className="flex items-center justify-between border-b border-[#E2E8EA] dark:border-[#203638] pb-3">
+            <div className="flex items-center justify-between border-b border-rule dark:border-rule pb-3">
               <div>
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
                   <Flame className="w-4 h-4 text-orange-400" />
                   <span>Confidence Threshold Sensitivity Sweep (0.10 to 0.70)</span>
                 </h3>
-                <p className="text-[11px] text-[#5D757E] dark:text-slate-400 font-mono mt-0.5">
+                <p className="text-[11px] text-muted font-mono mt-0.5">
                   Demonstrates the Precision vs Recall trade-off curve across confidence filtering thresholds
                 </p>
               </div>
@@ -1477,13 +1476,13 @@ export const BenchmarksPage: React.FC = () => {
                         : 'bg-[#0E1622] border-[#192638]'
                     }`}
                   >
-                    <span className="text-[10px] font-mono text-[#5D757E] dark:text-slate-400 block">
+                    <span className="text-[10px] font-mono text-muted block">
                       CONF {pt.conf_threshold.toFixed(2)}
                     </span>
                     <span className="text-base font-black text-white mt-1 block">
                       F1: {pt.metrics.f1_score.toFixed(3)}
                     </span>
-                    <div className="text-[10px] font-mono text-[#5D757E] dark:text-slate-400 mt-1 space-y-0.5">
+                    <div className="text-[10px] font-mono text-muted mt-1 space-y-0.5">
                       <div className="text-cyan-300">P: {(pt.metrics.precision * 100).toFixed(0)}%</div>
                       <div className="text-emerald-400">R: {(pt.metrics.recall * 100).toFixed(0)}%</div>
                     </div>
@@ -1514,17 +1513,17 @@ export const BenchmarksPage: React.FC = () => {
                   </span>
                 </div>
 
-                <div className="space-y-2 pt-2 border-t border-[#E2E8EA] dark:border-[#203638]">
+                <div className="space-y-2 pt-2 border-t border-rule dark:border-rule">
                   <div className="flex justify-between text-xs font-mono">
-                    <span className="text-[#5D757E] dark:text-slate-400">Capture FPS (avg):</span>
+                    <span className="text-muted">Capture FPS (avg):</span>
                     <span className="text-white font-bold">{item.mean_capture_fps.toFixed(1)} FPS</span>
                   </div>
                   <div className="flex justify-between text-xs font-mono">
-                    <span className="text-[#5D757E] dark:text-slate-400">Inference FPS (avg):</span>
+                    <span className="text-muted">Inference FPS (avg):</span>
                     <span className="text-emerald-400 font-bold">{item.mean_inference_fps.toFixed(1)} FPS</span>
                   </div>
                   <div className="flex justify-between text-xs font-mono">
-                    <span className="text-[#5D757E] dark:text-slate-400">Capture-to-Published:</span>
+                    <span className="text-muted">Capture-to-Published:</span>
                     <span className="text-purple-400 font-bold">
                       {item.mean_capture_to_published_ms 
                         ? `${Math.round(item.mean_capture_to_published_ms)} ms` 
@@ -1532,25 +1531,25 @@ export const BenchmarksPage: React.FC = () => {
                     </span>
                   </div>
                   <div className="flex justify-between text-xs font-mono">
-                    <span className="text-[#5D757E] dark:text-slate-400">Raw Buffer Age:</span>
+                    <span className="text-muted">Raw Buffer Age:</span>
                     <span className="text-[#2F4454] dark:text-slate-300 font-bold">
                       {Math.round((item.mean_raw_buffer_age_seconds || item.mean_frame_latency_seconds || 0.02) * 1000)} ms
                     </span>
                   </div>
                   <div className="flex justify-between text-xs font-mono">
-                    <span className="text-[#5D757E] dark:text-slate-400">Buffer Overwrites:</span>
+                    <span className="text-muted">Buffer Overwrites:</span>
                     <span className="text-amber-400">{item.total_buffer_overwrites || item.total_frames_dropped}</span>
                   </div>
                   <div className="flex justify-between text-xs font-mono">
-                    <span className="text-[#5D757E] dark:text-slate-400">Capture Failure Rate:</span>
+                    <span className="text-muted">Capture Failure Rate:</span>
                     <span className="text-emerald-400 font-bold">{item.capture_failure_rate_percent ?? 0.0}%</span>
                   </div>
                   <div className="flex justify-between text-xs font-mono">
-                    <span className="text-[#5D757E] dark:text-slate-400">CPU Load (Norm):</span>
+                    <span className="text-muted">CPU Load (Norm):</span>
                     <span className="text-[#2F4454] dark:text-slate-300">{item.mean_cpu_percent.toFixed(1)}%</span>
                   </div>
                   <div className="flex justify-between text-xs font-mono">
-                    <span className="text-[#5D757E] dark:text-slate-400">Process Memory:</span>
+                    <span className="text-muted">Process Memory:</span>
                     <span className="text-[#2F4454] dark:text-slate-300">{item.mean_memory_working_set_mb.toFixed(0)} MB</span>
                   </div>
                 </div>
@@ -1591,7 +1590,7 @@ export const BenchmarksPage: React.FC = () => {
                     isPass ? 'bg-[#0A1018] border-[#192638]' : 'bg-rose-950/20 border-rose-500/40'
                   }`}
                 >
-                  <div className="flex items-center justify-between border-b border-[#E2E8EA] dark:border-[#203638] pb-2 mb-3">
+                  <div className="flex items-center justify-between border-b border-rule dark:border-rule pb-2 mb-3">
                     <span className="text-xs font-bold text-white">{sc.name}</span>
                     <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
                       isPass ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30' : 'bg-rose-950/40 text-rose-400 border-rose-500/30'
@@ -1600,18 +1599,18 @@ export const BenchmarksPage: React.FC = () => {
                     </span>
                   </div>
 
-                  <p className="text-[11px] text-[#5D757E] dark:text-slate-400 mb-3">{sc.description}</p>
+                  <p className="text-[11px] text-muted mb-3">{sc.description}</p>
 
                   <div className="grid grid-cols-2 gap-2 text-xs font-mono bg-[#070B11] p-3 rounded-lg border border-[#142032]">
                     <div>
                       <span className="text-[10px] text-slate-500 block">OBSERVED RISK</span>
                       <span className="text-base font-bold text-cyan-300">{sc.observed_score}</span>
-                      <span className="text-[10px] text-[#5D757E] dark:text-slate-400 block">({sc.observed_band})</span>
+                      <span className="text-[10px] text-muted block">({sc.observed_band})</span>
                     </div>
 
                     <div>
                       <span className="text-[10px] text-slate-500 block">COMPONENTS</span>
-                      <div className="text-[10px] text-[#5D757E] dark:text-slate-400 space-y-0.5">
+                      <div className="text-[10px] text-muted space-y-0.5">
                         <div>D: {sc.density_component}</div>
                         <div>G: {sc.growth_component}</div>
                         <div>M: {sc.motion_anomaly_component}</div>
@@ -1664,11 +1663,11 @@ export const BenchmarksPage: React.FC = () => {
                 </div>
 
                 <div className="p-3 space-y-1 text-xs font-mono">
-                  <div className="flex justify-between text-[#5D757E] dark:text-slate-400">
+                  <div className="flex justify-between text-muted">
                     <span>GT Persons:</span>
                     <span className="text-emerald-400 font-bold">{frame.ground_truth_boxes.length}</span>
                   </div>
-                  <div className="flex justify-between text-[#5D757E] dark:text-slate-400">
+                  <div className="flex justify-between text-muted">
                     <span>Dimensions:</span>
                     <span className="text-[#2F4454] dark:text-slate-300">{frame.width}×{frame.height}</span>
                   </div>

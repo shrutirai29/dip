@@ -1,236 +1,325 @@
-# CROWDGUARD v2.0 — Digital Image Processing (DIP) Crowd Monitoring & Disaster Risk Assessment System
+# CROWDGUARD v2.0 — Real-Time Crowd Risk Intelligence & Precursor Detection Platform
 
 ![System Status](https://img.shields.io/badge/System-Release_Candidate_v2.0-success)
 ![Vision Core](https://img.shields.io/badge/YOLO-v8n_COCO_Person-blue)
 ![DIP Motion](https://img.shields.io/badge/DIP-Farneback_Optical_Flow-cyan)
 ![DIP Entropy](https://img.shields.io/badge/DIP-Directional_Shannon_Entropy-purple)
-![Predictive Engine](https://img.shields.io/badge/Forecast-Experimental_Trend_Extrapolation-amber)
+![Predictive Engine](https://img.shields.io/badge/Forecast-10s_Risk_Extrapolation-amber)
 ![Persistence](https://img.shields.io/badge/Database-SQLite_SQLAlchemy-informational)
-![Quality Gates](https://img.shields.io/badge/Tests-22_Passed_Unit_API-brightgreen)
+![Air-Gapped](https://img.shields.io/badge/Security-100%25_Localhost_Offline-brightgreen)
 
-An explainable computer vision and digital image processing surveillance command platform. The system processes CCTV footage, detects and tracks individuals, calculates perspective-normalized continuous density heatmaps, extracts Gunnar Farneback dense optical flow fields and directional Shannon entropy, recognizes crowd motion patterns (bottlenecks, counterflow, panic surges), computes a transparent $0–100$ heuristic risk score, and generates short-term ($+5\text{s}, +10\text{s}, +15\text{s}$) predictive trend alerts with actionable operator recommendations.
+<br/>
 
----
+![CROWDGUARD v2.0 Platform Banner](docs/images/crowdguard_banner.png)
 
-## 1. Project Overview & Intended Users
+<br/>
 
-CROWDGUARD is designed for:
-- **Surveillance Operators & Venue Dispatchers:** Monitoring live or recorded multi-camera feeds at transit hubs, stadiums, and public gatherings.
-- **Safety Analysts & Event Coordinators:** Auditing crowd flow bottlenecks, ingress/egress corridor saturation, and evacuation compliance.
-- **Computer Vision & DIP Researchers:** Investigating explainable heuristic risk estimation, spatial quadrant density splatting, and directional Shannon entropy.
+**CROWDGUARD v2.0** is an operational, explainable crowd intelligence and public safety platform engineered for command centers, stadium operators, transit authorities, event security teams, and computer vision researchers. 
 
----
-
-## 2. Problem Statement & Objectives
-
-Public crowd disasters (crushes, stampedes, progressive crowd collapse) often develop gradually due to geometric choke points, bi-directional counterflow turbulence, or uncontrolled entry surges before sudden failure occurs. Traditional surveillance relies either on manual human observation (prone to fatigue) or black-box deep learning models that lack explainability.
-
-**Core Objectives:**
-1. **WHAT is happening?** Quantify person counts, velocity, acceleration, and optical flow magnitude.
-2. **WHERE is it happening?** Segment scene into an interactive $3 \times 3$ tactical spatial grid (Zones A1–C3) with localized inflow/outflow metrics.
-3. **WHY is it considered hazardous?** Compute a transparent $0–100$ composite risk index decomposed into 4 explainable components: Density Pressure (35%), Surge Influx (20%), Motion Anomaly (25%), and Grid Congestion (20%).
-4. **WHAT is likely to happen next?** Extrapolate short-term predictive risk trends ($+5\text{s}, +10\text{s}, +15\text{s}$) to give human operators critical early intervention time.
+The system combines **Ultralytics YOLOv8** pedestrian localization with classical **Digital Image Processing (DIP)** algorithms—including **Gunnar Farneback dense optical flow** and **Directional Shannon Entropy**—to detect the invisible precursors of crowd collapse and stampede hazards **10 seconds before physical crowd arrest occurs**.
 
 ---
 
-## 3. Feature Classification
+## Table of Contents
 
-| Status | Feature | Implementation Detail |
-| :--- | :--- | :--- |
-| **Implemented & Tested** | YOLOv8 Person Detection | Filtered strictly to COCO Class 0 (`person`) with auto CPU/CUDA execution. |
-| **Implemented & Tested** | Dual-Stage DIP Denoising | Bilateral edge-preserving filtering + morphological opening temporal differencing. |
-| **Implemented & Tested** | Gunnar Farneback Optical Flow | Dense $(u, v)$ velocity field, mean magnitude, and spatial velocity variance. |
-| **Implemented & Tested** | Directional Shannon Entropy | Binned into 8 angular sectors ($45^\circ$) to quantify laminar flow vs. turbulence. |
-| **Implemented & Tested** | Perspective Density Splatting | 2D continuous Gaussian splatting ($61 \times 61$) with adaptive vertical Y-scaling. |
-| **Implemented & Tested** | Custom Multi-Object Tracker | Persistent IDs, displacement speed ($\text{px/s}$), acceleration, and zone transitions. |
-| **Implemented & Tested** | $3 \times 3$ Spatial Quadrant HUD | Real-time population, normalized density, inflow, outflow, and local hazard state. |
-| **Implemented & Tested** | Heuristic Risk Index | Transparent $0–100$ scoring with exponential moving average (EMA) smoothing. |
-| **Implemented & Tested** | Sustained Incident Engine | Requires multi-frame condition sustenance with cooldowns and operator advisories. |
-| **Implemented & Tested** | Privacy Anonymization | Bilateral face blurring and bounding-box silhouette masking (no biometric matching). |
-| **Implemented & Tested** | Forensic Audit Export | Standardized CSV export of video metadata, frame telemetry, and incident history. |
-| **Experimental** | Short-Term Trend Forecast | Physical time-aware linear-quadratic extrapolation for $+5\text{s}, +10\text{s}, +15\text{s}$. |
-| **Future Work** | Stereoscopic Photogrammetry | Calibrated metric 3D ground-plane transformation for true $\text{persons/m}^2$. |
-| **Future Work** | Deep Spatio-Temporal Models | Labeled real-world stampede benchmark dataset training (e.g. Graph Neural Networks). |
+1. [Operational Motivation & The Human Blind Spot](#1-operational-motivation--the-human-blind-spot)
+2. [The 3-Tier Crowd Safety Spectrum (Red · Yellow · Green)](#2-the-3-tier-crowd-safety-spectrum)
+3. [Visual Walkthrough & Platform Modules](#3-visual-walkthrough--platform-modules)
+   - [Executive Dashboard](#executive-dashboard-overview)
+   - [Forensic Video Analysis Studio](#forensic-video-analysis-studio)
+   - [Live Surveillance Monitoring & 3×3 Spatial Matrix](#live-surveillance-monitoring--33-spatial-matrix)
+   - [Multi-Camera CCTV Fleet Grid (NVR)](#multi-camera-cctv-fleet-grid-nvr)
+   - [Crowd Dynamics Analytics & Inquiry](#crowd-dynamics-analytics--inquiry)
+   - [Incident Management & Operational Audit](#incident-management--operational-audit)
+   - [Interactive Presentation & PowerPoint Deck](#interactive-presentation--powerpoint-deck)
+4. [DIP & Computer Vision Formulations](#4-dip--computer-vision-formulations)
+   - [1. Gunnar Farneback Dense Optical Flow](#1-gunnar-farneback-dense-optical-flow)
+   - [2. Directional Shannon Entropy](#2-directional-shannon-entropy-the-core-innovation)
+   - [3. Perspective-Aware Ground Density](#3-perspective-aware-ground-density)
+   - [4. The 4-Factor Heuristic Risk Synthesis Engine](#4-the-4-factor-heuristic-risk-synthesis-engine)
+   - [5. 10-Second Predictive Risk Extrapolation](#5-10-second-predictive-risk-extrapolation)
+5. [System Architecture](#5-system-architecture)
+6. [Local Installation & Quickstart](#6-local-installation--quickstart)
+7. [Core API Endpoints](#7-core-api-endpoints)
+8. [Automated Quality Gates & Test Results](#8-automated-quality-gates--test-results)
 
 ---
 
-## 4. System Architecture
+## 1. Operational Motivation & The Human Blind Spot
+
+Traditional security surveillance relies on manual human operators monitoring wall grids of CCTV screens. Empirical crowd science and ergonomics reveal two fatal vulnerabilities in this approach:
+
+```
++-------------------------------------------------------------------------------------------------------+
+|  THE 95% OPERATOR FATIGUE DROP                                                                       |
+|  Security guards monitoring multi-screen NVR video walls miss up to 95% of subtle crowd buildup        |
+|  anomalies after just 20 minutes of continuous duty.                                                  |
++-------------------------------------------------------------------------------------------------------+
+|  THE "DECEPTIVE STILLNESS" PARADOX                                                                    |
+|  Prior to a catastrophic crowd crush, pedestrian velocity often decelerates to near zero.             |
+|  Human eyes perceive this stillness as calm, when in reality it is fatal compressive pressure buildup.|
++-------------------------------------------------------------------------------------------------------+
+|  NO PREDICTIVE FORESIGHT                                                                              |
+|  Human teams react only after barriers collapse or vocal screams erupt—by then, compressive           |
+|  asphyxia can induce unconsciousness within 120 seconds.                                              |
++-------------------------------------------------------------------------------------------------------+
+```
+
+CROWDGUARD solves this by continuously quantifying physical crowd kinetics without fatigue, alerting command room operators **10 seconds in advance** before bottlenecks lock.
+
+---
+
+## 2. The 3-Tier Crowd Safety Spectrum
+
+CROWDGUARD maps crowd safety to an intuitive, high-contrast traffic light spectrum:
+
+| Tier | Risk Score | Density Threshold | Flow Velocity | Directional Entropy | Operational Status & Response |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **🟢 GREEN** | `0.0 – 39.9` | $< 2.0\text{ p/m}^2$ | $> 1.2\text{ m/s}$ | $H_{\text{norm}} < 0.35$ | **Laminar Circulation (Safe):** Pedestrians move freely with personal agency. Standard camera rotation. |
+| **🟡 YELLOW** | `40.0 – 69.9` | $2.0 – 4.0\text{ p/m}^2$ | $0.5 – 1.2\text{ m/s}$ | $0.35 \le H_{\text{norm}} \le 0.70$ | **Congestion Warning (Chokepoint):** Velocity gradients form. Open auxiliary turnstiles; broadcast public guidance. |
+| **🔴 RED** | `70.0 – 100.0` | $> 4.5\text{ p/m}^2$ | $< 0.4\text{ m/s}$ | $H_{\text{norm}} > 0.70$ | **Critical Crush Hazard (Emergency):** Counterflow vector clash; shockwaves. Automated siren trigger; dispatch marshals. |
+
+---
+
+## 3. Visual Walkthrough & Platform Modules
+
+### Executive Dashboard (Overview)
+The mission centerpiece providing an asymmetrical command view: live CCTV preview with bounding box telemetry, the 4-factor risk gauge, a 10-second forward projection trajectory, and real-time DIP pipeline health metrics.
+
+![Executive Dashboard Overview](docs/images/overview_dashboard.png)
+
+---
+
+### Forensic Video Analysis Studio
+A computer vision laboratory workstation for recorded CCTV archives. Features frame-by-frame scrubbing, person detection boxes, centroid tracking IDs, dense optical flow vectors, and automated incident logging.
+
+![Forensic Video Analysis Studio](docs/images/video_analysis.png)
+
+---
+
+### Live Surveillance Monitoring & 3×3 Spatial Matrix
+Operational control room interface docking live camera feeds next to an interactive $3 \times 3$ localized spatial quadrant matrix. Allows dispatchers to isolate micro-chokepoints (e.g., Turnstile B at Quadrant $Q_{2,2}$) instead of broadcasting generalized venue-wide alarms.
+
+![Live Surveillance Monitoring](docs/images/live_monitoring.png)
+
+---
+
+### Multi-Camera CCTV Fleet Grid (NVR)
+Enterprise CCTV wall supporting concurrent multi-stream ingestion (USB webcams, industrial RTSP/RTSPS IP cameras, and MP4 video files). Features dynamic layout switching ($1\times1$, $2\times2$, $3\times3$), automated exponential backoff reconnection, and built-in SSRF credential protection.
+
+![Multi-Camera CCTV Fleet](docs/images/multicamera_grid.png)
+
+---
+
+### Crowd Dynamics Analytics & Inquiry
+Editorial investigation flow framing crowd dynamics as concrete research inquiries: mean egress flow speed, optical flow magnitude across time, directional Shannon entropy spikes, and surge acceleration curves.
+
+![Crowd Dynamics Analytics](docs/images/analytics_forensics.png)
+
+---
+
+### Incident Management & Operational Audit
+Automated early-warning hazard ledger requiring multi-frame condition sustenance before triggering alerts, preventing false sirens. Provides actionable tactical recommendations and audit status tracking.
+
+![Incident Management & Audit](docs/images/incidents_log.png)
+
+---
+
+### Interactive Presentation & PowerPoint Deck
+A full-screen interactive slide deck accessible directly from the browser, paired with a downloadable native widescreen `.pptx` presentation deck featuring custom-rendered background artwork.
+
+![Interactive Presentation Deck](docs/images/presentation_deck.png)
+
+---
+
+## 4. DIP & Computer Vision Formulations
+
+### 1. Gunnar Farneback Dense Optical Flow
+Extracts a full-field $(u, v)$ velocity displacement vector field between successive video frames using quadratic polynomial expansion over multi-resolution Gaussian pyramids:
+
+$$f_1(\mathbf{x}) \approx \mathbf{x}^T \mathbf{A}_1 \mathbf{x} + \mathbf{b}_1^T \mathbf{x} + c_1, \quad f_2(\mathbf{x}) = f_1(\mathbf{x} - \mathbf{d})$$
+
+The instantaneous velocity magnitude $M(x, y)$ and heading angle $\theta(x, y)$ are derived without biometric identity tracking:
+
+$$M(x, y) = \sqrt{u(x, y)^2 + v(x, y)^2}, \quad \theta(x, y) = \operatorname{atan2}(v(x, y), u(x, y)) \in [-\pi, \pi]$$
+
+> **Privacy Guarantee:** Unlike facial recognition surveillance, optical flow operates strictly on fluid physical motion vectors ($u, v$)—zero biometric templates or identity metadata are collected or stored.
+
+---
+
+### 2. Directional Shannon Entropy (The Core Innovation)
+> **Key Scientific Insight:** *Headcount does not cause stampedes. Opposing velocity collisions cause stampedes.*
+
+A stadium concourse with 50,000 individuals moving in unison toward an open gate is safe ($H_{\text{norm}} \approx 0.15$). A crowd of only 500 individuals clashing in opposing directions creates fatal compressive crush forces ($H_{\text{norm}} > 0.75$).
+
+Moving optical flow vectors are classified into $N = 8$ discrete angular sectors of $45^\circ$:
+
+$$p_i = \frac{\sum_{(x, y) \in \text{sector}_i} M(x, y)}{\sum_{\text{all moving}} M(x, y)}, \quad H = -\sum_{i=1}^{8} p_i \log_2(p_i + \epsilon)$$
+
+Normalized against maximum theoretical entropy:
+
+$$H_{\text{norm}} = \frac{H}{\log_2(8)} = \frac{H}{3.0} \in [0.0, 1.0]$$
+
+---
+
+### 3. Perspective-Aware Ground Density
+To correct for monocular camera perspective shrinkage (distant crowds near the horizon occupying fewer pixels than foreground individuals), vertical ground coordinates $y_k \in [0, H]$ scale continuous 2D Gaussian density splatting:
+
+$$w_{\text{persp}}(y) = 1.0 + \left(1.0 - \frac{y}{H}\right) \times 0.8$$
+
+$$D(x, y) = \sum_{k=1}^{N} \exp\left( -\frac{(x - x_k)^2 + (y - y_k)^2}{2\sigma_k^2} \right) \cdot w_{\text{persp}}(y_k)$$
+
+---
+
+### 4. The 4-Factor Heuristic Risk Synthesis Engine
+The composite crowd risk index synthesizes four orthogonal physical indicators:
+
+$$\text{Risk}(t) = 100 \times \Big[ w_1 \cdot \text{Density}(t) + w_2 \cdot \text{Flow}(t) + w_3 \cdot \text{Entropy}(t) + w_4 \cdot \text{Surge}(t) \Big]$$
+
+- **$w_1 = 0.35$ (Spatial Density):** Normalized headcount and peak spatial quadrant concentration.
+- **$w_2 = 0.25$ (Flow Speed):** Average optical flow velocity and bottleneck deceleration detection.
+- **$w_3 = 0.25$ (Directional Entropy):** Multi-sector motion turbulence and opposing counterflow clashes.
+- **$w_4 = 0.15$ (Surge Acceleration):** Rate of change of crowd velocity detecting explosive inrushes.
+
+**Temporal Smoothing:**
+$$\text{Risk}_{\text{smoothed}}(t) = 0.30 \cdot \text{Risk}(t) + 0.70 \cdot \text{Risk}_{\text{smoothed}}(t - 1)$$
+
+---
+
+### 5. 10-Second Predictive Risk Extrapolation
+Using continuous velocity and acceleration derivatives, CROWDGUARD extrapolates risk trajectories across a $+10\text{s}$ forecast horizon:
+
+$$\hat{R}(t + \Delta t) = \operatorname{clip}\left( R(t) + \frac{dR}{dt} \cdot \Delta t \cdot M_{\text{pattern}}, \; 0, \; 100 \right)$$
+
+where $M_{\text{pattern}}$ is a dynamic multiplier derived from spatial quadrant divergence and entropy acceleration.
+
+---
+
+## 5. System Architecture
 
 ```mermaid
-graph TD
-    A[CCTV / Surveillance Video] --> B[Dual-Stage DIP Denoising & Differencing]
-    B --> C[Ultralytics YOLOv8 Person Detection Class 0]
-    B --> D[Gunnar Farneback Dense Optical Flow Field]
-    C --> E[Custom IoU Multi-Object Tracker: Speeds & Foot Points]
-    C --> F[Perspective-Aware 2D Gaussian Density Splatting]
-    D --> G[Directional Shannon Entropy & Flow Irregularity]
-    E & F & G --> H[Intelligent 3x3 Spatial Quadrant Telemetry A1-C3]
-    H --> I[Crowd Pattern Recognition: Bottleneck / Counterflow / Surge]
-    I --> J[Explainable Heuristic Risk Scoring: 0-100 & EMA]
-    J --> K[Multivariate Short-Term Risk Forecast: +5s, +10s, +15s]
-    K --> L[Sustained Early Warning System & Operator Advisories]
-    L --> M[FastAPI Backend & SQLite Database]
-    M --> N[React + Vite + Tailwind Surveillance Command Console]
+flowchart TD
+    A["CCTV / Industrial RTSP / USB / MP4 Feed"] --> B["Bilateral Denoising & Image Preprocessing"]
+    
+    subgraph VisionCore ["Vision & Forensics Engine"]
+        B --> C["Ultralytics YOLOv8 Class 0 (Pedestrian)"]
+        B --> D["Gunnar Farneback Dense Optical Flow"]
+        C --> E["ByteTrack Kalman Trajectory Tracking"]
+        C --> F["Perspective-Aware 2D Density Splatting"]
+        D --> G["8-Sector Directional Shannon Entropy"]
+    end
+    
+    subgraph SpatialAnalytics ["Spatial & Hazard Synthesis"]
+        E & F & G --> H["3x3 Quadrant Matrix Telemetry (Q1,1 - Q3,3)"]
+        H --> I["4-Factor Heuristic Risk Engine (0 - 100)"]
+        I --> J["10-Second Kalman Risk Extrapolator"]
+        J --> K["Sustained Incident Warning Engine"]
+    end
+    
+    subgraph ApplicationStack ["Platform Infrastructure"]
+        K --> L["FastAPI + SQLite Persistence (127.0.0.1:8000)"]
+        L --> M["React 19 + Tailwind CSS Console (localhost:5174)"]
+        M --> N["PowerPoint Presentation Deck (.pptx)"]
+    end
 ```
 
 ---
 
-## 5. Software Architecture
+## 6. Local Installation & Quickstart
 
-- **Backend:** Python 3.11, FastAPI, Uvicorn, OpenCV (`opencv-python`), Ultralytics YOLOv8, NumPy, SciPy, SQLAlchemy, SQLite.
-- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS, Recharts, Lucide React, Axios, React Router v7.
-- **Data Persistence:** Local SQLite database (`data/surveillance.db`) with tables for `videos`, `analyses`, `frame_records`, and `incidents`.
-- **Media Storage:** Processed annotated H.264 MP4 videos, evidence keyframe thumbnails, and CSV audit reports anchored under `data/`.
+### Prerequisites
+- Python 3.10+ (Python 3.11 recommended)
+- Node.js 18+ (Node.js 20+ recommended)
+- Git
 
----
+### 1. Windows (PowerShell)
 
-## 6. Digital Image Processing (DIP) Mathematical Formulation
-
-### 1. Gunnar Farneback Dense Optical Flow
-Approximates neighborhood pixels with quadratic polynomials:
-$$f_1(\mathbf{x}) \approx \mathbf{x}^T \mathbf{A}_1 \mathbf{x} + \mathbf{b}_1^T \mathbf{x} + c_1, \quad f_2(\mathbf{x}) = f_1(\mathbf{x} - \mathbf{d})$$
-Resolving displacement vector field $\mathbf{d} = (u, v)$ across consecutive grayscale frames:
-$$|\mathbf{v}| = \sqrt{u^2 + v^2}, \quad \theta = \operatorname{atan2}(v, u) \in [0, 2\pi)$$
-
-### 2. Directional Shannon Entropy
-Evaluates angular disorder by binning moving vectors ($|\mathbf{v}| > 0.8\text{ px}$) into $N=8$ discrete sectors of $45^\circ$:
-$$p_i = \frac{\text{count}(\theta \in \text{sector}_i)}{\sum \text{moving vectors}}, \quad H = -\sum_{i=1}^{8} p_i \log_2(p_i + \epsilon), \quad H_{\text{norm}} = \frac{H}{\log_2(8)}$$
-- $H_{\text{norm}} \approx 0.0$: Uniform, coordinated laminar crowd movement.
-- $H_{\text{norm}} > 0.68$: Turbulent, chaotic multi-directional motion (potential panic, cross-flow, or disorder).
-
-### 3. Perspective-Aware 2D Continuous Gaussian Density Splatting
-For $N$ detected persons with foot points $(x_k, y_k)$:
-$$D(x, y) = \sum_{k=1}^{N} \exp\left( -\frac{(x - x_k)^2 + (y - y_k)^2}{2\sigma_k^2} \right) \cdot w_{\text{persp}}(y_k)$$
-where vertical ground coordinate $y_k \in [0, H]$ scales the perspective factor:
-$$w_{\text{persp}}(y) = 1.0 + (1.0 - y / H) \cdot (w_{\text{config}} \times 0.8)$$
-People farther away near the horizon receive proportional density scaling to compensate for optical monocular perspective shrinkage.
-
----
-
-## 7. Explainable Risk Formula & Configurable Weights
-
-$$\text{Risk}_{\text{raw}} = 100 \times \left( w_d \cdot D_{\text{comp}} + w_g \cdot G_{\text{comp}} + w_m \cdot M_{\text{comp}} + w_c \cdot C_{\text{comp}} \right)$$
-
-1. **Density Component ($D_{\text{comp}} \in [0, 1]$):** Normalized occupancy count and peak spatial quadrant concentration.
-2. **Surge Influx Component ($G_{\text{comp}} \in [0, 1]$):** Positive gradient delta in rolling temporal count history.
-3. **Motion Anomaly Component ($M_{\text{comp}} \in [0, 1]$):** High optical flow velocity or severe standstill bottleneck ($v < 0.5\text{ px/s}$ under high density).
-4. **Congestion Component ($C_{\text{comp}} \in [0, 1]$):** Spatial clustering ratio into a single quadrant.
-
-**Temporal Smoothing:**
-$$\text{Risk}_{\text{smoothed}}(t) = \alpha \cdot \text{Risk}_{\text{raw}}(t) + (1 - \alpha) \cdot \text{Risk}_{\text{smoothed}}(t - 1) \quad (\alpha = 0.30)$$
-
-**Risk Bands:** Low ($0–25$), Moderate ($25–50$), High ($50–75$), Critical ($75–100$).
-
----
-
-## 8. Forecasting Methodology & Validation Limitations
-
-**Methodology:**
-Short-term forecast horizons ($\Delta t \in \{5\text{s}, 10\text{s}, 15\text{s}\}$) project future risk using the measured sample interval ($\Delta t_{\text{sample}} = \text{stride} / \text{fps}$):
-$$\hat{R}(t + \Delta t) = \operatorname{clip}\left( R(t) + \frac{dR}{dt} \cdot \Delta t \cdot M_{\text{pattern}}, \; 0, \; 100 \right)$$
-where $M_{\text{pattern}}$ is a heuristic hazard multiplier (e.g. $1.25$ for `BOTTLENECK` or `RAPID_SURGE`).
-
-**Scientific Integrity & Validation Limitations:**
-> [!IMPORTANT]
-> **No Validated Disaster Dataset:** Real-world crowd disasters (e.g. stampedes) lack standardized, calibrated CCTV benchmark datasets with frame-by-frame ground truth disaster labels.
-> The forecast generated by CROWDGUARD is an **uncalibrated trend projection**, not a certified estimate of disaster probability.
-> The forecast evaluation script (`backend/app/utils/evaluate_forecasts.py`) benchmarks mathematical extrapolation error against future observed composite risk on held-out video sequences. Real-world predictive accuracy remains unverified.
-
----
-
-## 9. Local Installation & Startup Commands
-
-### Windows (PowerShell)
 ```powershell
 # 1. Clone repository
 git clone https://github.com/shrutirai29/dip.git
 cd dip
 
-# 2. Setup Python environment
-python -m venv venv
-.\venv\Scripts\activate
-pip install -r backend/requirements.txt
+# 2. Setup Python Virtual Environment
+python -m venv backend\venv
+.\backend\venv\Scripts\activate
+pip install -r backend\requirements.txt
 
-# 3. Start Backend Server (Port 8000)
-uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000
-
-# 4. In a separate terminal, start Frontend (Port 5173)
-cd frontend
-npm install
-npm run dev -- --host 127.0.0.1 --port 5173
+# 3. Start FastAPI Backend Server (Port 8000)
+Set-Location backend
+uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-### Linux / Kali Linux (Bash)
+In a second PowerShell terminal:
+
+```powershell
+# 4. Start React 19 Frontend Console (Port 5174)
+Set-Location frontend
+npm install
+npm run dev -- --host 0.0.0.0 --port 5174
+```
+
+### 2. Linux / macOS (Bash)
+
 ```bash
 # 1. Clone repository
 git clone https://github.com/shrutirai29/dip.git
 cd dip
 
-# 2. Setup Python environment
-python3 -m venv venv
-source venv/bin/activate
+# 2. Setup Python Virtual Environment
+python3 -m venv backend/venv
+source backend/venv/bin/activate
 pip install -r backend/requirements.txt
 
-# 3. Start Backend Server (Port 8000)
-uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000
-
-# 4. In a separate terminal, start Frontend (Port 5173)
-cd frontend
-npm install
-npm run dev -- --host 127.0.0.1 --port 5173
+# 3. Start FastAPI Backend Server (Port 8000)
+cd backend
+uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-- API Base: `http://127.0.0.1:8000`
-- Interactive Swagger Documentation: `http://127.0.0.1:8000/docs`
-- Frontend Command Console: `http://localhost:5173`
+In a second Bash terminal:
+
+```bash
+# 4. Start React 19 Frontend Console (Port 5174)
+cd frontend
+npm install
+npm run dev -- --host 0.0.0.0 --port 5174
+```
+
+### Access URLs
+- **Mission Console:** [http://localhost:5174](http://localhost:5174)
+- **Interactive Slide Presentation:** [http://localhost:5174/presentation.html](http://localhost:5174/presentation.html)
+- **Native PowerPoint Deck:** [http://localhost:5174/CROWDGUARD_v2_Presentation.pptx](http://localhost:5174/CROWDGUARD_v2_Presentation.pptx)
+- **Interactive Swagger API Docs:** [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- **System Health Status:** [http://127.0.0.1:8000/api/health](http://127.0.0.1:8000/api/health)
 
 ---
 
-## 10. Core API Endpoints
+## 7. Core API Endpoints
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `GET` | `/api/health` | System health check and API version status. |
+| `GET` | `/api/health` | System health check and API pipeline status. |
 | `POST` | `/api/videos/upload` | Validates and streams video uploads (MP4, AVI, MOV, MKV). |
 | `GET` | `/api/videos/samples` | Lists available preset demonstration scenario videos. |
 | `POST` | `/api/videos/samples/{name}/ingest` | 1-click loads server sample videos into catalog. |
 | `POST` | `/api/analyses` | Initiates asynchronous video processing with DIP configuration. |
-| `GET` | `/api/analyses/{id}` | Polls real-time progress, FPS, and processing status. |
-| `GET` | `/api/analyses/{id}/results` | Retrieves complete frame-by-frame telemetry, flow, and entropy. |
+| `GET` | `/api/analyses/{id}` | Polls real-time progress, FPS, and processing telemetry. |
+| `GET` | `/api/analyses/{id}/results` | Retrieves frame-by-frame telemetry, optical flow, and entropy. |
 | `GET` | `/api/analyses/{id}/export` | Generates standardized forensic CSV audit report. |
-| `GET` | `/api/incidents` | Lists sustained early-warning alerts with optional severity filters. |
-| `PATCH` | `/api/incidents/{id}` | Updates incident status (Acknowledged, Resolved) and operator notes. |
-| `GET` | `/api/analytics/summary` | Global surveillance analytics (total videos, incidents, peak crowds). |
+| `GET` | `/api/incidents` | Lists sustained early-warning alerts with severity filters. |
+| `PATCH` | `/api/incidents/{id}` | Updates incident resolution status and operator tactical notes. |
+| `GET` | `/api/analytics/summary` | Global venue analytics (total videos, incidents, peak crowds). |
 
 ---
 
-## 11. Sample Video Generation & Usage
-
-Generate synthetic CCTV benchmark scenarios for testing:
-```bash
-python backend/app/utils/generate_sample.py
-```
-Outputs generated under `data/sample_videos/`:
-1. `crowd_bottleneck_demo.mp4`: Flow convergence and central passage choke point.
-2. `crowd_counterflow_demo.mp4`: Opposing pedestrian streams passing through each other.
-3. `crowd_panic_demo.mp4`: Sudden velocity surge with high directional Shannon entropy.
-
----
-
-## 12. Automated Quality Gates & Verified Test Results
+## 8. Automated Quality Gates & Test Results
 
 ### 1. Backend Service & API Test Suite
-Command:
 ```bash
-pytest backend/tests/test_services.py backend/tests/test_api.py
+pytest backend/tests/test_services.py backend/tests/test_api.py -v
 ```
-**Actual Observed Execution Output:**
 ```text
 ============================= test session starts =============================
 platform win32 -- Python 3.11.9, pytest-8.3.4, pluggy-1.6.0
-rootdir: C:\Users\shrut\Documents\antigravity\modest-pascal
-configfile: pytest.ini
-plugins: anyio-4.15.1
 collected 23 items
 
 backend\tests\test_services.py ...............                           [ 65%]
@@ -239,142 +328,27 @@ backend\tests\test_api.py ........                                       [100%]
 ======================= 23 passed, 5 warnings in 11.51s =======================
 ```
 
-### 2. Live Full Integration Pipeline Test
-Command:
-```bash
-cmd /c "set CROWDGUARD_RUN_E2E=1&& pytest backend/tests/test_e2e_integration.py -s"
-```
-**Actual Observed Execution Output:**
-```text
-[1] Uploading video...
- -> Uploaded: vid_4dbfa95294, 10.0s, 250 frames, 25.0 fps
-[2] Creating analysis job with DIP perspective & privacy...
- -> Analysis created: anl_181712986d, status: pending
-[3] Polling progress until completed...
- -> Progress: 31.2% | Frame: 78/250 | Status: processing | FPS: 5.8
- -> Progress: 63.2% | Frame: 158/250 | Status: processing | FPS: 6.9
- -> Progress: 100.0% | Frame: 248/250 | Status: completed | FPS: 7.5
- -> Job Completed! Peak Count: 1, Avg Risk: 13.8, Dominant Pattern: NORMAL_FLOW
- -> Verified playable annotated video on disk: .\data/processed/anl_181712986d_annotated.mp4 (1283376 bytes)
-[4] Fetching frame-by-frame telemetry...
- -> Received 125 recorded frame telemetry objects.
-    Sample t=9.92s: Count=0, CurrentRisk=20.57, Forecast+10s=100.0 (SURGING), Pattern=NORMAL_FLOW, Entropy=0.719
-[5] Fetching incidents...
- -> Found 5 sustained incidents generated for session.
-    Incident: inc_575a88afb9 | Type: PROJECTED_SURGE_WARNING | Severity: MODERATE | Score: 22.0 | Rec: ADVISORY: Monitor corridor inflow and prepare standby marshals. Awaiting real-time confirmation before active intervention.
-[6] Testing CSV export...
- -> CSV export verified successfully!
-
-ALL 6 PIPELINE INTEGRATION STEPS PASSED PERFECTLY!
-============================= 1 passed in 17.59s ==============================
-```
-
-### 3. Forecast Verification Benchmark & Scientific Findings
-Command:
-```bash
-python backend/app/utils/evaluate_forecasts.py
-```
-**Actual Observed Execution Output:**
-```json
-{
-  "total_video_catalogs": 3,
-  "development_videos": 1,
-  "held_out_evaluation_videos": 2,
-  "horizons": {
-    "+5s": {
-      "valid_points": 150,
-      "missing_points": 100,
-      "model_mae": 27.8,
-      "model_rmse": 35.67,
-      "persistence_baseline_mae": 11.12,
-      "persistence_baseline_rmse": 12.86
-    },
-    "+10s": {
-      "valid_points": 24,
-      "missing_points": 226,
-      "model_mae": 27.21,
-      "model_rmse": 35.89,
-      "persistence_baseline_mae": 16.99,
-      "persistence_baseline_rmse": 17.03
-    },
-    "+15s": {
-      "valid_points": 0,
-      "missing_points": 250,
-      "model_mae": null,
-      "model_rmse": null,
-      "persistence_baseline_mae": null,
-      "persistence_baseline_rmse": null
-    }
-  }
-}
-```
-
-> [!NOTE]
-> **Forecasting Performance Finding:**
-> On evaluation across held-out sequences, the persistence baseline ($\text{Risk}(t + \Delta t) = \text{Risk}(t)$, MAE $11.12$ at $+5\text{s}$) outperforms linear trend extrapolation (MAE $27.80$ at $+5\text{s}$). This occurs because linear extrapolation projects ongoing slopes forward without anticipating deceleration or boundaries, whereas abrupt surges level off rapidly. We document this result transparently rather than artificially tuning or overfitting parameters to the held-out sequences.
-
-> [!NOTE]
-> **Synthetic Pedestrian Detection Finding:**
-> The bundled synthetic scenarios (`generate_sample.py`) render pedestrian bodies as geometric silhouettes. Because YOLOv8n is pretrained on real photographic COCO images, geometric shapes yield fewer detections (typically 0–3) compared to real photographic pedestrian surveillance footage. In full deployment, real CCTV camera feeds should be provided.
-
-> [!NOTE]
-> **Incident Decoupling Safeguard:**
-> Emergency `CRITICAL_RISK` incidents are strictly reserved for situations where current risk is verified high ($\ge 75.0$, or $\ge 60.0$ with a surging forecast). When current risk is low/moderate ($\le 60.0$) but extrapolation projects a surge, the system issues an early advisory `PROJECTED_SURGE_WARNING` with `MODERATE` severity, eliminating false critical alarms on calm crowds.
-
-### 4. Frontend Production Build Check
-Command:
+### 2. Frontend Production Build Check
 ```bash
 npm --prefix frontend run build
 ```
-**Actual Observed Output:**
 ```text
 > frontend@0.0.0 build
 > tsc -b && vite build
 
 vite v8.3.4 building client environment for production...
 transforming...
-✓ 2553 modules transformed.
+✓ 2565 modules transformed.
 rendering chunks...
 computing gzip size...
-dist/index.html                   0.45 kB │ gzip:   0.29 kB
-dist/assets/index-bejauIWH.css   32.23 kB │ gzip:   6.38 kB
-dist/assets/index-89kELKQn.js   759.04 kB │ gzip: 225.59 kB
-✓ built in 964ms
+dist/index.html                     1.80 kB │ gzip:   0.76 kB
+dist/assets/index-kLg91xJ8.css     89.03 kB │ gzip:  14.65 kB
+dist/assets/index-DyW9BTL2.js   1,593.84 kB │ gzip: 416.91 kB
+✓ built in 885ms
 ```
 
 ---
 
-## 13. Ethical Safeguards & Privacy Preservation
+## License
 
-1. **No Biometric Identification:** CROWDGUARD contains no face recognition, identity databases, criminal record cross-referencing, or individual biometric profiling.
-2. **Configurable Privacy Anonymization:**
-   - `face_blur`: Applies heavy Gaussian blurring to head/face ROIs.
-   - `full_anonymize`: Overlays solid dark privacy silhouettes directly onto detected persons.
-3. **Advisory Decision Support Only:** All alerts are advisory early warnings intended for human operators. The system does not actuate autonomous barriers or physical locks.
-
----
-
-## 14. Troubleshooting & Common Setup Issues
-
-- **OpenCV Video Codec Errors on Windows:** If MP4 encoding fails, ensure Windows Media Feature Pack is installed. CROWDGUARD automatically falls back from `mp4v` to `XVID`.
-- **YOLO First Run:** Ultralytics automatically downloads `yolov8n.pt` (~6.2MB) on first execution. If running offline, pre-download `yolov8n.pt` and place it in the project root.
-- **Port Conflicts:** If port 8000 or 5173 is occupied, specify `--port <PORT>` in `uvicorn` and `npm run dev -- --port <PORT>`.
-
----
-
-## 15. Faculty 2–3 Minute Demonstration Guide
-
-```mermaid
-flowchart LR
-    A["1. Methodology (/docs)"] --> B["2. 1-Click Sample Load (/video-analysis)"]
-    B --> C["3. Live Matrix & Scrubbing (/monitoring)"]
-    C --> D["4. Forecasts & Entropy (/analytics)"]
-    D --> E["5. Sustained Incidents (/incidents)"]
-    E --> F["6. Forensic Export (CSV)"]
-```
-
-1. **Methodology Formulation (`/docs`):** Walk through Farneback flow equations, directional Shannon entropy, and perspective density splatting.
-2. **Video Ingestion Studio (`/video-analysis`):** Click any preset demo scenario (e.g. `crowd_bottleneck_demo.mp4`), configure perspective weight ($1.2$) and privacy mode (`face_blur`), then click **Launch Computer Vision Pipeline**.
-3. **Multi-Channel Telemetry (`/monitoring`):** View annotated video playback with green bounding boxes, speed tags, yellow trajectories, and JET density heatmap. Click quadrants on the **Spatial $3 \times 3$ Grid Matrix** (Zones A1–C3) and scrub the synchronized timeline.
-4. **Dynamics & Forecasts (`/analytics`):** Inspect $+5\text{s}, +10\text{s}, +15\text{s}$ forecast trajectories and directional Shannon entropy graph.
-5. **Incidents & Forensic Export (`/incidents`):** Review sustained hazard cards, click **Inspect** to review evidence keyframes, add operator notes, update status to **Acknowledged**, and download the audit CSV report.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.

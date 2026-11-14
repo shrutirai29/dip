@@ -22,20 +22,20 @@ const AppLayout: React.FC = () => {
   const { sidebarCollapsed } = useSystem();
 
   return (
-    <div className="min-h-screen bg-[#F8F6F3] dark:bg-[#0B1415] text-[#1C3334] dark:text-[#EEF4F5] flex transition-colors duration-200">
-      {/* Dynamic Collapsible Sidebar */}
+    <div className="min-h-screen bg-paper text-ink flex transition-colors duration-200 selection:bg-accent-soft selection:text-ink">
+      {/* Precision Navigation Sidebar */}
       <Navbar />
 
-      {/* Main Content Workspace - Dynamic left margin matching sidebar width */}
+      {/* Main Console Workspace */}
       <div 
-        className={`flex-1 flex flex-col min-w-0 transition-all duration-200 ${
-          sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'
+        className={`flex-1 flex flex-col min-w-0 transition-[margin] duration-200 ${
+          sidebarCollapsed ? 'md:ml-[72px]' : 'md:ml-[260px]'
         }`}
       >
-        {/* Top Context Bar with Theme Toggle */}
+        {/* Top Context & Telemetry Bar */}
         <TopBar />
 
-        {/* Scrollable Page Content */}
+        {/* Scrollable Workspace Container */}
         <main className="flex-1 p-4 md:p-6 lg:p-8 max-w-[1700px] w-full mx-auto">
           <Routes>
             <Route path="/" element={<Overview />} />

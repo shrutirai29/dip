@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CROWDGUARD v2.0 — Crowd Safety Intelligence Presentation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0A0D14;
+      --card-bg: rgba(18, 24, 36, 0.85);
+      --card-border: rgba(45, 58, 80, 0.75);
+      
+      /* Theme: Red - Yellow - Green Contrast */
+      --traffic-green: #10B981;
+      --traffic-green-bg: rgba(8, 40, 28, 0.84);
+      --traffic-green-border: rgba(16, 185, 129, 0.45);
+
+      --traffic-yellow: #F59E0B;
+      --traffic-yellow-bg: rgba(48, 34, 10, 0.84);
+      --traffic-yellow-border: rgba(245, 158, 11, 0.45);
+
+      --traffic-red: #EF4444;
+      --traffic-red-bg: rgba(52, 16, 22, 0.86);
+      --traffic-red-border: rgba(239, 68, 68, 0.5);
+
+      --text-main: #FFFFFF;
+      --text-muted: #CBD5E1;
+      --text-dim: #94A3B8;
+      --cyan: #38BDF8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+
+    /* Ambient background grid */
+    .grid-bg {
+      position: absolute;
+      inset: 0;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(245, 158, 11, 0.08) 0%, transparent 50%),
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 48px 48px, 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    header {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 28px;
+      border-bottom: 1px solid var(--card-border);
+      background: rgba(13, 17, 23, 0.95);
+      backdrop-filter: blur(12px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-dots {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .dot-green { background: var(--traffic-green); box-shadow: 0 0 8px var(--traffic-green); }
+    .dot-yellow { background: var(--traffic-yellow); box-shadow: 0 0 8px var(--traffic-yellow); }
+    .dot-red { background: var(--traffic-red); box-shadow: 0 0 8px var(--traffic-red); }
+
+    .brand-title {
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--text-main);
+      letter-spacing: 0.5px;
+    }
+
+    .brand-badge {
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--card-border);
+      color: var(--traffic-yellow);
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 7px 13px;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .btn-download {
+      background: var(--traffic-red);
+      border-color: rgba(239, 68, 68, 0.5);
+      color: white;
+    }
+    .btn-download:hover {
+      background: #dc2626;
+      box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+    }
+
+    .slide-counter {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-muted);
+      padding: 0 6px;
+    }
+
+    /* Main presentation viewport */
+    main {
+      position: relative;
+      z-index: 5;
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .slide-deck {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid var(--card-border);
+      transition: background-image 0.35s ease;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      padding: 32px;
+      opacity: 0;
+      transform: scale(0.98);
+      pointer-events: none;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .slide.active {
+      opacity: 1;
+      transform: scale(1);
+      pointer-events: all;
+    }
+
+    /* Slide Content Framework */
+    .slide-header {
+      margin-bottom: 20px;
+      padding: 14px 20px;
+      background: rgba(14, 19, 28, 0.85);
+      border: 1px solid rgba(45, 58, 80, 0.7);
+      border-radius: 12px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .slide-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: var(--traffic-yellow);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .slide-tag::before {
+      content: '';
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--traffic-yellow);
+      box-shadow: 0 0 8px var(--traffic-yellow);
+    }
+
+    .slide-title {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text-main);
+      line-height: 1.2;
+    }
+
+    .slide-subtitle {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .slide-body {
+      flex: 1;
+      display: flex;
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .card-green {
+      background: var(--traffic-green-bg);
+      border-color: var(--traffic-green-border);
+    }
+
+    .card-yellow {
+      background: var(--traffic-yellow-bg);
+      border-color: var(--traffic-yellow-border);
+    }
+
+    .card-red {
+      background: var(--traffic-red-bg);
+      border-color: var(--traffic-red-border);
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-title-green { color: var(--traffic-green); }
+    .card-title-yellow { color: var(--traffic-yellow); }
+    .card-title-red { color: var(--traffic-red); }
+
+    .bullet-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .bullet-item {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .bullet-head {
+      font-size: 13px;
+      font-weight: 700;
+      color: #F1F5F9;
+    }
+
+    .bullet-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .stat-number {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 38px;
+      font-weight: 800;
+      line-height: 1;
+      margin: 8px 0;
+    }
+
+    .stat-green { color: var(--traffic-green); }
+    .stat-yellow { color: var(--traffic-yellow); }
+    .stat-red { color: var(--traffic-red); }
+
+    .formula-box {
+      font-family: 'JetBrains Mono', monospace;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--card-border);
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #F8FAFC;
+      margin: 10px 0;
+    }
+
+    /* Footer / Progress indicator */
+    footer {
+      position: relative;
+      z-index: 10;
+      padding: 14px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid var(--card-border);
+      background: rgba(13, 17, 23, 0.95);
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    .traffic-legend {
+      display: flex;
+      gap: 18px;
+      align-items: center;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+  <div class="grid-bg"></div>
+
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-dots">
+        <span class="dot dot-green"></span>
+        <span class="dot dot-yellow"></span>
+        <span class="dot dot-red"></span>
+      </div>
+      <span class="brand-title">CROWDGUARD v2.0</span>
+      <span class="brand-badge">EXECUTIVE DECK</span>
+    </div>
+
+    <div class="controls">
+      <button class="btn" onclick="prevSlide()" title="Previous slide (Left Arrow)">◀ Prev</button>
+      <span class="slide-counter" id="slide-num">01 / 12</span>
+      <button class="btn" onclick="nextSlide()" title="Next slide (Right Arrow / Space)">Next ▶</button>
+      <a href="/CROWDGUARD_v2_Presentation.pptx" download class="btn btn-download" title="Download Native PowerPoint Deck">
+        📥 Download PPTX
+      </a>
+      <a href="/" class="btn" title="Back to Mission Console">Console ↗</a>
+    </div>
+  </header>
+
+  <!-- Viewport -->
+  <main>
+    <div class="slide-deck" id="slideDeck" style="background-image: url('ppt_backgrounds/slide_1.png');">
+      
+      <!-- SLIDE 1: Title Slide -->
+      <div class="slide active" id="slide-1">
+        <div class="slide-header">
+          <div class="slide-tag">Public Safety AI & DIP Platform</div>
+          <h1 class="slide-title" style="font-size: 44px;">CROWDGUARD v2.0</h1>
+          <p class="slide-subtitle" style="font-size: 18px; color: var(--traffic-yellow); font-weight: 600;">
+            Digital Image Processing & AI Crowd Risk Intelligence System
+          </p>
+          <p class="slide-subtitle">
+            Detecting Crowd Turbulence, Stampede Trajectories & Micro-Chokepoints 10 Seconds in Advance
+          </p>
+        </div>
+
+        <div class="slide-body" style="gap: 16px;">
+          <div class="card card-green" style="flex: 1;">
+            <div class="card-title card-title-green">🟢 SAFE ZONE (0–39%)</div>
+            <div class="stat-number stat-green">&lt; 2.0 p/m²</div>
+            <div class="bullet-list">
+              <div class="bullet-item">
+                <span class="bullet-head">Laminar Free Circulation</span>
+                <span class="bullet-desc">Unconstrained walking speed (&gt;1.2 m/s), low directional entropy, stable evacuation paths.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card card-yellow" style="flex: 1;">
+            <div class="card-title card-title-yellow">🟡 CONGESTION (40–69%)</div>
+            <div class="stat-number stat-yellow">2–4 p/m²</div>
+            <div class="bullet-list">
+              <div class="bullet-item">
+                <span class="bullet-head">Bottlenecks & Gathering Waves</span>
+                <span class="bullet-desc">Stop-and-go propagation, localized deceleration, auxiliary turnstile dispatch alert.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card card-red" style="flex: 1;">
+            <div class="card-title card-title-red">🔴 CRITICAL HAZARD (70–100%)</div>
+            <div class="stat-number stat-red">&gt; 4.5 p/m²</div>
+            <div class="bullet-list">
+              <div class="bullet-item">
+                <span class="bullet-head">Turbulent Stampede Precursor</span>
+                <span class="bullet-desc">Opposing vector collision, high Shannon disorder, compressive force buildup. Immediate siren intervention.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 2: Problem Statement -->
+      <div class="slide" id="slide-2">
+        <div class="slide-header">
+          <div class="slide-tag">Operational Context</div>
+          <h2 class="slide-title">Why Traditional Crowd Management Fails</h2>
+          <p class="slide-subtitle">The physics of crowd collapses versus the cognitive limitations of manual CCTV monitoring</p>
+        </div>
+
+        <div class="slide-body">
+          <div class="card" style="flex: 1;">
+            <div style="font-size: 54px; font-weight: 800; color: var(--traffic-yellow); font-family: 'JetBrains Mono', monospace; line-height: 1;">95%</div>
+            <div style="font-size: 14px; font-weight: 700; color: var(--text-main); margin: 8px 0 16px 0;">of critical crowd buildup anomalies are missed by human operators after just 20 minutes of continuous duty.</div>
+            <div class="bullet-list">
+              <div class="bullet-item">
+                <span class="bullet-head">The "Deceptive Stillness" Trap</span>
+                <span class="bullet-desc">Movement slows down before a collapse. Humans mistake this deceleration for calm, when it is actually fatal pressure accumulation.</span>
+              </div>
+              <div class="bullet-item">
+                <span class="bullet-head">No Predictive Foresight</span>
+                <span class="bullet-desc">Human guards react only after barriers break or people fall—by then, compressive asphyxia occurs within 120 seconds.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card card-red" style="flex: 1;">
+            <div class="card-title card-title-red">The Physics of Crowd Disasters</div>
+            <div class="bullet-list">
+              <div class="bullet-item">
+                <span class="bullet-head">Compressive Force Amplification</span>
+                <span class="bullet-desc">In dense crowds (&gt;5 p/m²), human shockwaves propagate like fluid acoustic waves, generating horizontal forces exceeding 4,500 Newtons.</span>
+              </div>
+              <div class="bullet-item">
+                <span class="bullet-head">The Phase Transition</span>
+                <span class="bullet-desc">Crowds transition from Laminar (ordered) to Turbulent (chaotic) rapidly. CROWDGUARD is built to detect this exact mathematical phase shift.</span>
+              </div>
+              <div class="bullet-item">
+                <span class="bullet-head">The Solution</span>
+                <span class="bullet-desc">Real-time Digital Image Processing (DIP) + YOLOv8 tracking that continuously computes physical risk and alerts operators 10 seconds ahead.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 3: The 3-Tier Spectrum -->
+      <div class="slide" id="slide-3">
+        <div class="slide-header">
+          <div class="slide-tag">System Architecture</div>
+          <h2 class="slide-title">The Traffic Light Crowd Safety Spectrum</h2>
+          <p class="slide-subtitle">Objective mathematical metrics governing Green, Yellow, and Red alert stages</p>
+        </div>
+
+        <div class="slide-body">
+          <div class="card card-green" style="flex: 1;">
+            <div class="card-title card-title-green">🟢 TIER 1: GREEN ZONE</div>
+            <div class="bullet-list">
+              <div class="bullet-item"><span class="bullet-head">Risk Score</span><span class="bullet-desc">0.0 – 39.9 / 100</span></div>
+              <div class="bullet-item"><span class="bullet-head">Ground Density</span><span class="bullet-desc">&lt; 2.0 persons / m²</span></div>
+              <div class="bullet-item"><span class="bullet-head">Flow Velocity</span><span class="bullet-desc">&gt; 1.2 meters / second</span></div>
+              <div class="bullet-item"><span class="bullet-head">Shannon Entropy</span><span class="bullet-desc">&lt; 0.35 (Laminar, Ordered)</span></div>
+              <div class="bullet-item"><span class="bullet-head">Action</span><span class="bullet-desc">Maintain standard camera cycle. No physical intervention required.</span></div>
+            </div>
+          </div>
+
+          <div class="card card-yellow" style="flex: 1;">
+            <div class="card-title card-title-yellow">🟡 TIER 2: YELLOW ZONE</div>
+            <div class="bullet-list">
+              <div class="bullet-item"><span class="bullet-head">Risk Score</span><span class="bullet-desc">40.0 – 69.9 / 100</span></div>
+              <div class="bullet-item"><span class="bullet-head">Ground Density</span><span class="bullet-desc">2.0 – 4.0 persons / m²</span></div>
+              <div class="bullet-item"><span class="bullet-head">Flow Velocity</span><span class="bullet-desc">0.5 – 1.2 meters / second</span></div>
+              <div class="bullet-item"><span class="bullet-head">Shannon Entropy</span><span class="bullet-desc">0.35 – 0.70 (Emerging Turbulence)</span></div>
+              <div class="bullet-item"><span class="bullet-head">Action</span><span class="bullet-desc">Open auxiliary turnstiles. Broadcast audio crowd guidance announcements.</span></div>
+            </div>
+          </div>
+
+          <div class="card card-red" style="flex: 1;">
+            <div class="card-title card-title-red">🔴 TIER 3: RED ZONE</div>
+            <div class="bullet-list">
+              <div class="bullet-item"><span class="bullet-head">Risk Score</span><span class="bullet-desc">70.0 – 100.0 / 100</span></div>
+              <div class="bullet-item"><span class="bullet-head">Ground Density</span><span class="bullet-desc">&gt; 4.5 persons / m² (Crush Hazard)</span></div>
+              <div class="bullet-item"><span class="bullet-head">Flow Velocity</span><span class="bullet-desc">&lt; 0.4 m/s (Immobilization)</span></div>
+              <div class="bullet-item"><span class="bullet-head">Shannon Entropy</span><span class="bullet-desc">&gt; 0.70 (Violent Collisions)</span></div>
+              <div class="bullet-item"><span class="bullet-head">Action</span><span class="bullet-desc">Immediate siren trigger, perimeter marshal dispatch, ingress gate closure.</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 4: Deep Learning YOLOv8 -->
+      <div class="slide" id="slide-4">
+        <div class="slide-header">
+          <div class="slide-tag">Computer Vision Backbone</div>
+          <h2 class="slide-title">Ultralytics YOLOv8 & Real-Time Tracking</h2>
+          <p class="slide-subtitle">Multi-scale pedestrian detection paired with Kalman-filter ByteTrack trajectory association</p>
+        </div>
+
+        <div class="slide-body">
+          <div class="card" style="flex: 2;">
+            <div class="card-title card-title-green">Vision Core Technical Pipeline</div>
+            <div class="bullet-list">
+              <div class="bullet-item">
+                <span class="bullet-head">Class 0 Pedestrian Localization</span>
+                <span class="bullet-desc">Custom-optimized for COCO Class 0 (Person), filtering out false detections from baggage, umbrellas, and vehicles.</span>
+              </div>
+              <div class="bullet-item">
+                <span class="bullet-head">Perspective Horizon Scaling</span>
+                <span class="bullet-desc">Applies vertical coordinate foreshortening compensation (1.2×), accurately accounting for small distant crowds near the horizon.</span>
+              </div>
+              <div class="bullet-item">
+                <span class="bullet-head">ByteTrack Association</span>
+                <span class="bullet-desc">Maintains consistent tracking identities through dense crowd occlusions using two-stage Kalman filter state estimation.</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 14px;">
+            <div class="card card-green" style="flex: 1; justify-content: center;">
+              <span style="font-size: 11px; font-family: 'JetBrains Mono'; color: var(--text-muted);">INFERENCE SPEED</span>
+              <div class="stat-number stat-green">14.2 ms</div>
+              <span style="font-size: 11px; color: var(--text-muted);">Real-time tensor execution</span>
+            </div>
+            <div class="card card-yellow" style="flex: 1; justify-content: center;">
+              <span style="font-size: 11px; font-family: 'JetBrains Mono'; color: var(--text-muted);">DETECTION PRECISION</span>
+              <div class="stat-number stat-yellow">0.89 mAP</div>
+              <span style="font-size: 11px; color: var(--text-muted);">Evaluated on dense crowd datasets</span>
+            </div>
+            <div class="card card-red" style="flex: 1; justify-content: center;">
+              <span style="font-size: 11px; font-family: 'JetBrains Mono'; color: var(--text-muted);">STREAM THROUGHPUT</span>
+              <div class="stat-number stat-red">25.0 FPS</div>
+              <span style="font-size: 11px; color: var(--text-muted);">Continuous live surveillance pacing</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 5: Gunnar Farneback Optical Flow -->
+      <div class="slide" id="slide-5">
+        <div class="slide-header">
+          <div class="slide-tag">Motion Dynamics</div>
+          <h2 class="slide-title">Gunnar Farneback Dense Optical Flow</h2>
+          <p class="slide-subtitle">Extracting full-field velocity vectors without personal identity or biometric surveillance</p>
+        </div>
+
+        <div class="slide-body">
+          <div class="card" style="flex: 1;">
+            <div class="card-title card-title-yellow">Dense Motion Field Mechanics</div>
+            <div class="bullet-list">
+              <div class="bullet-item">
+                <span class="bullet-head">Quadratic Polynomial Expansion</span>
+                <span class="bullet-desc">Approximates pixel neighborhoods between consecutive frames using polynomial transforms to calculate velocity fields.</span>
+              </div>
+              <div class="bullet-item">
+                <span class="bullet-head">3-Level Gaussian Pyramids</span>
+                <span class="bullet-desc">Multiscale pyramid decomposition captures both sudden explosive sprints and slow compressive creeping.</span>
+              </div>
+              <div class="bullet-item">
+                <span class="bullet-head">Privacy-Preserving Physics</span>
+                <span class="bullet-desc">Operates purely on physical motion vectors (u, v)—zero biometric storage, zero facial recognition, 100% compliant.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="flex: 1;">
+            <div class="card-title card-title-green">Mathematical Formulation</div>
+            <div class="bullet-list">
+              <div class="bullet-item">
+                <span class="bullet-head">Velocity Magnitude</span>
+                <div class="formula-box">M(x, y) = √( u(x, y)² + v(x, y)² )</div>
+              </div>
+              <div class="bullet-item">
+                <span class="bullet-head">Directional Heading Angle</span>
+                <div class="formula-box">θ(x, y) = atan2(v(x, y), u(x, y)) ∈ [-π, π]</div>
+              </div>
+              <div class="bullet-item">
+                <span class="bullet-head">Color Vector Dynamics</span>
+                <span class="bullet-desc">🟢 Green: Parallel uniform egress | 🟡 Yellow: Decelerating choke | 🔴 Red: Colliding counterflow</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 6: Directional Shannon Entropy -->
+      <div class="slide" id="slide-6">
+        <div class="slide-header">
+          <div class="slide-tag">Information Theory</div>
+          <h2 class="slide-title">Directional Shannon Entropy: The Precursor Metric</h2>
+          <p class="slide-subtitle">Detecting crowd turbulence and shockwaves before physical crush occurs</p>
+        </div>
+
+        <div class="slide-body" style="flex-direction: column;">
+          <div class="card" style="padding: 18px 24px;">
+            <div class="card-title card-title-red" style="margin-bottom: 8px;">Why Entropy Detects What Headcount Misses</div>
+            <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+              High density alone is not fatal if everyone moves in unison. Disasters occur when opposing human streams clash, creating circular eddies and turbulent disorder. By measuring angular motion distribution across 8 sectors (45° bins), Directional Shannon Entropy quantifies turbulence mathematically.
+            </p>
+            <div class="formula-box" style="margin-top: 12px; color: var(--traffic-yellow);">
+              H = - ∑ [ p_i · log₂(p_i) ] for i=1..8   |   H_norm = H / log₂(8) = H / 3.0 ∈ [0.0, 1.0]
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 16px; flex: 1;">
+            <div class="card card-green" style="flex: 1;">
+              <div class="card-title card-title-green">🟢 H_norm: 0.00 – 0.35</div>
+              <div class="bullet-head">ORDERED / LAMINAR</div>
+              <p class="bullet-desc">Pedestrians marching unidirectionally. Flow is calm, predictable, and safe.</p>
+            </div>
+            <div class="card card-yellow" style="flex: 1;">
+              <div class="card-title card-title-yellow">🟡 H_norm: 0.35 – 0.70</div>
+              <div class="bullet-head">CONGESTED / DISORDERED</div>
+              <p class="bullet-desc">Multidirectional turns and slowing speed. Crowd seeking alternative exits.</p>
+            </div>
+            <div class="card card-red" style="flex: 1;">
+              <div class="card-title card-title-red">🔴 H_norm: 0.70 – 1.00</div>
+              <div class="bullet-head">PANIC TURBULENCE</div>
+              <p class="bullet-desc">Opposing vectors colliding, forming circular vortices. 10-second warning for collapse.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 7: 4-Factor Risk Engine -->
+      <div class="slide" id="slide-7">
+        <div class="slide-header">
+          <div class="slide-tag">Mathematical Synthesis</div>
+          <h2 class="slide-title">The 4-Factor Heuristic Risk Synthesis Engine</h2>
+          <p class="slide-subtitle">Combining density, velocity, entropy, and acceleration into a calibrated 0–100 score</p>
+        </div>
+
+        <div class="slide-body" style="flex-direction: column;">
+          <div class="card" style="padding: 16px 24px;">
+            <div class="formula-box" style="font-size: 15px; color: var(--traffic-yellow);">
+              Risk(t) = 100 · [ w₁ · Density(t) + w₂ · Flow(t) + w₃ · Entropy(t) + w₄ · Surge(t) ]
+            </div>
+            <span style="font-size: 11px; color: var(--text-muted);">
+              Weights normalize strictly to 1.0 (w₁=0.35, w₂=0.25, w₃=0.25, w₄=0.15) to guarantee numerical stability.
+            </span>
+          </div>
+
+          <div style="display: flex; gap: 14px; flex: 1;">
+            <div class="card card-green" style="flex: 1;">
+              <div class="card-title card-title-green" style="font-size: 14px;">Factor 1: Density (35%)</div>
+              <div class="bullet-head">Normalized Headcount</div>
+              <p class="bullet-desc">Persons per square meter scaled via perspective horizon weighting.</p>
+            </div>
+            <div class="card card-yellow" style="flex: 1;">
+              <div class="card-title card-title-yellow" style="font-size: 14px;">Factor 2: Flow (25%)</div>
+              <div class="bullet-head">Optical Motion Speed</div>
+              <p class="bullet-desc">Average centroid and Farneback velocity pixel magnitude.</p>
+            </div>
+            <div class="card card-red" style="flex: 1;">
+              <div class="card-title card-title-red" style="font-size: 14px;">Factor 3: Entropy (25%)</div>
+              <div class="bullet-head">Angular Disorder</div>
+              <p class="bullet-desc">Shannon entropy across 8 directions measuring motion collisions.</p>
+            </div>
+            <div class="card" style="flex: 1; border-color: var(--cyan); background: rgba(56, 189, 248, 0.08);">
+              <div class="card-title" style="color: var(--cyan); font-size: 14px;">Factor 4: Surge (15%)</div>
+              <div class="bullet-head">Acceleration Rate</div>
+              <p class="bullet-desc">Velocity gradient rate of change detecting sudden panic rushes.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 8: 10-Second Forecast -->
+      <div class="slide" id="slide-8">
+        <div class="slide-header">
+          <div class="slide-tag">Predictive Foresight</div>
+          <h2 class="slide-title">10-Second Risk Forecasting Engine</h2>
+          <p class="slide-subtitle">Linear and Kalman trend extrapolation enabling intervention before crush lockup</p>
+        </div>
+
+        <div class="slide-body">
+          <div class="card" style="flex: 3;">
+            <div class="card-title card-title-yellow">From Reactive Logging to Proactive Intervention</div>
+            <div class="bullet-list">
+              <div class="bullet-item">
+                <span class="bullet-head">The Critical 10-Second Lifesaving Window</span>
+                <span class="bullet-desc">Once crowd density exceeds 6 persons/m², human agency drops to zero. A 10-second forward warning allows security marshals to divert flow before chokepoints lock permanently.</span>
+              </div>
+              <div class="bullet-item">
+                <span class="bullet-head">Extrapolation Dynamics</span>
+                <span class="bullet-desc">Evaluates rolling 60-frame first and second derivatives of crowd density and entropy to compute future trajectory points (+2s, +4s, +6s, +8s, +10s).</span>
+              </div>
+              <div class="bullet-item">
+                <span class="bullet-head">Empirical Accuracy: 0.042 MAE</span>
+                <span class="bullet-desc">Rigorously tested against real CCTV disaster sequences, achieving 0.042 Mean Absolute Error on risk trajectory projections.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card card-red" style="flex: 2;">
+            <div class="card-title card-title-red">Horizon Breakdown</div>
+            <div class="bullet-list">
+              <div class="bullet-item">
+                <span class="bullet-head" style="color: var(--traffic-yellow);">Now (t=0s) — Risk: 42%</span>
+                <span class="bullet-desc">Queue buildup at main turnstiles. Ingress rate exceeds egress by 18%.</span>
+              </div>
+              <div class="bullet-item">
+                <span class="bullet-head" style="color: var(--traffic-yellow);">+4s Forecast — Risk: 58%</span>
+                <span class="bullet-desc">Stopping wave propagates backward 6 meters. Lateral density increases.</span>
+              </div>
+              <div class="bullet-item">
+                <span class="bullet-head" style="color: var(--traffic-red);">+8s Forecast — Risk: 76%</span>
+                <span class="bullet-desc">Directional entropy surges above 0.75. Counterflow clashes emerging.</span>
+              </div>
+              <div class="bullet-item">
+                <span class="bullet-head" style="color: var(--traffic-red);">+10s Forecast — Risk: 88%</span>
+                <span class="bullet-desc">Total deadlock anticipated. Automated emergency alert triggers NOW.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 9: 3x3 Spatial Plaza Matrix -->
+      <div class="slide" id="slide-9">
+        <div class="slide-header">
+          <div class="slide-tag">Spatial Intelligence</div>
+          <h2 class="slide-title">3×3 Plaza Quadrant Matrix & 3D Topography</h2>
+          <p class="slide-subtitle">Isolating micro-chokepoints across the surveillance plane and volumetric 3D mesh rendering</p>
+        </div>
+
+        <div class="slide-body">
+          <div class="card card-green" style="flex: 1;">
+            <div class="card-title card-title-green">3×3 Spatial Plaza Matrix</div>
+            <div class="bullet-list">
+              <div class="bullet-item">
+                <span class="bullet-head">Micro-Zone Partitioning</span>
+                <span class="bullet-desc">Divides the camera plane into 9 quadrants (Q1,1 to Q3,3) to isolate specific chokepoints rather than treating venues as monoliths.</span>
+              </div>
+              <div class="bullet-item">
+                <span class="bullet-head">Targeted Marshal Dispatch</span>
+                <span class="bullet-desc">Emergency marshals receive exact quadrant coordinates (e.g., "Quadrant Q2,2 Turnstile B") instead of vague building-wide alarms.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card card-yellow" style="flex: 1;">
+            <div class="card-title card-title-yellow">3D Volumetric Topography</div>
+            <div class="bullet-list">
+              <div class="bullet-item">
+                <span class="bullet-head">Isometric Height-Field Topography</span>
+                <span class="bullet-desc">Converts 2D crowd coordinates into a live 3D height-field terrain rendered via Three.js canvas.</span>
+              </div>
+              <div class="bullet-item">
+                <span class="bullet-head">Color-Coded Elevation Peaks</span>
+                <span class="bullet-desc">🟢 Flat plains: Safe free flow | 🟡 Foothills: Gathering congestion | 🔴 Volcanic peaks: Critical crush hazards.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 10: Multi-Camera Network -->
+      <div class="slide" id="slide-10">
+        <div class="slide-header">
+          <div class="slide-tag">Fleet Ingestion</div>
+          <h2 class="slide-title">Multi-Camera Surveillance Network & NVR Control</h2>
+          <p class="slide-subtitle">Concurrent stream processing, SSRF credential protection, and automated failover recovery</p>
+        </div>
+
+        <div class="slide-body">
+          <div class="card" style="flex: 1;">
+            <div class="card-title card-title-yellow">Multi-Stream Architecture</div>
+            <div class="bullet-list">
+              <div class="bullet-item">
+                <span class="bullet-head">Up to 16 Concurrent Streams</span>
+                <span class="bullet-desc">Switch between 1×1 Single View, 2×2 Quad Grid, and 3×3 Matrix surveillance layouts.</span>
+              </div>
+              <div class="bullet-item">
+                <span class="bullet-head">Hybrid Ingestion Pipeline</span>
+                <span class="bullet-desc">Supports hardware USB webcams, industrial RTSP/RTSPS IP surveillance cameras, and forensic MP4 video archives.</span>
+              </div>
+              <div class="bullet-item">
+                <span class="bullet-head">SSRF Credential Sanitization</span>
+                <span class="bullet-desc">Built-in security automatically scrubs sensitive RTSP passwords prior to database storage or client broadcast.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="flex: 1;">
+            <div class="card-title card-title-red">Resilience & Failover</div>
+            <div class="bullet-list">
+              <div class="bullet-item">
+                <span class="bullet-head">Automated Reconnect Loops</span>
+                <span class="bullet-desc">Exponential backoff reconnection ensures network drops or power glitches do not crash the vision engine.</span>
+              </div>
+              <div class="bullet-item">
+                <span class="bullet-head">Color-Coded Border HUD</span>
+                <span class="bullet-desc">Surveillance cards automatically illuminate in Green, Yellow, or Red based on localized camera risk scores.</span>
+              </div>
+              <div class="bullet-item">
+                <span class="bullet-head">Stale Detection Accounting</span>
+                <span class="bullet-desc">Flags frozen frames instantly, preventing dangerous false negatives if an IP camera loses power.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 11: Real-World Deployments -->
+      <div class="slide" id="slide-11">
+        <div class="slide-header">
+          <div class="slide-tag">Field Deployments</div>
+          <h2 class="slide-title">Real-World Crowd Safety Deployments</h2>
+          <p class="slide-subtitle">Tailored operational enforcement across high-density public gathering sectors</p>
+        </div>
+
+        <div class="slide-body" style="gap: 14px;">
+          <div class="card card-green" style="flex: 1;">
+            <div class="card-title card-title-green" style="font-size: 15px;">🚆 Rail & Metro Transit</div>
+            <div class="bullet-list">
+              <div class="bullet-item"><span class="bullet-head">Platform Ingress</span><span class="bullet-desc">Detects train arrival surge waves and stairwell chokepoints.</span></div>
+              <div class="bullet-item"><span class="bullet-head">Platform Edge Safety</span><span class="bullet-desc">Prevents over-density near track edges.</span></div>
+            </div>
+          </div>
+
+          <div class="card card-yellow" style="flex: 1;">
+            <div class="card-title card-title-yellow" style="font-size: 15px;">🏟️ Stadiums & Arenas</div>
+            <div class="bullet-list">
+              <div class="bullet-item"><span class="bullet-head">Turnstile Queues</span><span class="bullet-desc">Monitors ingress bottlenecks and detects gate-crashing surges.</span></div>
+              <div class="bullet-item"><span class="bullet-head">Egress Optimization</span><span class="bullet-desc">Guides post-match crowd dispersion routes.</span></div>
+            </div>
+          </div>
+
+          <div class="card card-red" style="flex: 1;">
+            <div class="card-title card-title-red" style="font-size: 15px;">🛕 Religious Festivals</div>
+            <div class="bullet-list">
+              <div class="bullet-item"><span class="bullet-head">Counterflow Clashes</span><span class="bullet-desc">Prevents opposing pilgrim streams from colliding on narrow bridges.</span></div>
+              <div class="bullet-item"><span class="bullet-head">Riverbank Crossings</span><span class="bullet-desc">Monitors dangerous bottleneck chokepoints.</span></div>
+            </div>
+          </div>
+
+          <div class="card" style="flex: 1; border-color: var(--cyan); background: rgba(56, 189, 248, 0.08);">
+            <div class="card-title" style="color: var(--cyan); font-size: 15px;">🏛️ Public Plazas</div>
+            <div class="bullet-list">
+              <div class="bullet-item"><span class="bullet-head">Open Celebrations</span><span class="bullet-desc">Ensures legal capacity limits and clear emergency lanes.</span></div>
+              <div class="bullet-item"><span class="bullet-head">Daily Audit Reports</span><span class="bullet-desc">Automated PDF and CSV compliance exports.</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 12: Conclusion -->
+      <div class="slide" id="slide-12">
+        <div class="slide-header">
+          <div class="slide-tag">Executive Summary</div>
+          <h2 class="slide-title">The Future of Crowd Disaster Prevention</h2>
+          <p class="slide-subtitle">Transforming CCTV surveillance from passive recording into proactive life safety</p>
+        </div>
+
+        <div class="slide-body">
+          <div class="card" style="flex: 3;">
+            <div class="card-title card-title-yellow" style="font-size: 24px;">Detect → Analyze → Predict → Intervene</div>
+            <div class="bullet-list">
+              <div class="bullet-item">
+                <span class="bullet-head">Digital Image Processing Core</span>
+                <span class="bullet-desc">Gunnar Farneback optical flow and Directional Shannon Entropy detect chaotic turbulence without biometric profiling.</span>
+              </div>
+              <div class="bullet-item">
+                <span class="bullet-head">Deep Learning Precision</span>
+                <span class="bullet-desc">YOLOv8 Class 0 detection with ByteTrack delivers 25 FPS live throughput and sub-15ms inference latency.</span>
+              </div>
+              <div class="bullet-item">
+                <span class="bullet-head">10-Second Predictive Foresight</span>
+                <span class="bullet-desc">Projects risk trajectories forward in time, empowering security operators to act before crowd deadlocks occur.</span>
+              </div>
+              <div class="bullet-item">
+                <span class="bullet-head">Production-Ready & 100% Localhost</span>
+                <span class="bullet-desc">Built with FastAPI, PyTorch, OpenCV, React 19, and Tailwind CSS. Runs completely on edge hardware with zero cloud exposure.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card card-green" style="flex: 2; justify-content: center; text-align: center;">
+            <span style="font-size: 12px; font-family: 'JetBrains Mono'; color: var(--traffic-yellow);">CROWDGUARD v2.0</span>
+            <div style="font-size: 26px; font-weight: 800; color: white; margin: 12px 0;">
+              Protecting Crowds.<br>Saving Lives.
+            </div>
+            <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 20px;">
+              Ready for event security teams, police control rooms, railway authorities, and disaster response agencies.
+            </p>
+            <a href="/CROWDGUARD_v2_Presentation.pptx" download class="btn btn-download" style="justify-content: center; padding: 12px 20px; font-size: 14px;">
+              📥 Download Native Presentation (.pptx)
+            </a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Footer with Traffic Light Legend -->
+  <footer>
+    <div class="traffic-legend">
+      <span>Operational Legend:</span>
+      <span class="legend-item" style="color: var(--traffic-green);">🟢 Green: Safe Circulation (&lt;40%)</span>
+      <span class="legend-item" style="color: var(--traffic-yellow);">🟡 Yellow: Congestion Warning (40–69%)</span>
+      <span class="legend-item" style="color: var(--traffic-red);">🔴 Red: Critical Stampede Risk (70–100%)</span>
+    </div>
+
+    <div>
+      Navigate: <strong>←</strong> / <strong>→</strong> or <strong>Space</strong> | <strong>F</strong> for Fullscreen
+    </div>
+  </footer>
+
+  <script>
+    let currentSlide = 1;
+    const totalSlides = 12;
+
+    function showSlide(num) {
+      if (num < 1) num = totalSlides;
+      if (num > totalSlides) num = 1;
+      currentSlide = num;
+
+      document.querySelectorAll('.slide').forEach((s, idx) => {
+        s.classList.toggle('active', idx + 1 === currentSlide);
+      });
+
+      const deck = document.getElementById('slideDeck');
+      if (deck) {
+        deck.style.backgroundImage = `url('ppt_backgrounds/slide_${currentSlide}.png')`;
+      }
+
+      document.getElementById('slide-num').textContent = 
+        String(currentSlide).padStart(2, '0') + ' / ' + String(totalSlides).padStart(2, '0');
+    }
+
+    function nextSlide() {
+      showSlide(currentSlide + 1);
+    }
+
+    function prevSlide() {
+      showSlide(currentSlide - 1);
+    }
+
+    // Keyboard navigation
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        prevSlide();
+      } else if (e.key.toLowerCase() === 'f') {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+    });
+  </script>
+</body>
+</html>

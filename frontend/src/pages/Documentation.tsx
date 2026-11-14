@@ -1,190 +1,310 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   BookOpen, 
   Layers, 
   Compass, 
   TrendingUp, 
   Lock, 
-  Cpu
+  Cpu,
+  Radio,
+  FileCode,
+  Sliders,
+  HelpCircle,
+  ExternalLink,
+  ChevronRight,
+  Terminal,
+  ShieldAlert
 } from 'lucide-react';
 
+const docSections = [
+  { id: 'overview', title: 'Overview' },
+  { id: 'architecture', title: 'Architecture' },
+  { id: 'detection', title: 'Detection' },
+  { id: 'optical-flow', title: 'Optical Flow' },
+  { id: 'risk-engine', title: 'Risk Engine' },
+  { id: 'camera-setup', title: 'Camera Setup' },
+  { id: 'api', title: 'API' },
+  { id: 'configuration', title: 'Configuration' },
+  { id: 'troubleshooting', title: 'Troubleshooting' },
+];
+
 export const Documentation: React.FC = () => {
+  const [activeSection, setActiveSection] = useState<string>('overview');
+
+  const scrollToSection = (id: string) => {
+    setActiveSection(id);
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   return (
-    <div className="space-y-6 w-full text-xs text-[#1C3334] dark:text-slate-200">
-      {/* Header */}
-      <div className="pb-4 border-b border-[#E2E8EA] dark:border-[#203638]">
-        <div className="flex items-center space-x-2.5">
-          <h1 className="text-xl font-bold text-[#1C3334] dark:text-[#EDF4F5] tracking-tight">
-            ACADEMIC METHODOLOGY & DIP ALGORITHM SPECIFICATION
+    <div className="w-full text-xs text-ink space-y-6">
+      {/* Editorial Header */}
+      <div className="pb-4 border-b border-rule flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="inline-flex items-center space-x-2 px-2.5 py-0.5 rounded-full bg-burgundy-soft border border-burgundy/20 text-burgundy text-[11px] font-mono font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-burgundy animate-pulse" />
+            <span>Technical Reference Manual</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink font-display mt-1">
+            System Documentation
           </h1>
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-cyan-950/40 border border-cyan-500/30 text-[#376E6F] dark:text-cyan-300">
-            TECHNICAL SPEC v2.0
-          </span>
+          <p className="text-xs text-muted mt-1 max-w-2xl leading-relaxed">
+            Mathematical formulations, computer vision pipelines, multi-camera architecture, and REST API specification for CROWDGUARD v2.0.
+          </p>
         </div>
-        <p className="text-xs text-[#5D757E] dark:text-[#A0B7BC] mt-1">
-          Comprehensive digital image processing formulation, Gunnar Farneback optical flow dynamics, directional Shannon entropy, and predictive risk forecasting
-        </p>
+
+        <a
+          href="/docs"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-paper-2 hover:bg-paper-3 text-ink border border-rule rounded-lg text-xs font-medium transition"
+        >
+          <span>OpenAPI / Swagger UI</span>
+          <ExternalLink className="w-3.5 h-3.5 text-muted" />
+        </a>
       </div>
 
-      <div className="space-y-6">
-        {/* Section 1: Problem Statement */}
-        <section className="bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl p-5 space-y-3 shadow-xs">
-          <h2 className="text-sm font-bold text-[#1C3334] dark:text-white flex items-center space-x-2">
-            <BookOpen className="w-4 h-4 text-[#376E6F] dark:text-cyan-400" />
-            <span>1. Problem Statement & Research Motivation</span>
-          </h2>
-          <p className="text-[#2F4454] dark:text-slate-300 leading-relaxed">
-            Catastrophic crowd disasters (stampedes, compressive asphyxia, turbulent bottleneck crush points) manifest when physical ground density exceeds safe physiological limits (&gt;4–5 persons/m²) combined with sudden directional velocity perturbations. Conventional CCTV security operations rely on human visual monitoring, which suffers severe fatigue degradation within 20–30 minutes of continuous surveillance.
-          </p>
-          <p className="text-[#5D757E] dark:text-slate-400 leading-relaxed">
-            This research project establishes an end-to-end automated Digital Image Processing (DIP) and Computer Vision system. Rather than providing passive video playback, the platform extracts frame-differenced motion vectors, computes dense optical flow fields, measures directional Shannon entropy to detect turbulence before stampede onset, and produces short-term (+5s, +10s, +15s) predictive hazard projections.
-          </p>
-        </section>
+      {/* Two Column Technical Manual Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Left Sticky Documentation Navigation */}
+        <nav className="lg:col-span-3 sticky top-20 bg-paper-2 border border-rule rounded-xl p-3 space-y-1 shadow-2xs">
+          <div className="px-3 py-2 text-[10px] font-mono uppercase text-muted font-semibold tracking-wider border-b border-rule mb-1">
+            Manual Navigation
+          </div>
+          {docSections.map((sec) => (
+            <button
+              key={sec.id}
+              onClick={() => scrollToSection(sec.id)}
+              className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-between cursor-pointer ${
+                activeSection === sec.id
+                  ? 'bg-burgundy text-white font-medium shadow-2xs'
+                  : 'text-ink-2 hover:text-ink hover:bg-paper-3'
+              }`}
+            >
+              <span>{sec.title}</span>
+              {activeSection === sec.id && <ChevronRight className="w-3.5 h-3.5" />}
+            </button>
+          ))}
+        </nav>
 
-        {/* Section 2: Complete Pipeline Architecture */}
-        <section className="bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl p-5 space-y-3 shadow-xs">
-          <h2 className="text-sm font-bold text-[#1C3334] dark:text-white flex items-center space-x-2">
-            <Layers className="w-4 h-4 text-[#376E6F] dark:text-cyan-400" />
-            <span>2. End-to-End DIP & Computer Vision Pipeline</span>
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
-            <div className="p-3 bg-[#F8F9FA] dark:bg-[#0A1018] rounded-lg border border-[#CBD5D8] dark:border-[#1E2D40] space-y-1.5">
-              <span className="text-[10px] font-mono font-bold text-[#376E6F] dark:text-cyan-400 uppercase">Stage 1: Ingestion</span>
-              <p className="text-[11px] text-[#2F4454] dark:text-slate-300 font-medium">Bilateral Preprocessing</p>
-              <p className="text-[10px] text-[#5D757E] dark:text-slate-400 leading-normal">
-                Noise reduction via edge-preserving bilateral filtering and temporal frame differencing.
+        {/* Right Main Content */}
+        <div className="lg:col-span-9 space-y-10 text-sm leading-relaxed text-ink-2">
+          {/* 1. Overview */}
+          <section id="overview" className="scroll-mt-24 space-y-4">
+            <div className="border-b border-rule pb-2">
+              <h2 className="text-xl font-bold text-ink font-display">1. System Overview</h2>
+              <p className="text-xs text-muted font-mono">Platform mission, objectives, and operational scope</p>
+            </div>
+            <p>
+              <strong>CROWDGUARD v2.0</strong> is an automated crowd safety and predictive hazard intelligence platform designed for high-density public infrastructure: railway concourses, sports stadiums, religious congregations, transit hubs, and commercial plazas.
+            </p>
+            <div className="p-4 bg-burgundy-soft/40 border border-burgundy/20 rounded-xl space-y-1">
+              <span className="font-semibold text-burgundy text-xs font-mono uppercase">Key Operational Principle</span>
+              <p className="text-xs text-ink leading-relaxed">
+                Conventional video surveillance relies on passive human visual observation, which suffers severe cognitive fatigue after 20 minutes. CROWDGUARD shifts the paradigm from passive monitoring to <strong>proactive 10-second predictive intervention</strong> by synthesizing deep-learning headcount tracking with classical Gunnar Farneback optical flow physics.
               </p>
             </div>
-            <div className="p-3 bg-[#F8F9FA] dark:bg-[#0A1018] rounded-lg border border-[#CBD5D8] dark:border-[#1E2D40] space-y-1.5">
-              <span className="text-[10px] font-mono font-bold text-[#376E6F] dark:text-cyan-400 uppercase">Stage 2: Detection</span>
-              <p className="text-[11px] text-[#2F4454] dark:text-slate-300 font-medium">YOLOv8 + ByteTrack</p>
-              <p className="text-[10px] text-[#5D757E] dark:text-slate-400 leading-normal">
-                COCO Class 0 pedestrian localization coupled with Kalman-filter multi-object tracking.
+          </section>
+
+          {/* 2. Architecture */}
+          <section id="architecture" className="scroll-mt-24 space-y-4">
+            <div className="border-b border-rule pb-2">
+              <h2 className="text-xl font-bold text-ink font-display">2. Pipeline Architecture</h2>
+              <p className="text-xs text-muted font-mono">End-to-end data flow and processing stages</p>
+            </div>
+            <p>
+              The platform executes a 4-stage pipeline that continuously transforms raw video frames into calibrated risk metrics:
+            </p>
+
+            <div className="p-4 bg-paper rounded-xl border border-rule font-mono text-xs overflow-x-auto space-y-2">
+              <div className="text-muted font-sans font-medium text-[11px] uppercase">Data Pipeline Architecture</div>
+              <div className="text-ink">
+                [Raw Stream / RTSP / Webcam]
+                <br />  │
+                <br />  ▼ (Async Monotonic Queue)
+                <br />[Stage 1: Ingestion & Frame Differencing]
+                <br />  │
+                <br />  ├─► [Stage 2: YOLOv8 Object Detection (Class 0: Person)] ──► [Centroid Tracker]
+                <br />  │
+                <br />  └─► [Stage 3: Gunnar Farneback Optical Flow] ──► [Directional Shannon Entropy]
+                <br />        │
+                <br />        ▼
+                <br />  [Stage 4: 4-Factor Heuristic Risk Engine + Linear Forecast (+10s)]
+                <br />        │
+                <br />        ▼
+                <br />  [FastAPI WebSocket Bus ──► React Mission Console & NVR Matrix]
+              </div>
+            </div>
+          </section>
+
+          {/* 3. Detection */}
+          <section id="detection" className="scroll-mt-24 space-y-4">
+            <div className="border-b border-rule pb-2">
+              <h2 className="text-xl font-bold text-ink font-display">3. Object Detection & Tracking</h2>
+              <p className="text-xs text-muted font-mono">Ultralytics YOLOv8n + Centroid Tracking Algorithm</p>
+            </div>
+            <p>
+              Pedestrian detection is performed using <strong>Ultralytics YOLOv8 Nano</strong> (`yolov8n.pt`) fine-tuned for Class 0 (`person`). The model processes input tensors scaled to 640 \times 640 with aspect-preserving letterboxing.
+            </p>
+            <table className="w-full text-left text-xs border border-rule rounded-lg overflow-hidden">
+              <thead className="bg-paper-3 text-muted font-mono font-medium">
+                <tr>
+                  <th className="p-3">Hyperparameter</th>
+                  <th className="p-3">Default Value</th>
+                  <th className="p-3">Description</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-rule font-mono">
+                <tr>
+                  <td className="p-3 text-burgundy font-semibold">conf_threshold</td>
+                  <td className="p-3">0.25</td>
+                  <td className="p-3 font-sans">Minimum detection confidence for Class 0 bounding box acceptance.</td>
+                </tr>
+                <tr>
+                  <td className="p-3 text-burgundy font-semibold">iou_threshold</td>
+                  <td className="p-3">0.45</td>
+                  <td className="p-3 font-sans">Non-Maximum Suppression (NMS) bounding box overlap threshold.</td>
+                </tr>
+                <tr>
+                  <td className="p-3 text-burgundy font-semibold">perspective_weight</td>
+                  <td className="p-3">1.2×</td>
+                  <td className="p-3 font-sans">Compensates for optical camera foreshortening of distant pedestrians.</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          {/* 4. Optical Flow */}
+          <section id="optical-flow" className="scroll-mt-24 space-y-4">
+            <div className="border-b border-rule pb-2">
+              <h2 className="text-xl font-bold text-ink font-display">4. Dense Optical Flow & Shannon Entropy</h2>
+              <p className="text-xs text-muted font-mono">Gunnar Farneback motion vectors and directional turbulence</p>
+            </div>
+            <p>
+              Dense optical flow fields  (u(x,y), v(x,y))  are evaluated between consecutive grayscale frames using quadratic polynomial expansion:
+            </p>
+            <div className="p-3.5 bg-paper rounded-lg border border-rule font-mono text-xs space-y-1">
+              <div>Flow Magnitude:  M(x, y) = √(u(x,y)² + v(x,y)²) </div>
+              <div>Flow Direction:  θ(x, y) = atan2(v(x,y), u(x,y)) ∈ [-π, π] </div>
+            </div>
+            <p>
+              To differentiate coordinated laminar flow (normal pedestrian movement) from chaotic multidirectional turbulence (stampede or panic onset), directional angles are partitioned into 8 angular sectors (45° bins) to calculate **Normalized Directional Shannon Entropy**:
+            </p>
+            <div className="p-3.5 bg-paper rounded-lg border border-rule font-mono text-xs text-burgundy space-y-1 font-semibold">
+              <div> H = -∑ (i=1..8) p_i log₂(p_i) </div>
+              <div> H_norm = H / log₂(8) = H / 3.0 ∈ [0.0, 1.0] </div>
+            </div>
+          </section>
+
+          {/* 5. Risk Engine */}
+          <section id="risk-engine" className="scroll-mt-24 space-y-4">
+            <div className="border-b border-rule pb-2">
+              <h2 className="text-xl font-bold text-ink font-display">5. 4-Factor Heuristic Risk Synthesis</h2>
+              <p className="text-xs text-muted font-mono">Mathematical formulation of composite crowd hazard</p>
+            </div>
+            <p>
+              The composite crowd risk score  R(t) ∈ [0, 100]  aggregates four normalized physical factors:
+            </p>
+            <div className="p-4 bg-paper rounded-xl border border-rule font-mono text-xs space-y-2">
+              <div className="text-burgundy font-bold text-sm">
+                 R(t) = 100 · [ w_1 · D(t) + w_2 · V(t) + w_3 · H_norm(t) + w_4 · A(t) ] 
+              </div>
+              <ul className="space-y-1 text-muted font-sans text-xs pt-1">
+                <li>•  D(t) : Spatial density index (persons / m^2)</li>
+                <li>•  V(t) : Mean flow speed magnitude</li>
+                <li>•  H_norm(t) : Normalized directional Shannon entropy</li>
+                <li>•  A(t) : Velocity gradient surge acceleration</li>
+              </ul>
+            </div>
+          </section>
+
+          {/* 6. Camera Setup */}
+          <section id="camera-setup" className="scroll-mt-24 space-y-4">
+            <div className="border-b border-rule pb-2">
+              <h2 className="text-xl font-bold text-ink font-display">6. Camera Fleet & RTSP Security</h2>
+              <p className="text-xs text-muted font-mono">Webcam ingestion, RTSP network streaming, and credential scrub</p>
+            </div>
+            <p>
+              CROWDGUARD supports concurrent ingestion from local USB webcams (`/dev/video*`, Windows DirectShow index 0, 1) and remote RTSP security cameras.
+            </p>
+            <div className="p-4 bg-ok-soft/50 border border-ok/20 rounded-xl space-y-1">
+              <span className="font-semibold text-ok text-xs font-mono uppercase">SSRF & Credential Protection</span>
+              <p className="text-xs text-ink leading-relaxed">
+                RTSP stream URLs containing embedded passwords (e.g., `rtsp://admin:pass@192.168.1.50/stream1`) are automatically scrubbed by `rtsp_security.py` prior to database persistence and client broadcast.
               </p>
             </div>
-            <div className="p-3 bg-[#F8F9FA] dark:bg-[#0A1018] rounded-lg border border-[#CBD5D8] dark:border-[#1E2D40] space-y-1.5">
-              <span className="text-[10px] font-mono font-bold text-[#376E6F] dark:text-cyan-400 uppercase">Stage 3: DIP Motion</span>
-              <p className="text-[11px] text-[#2F4454] dark:text-slate-300 font-medium">Optical Flow & Entropy</p>
-              <p className="text-[10px] text-[#5D757E] dark:text-slate-400 leading-normal">
-                Gunnar Farneback polynomial expansion flow fields and 8-sector Shannon entropy.
-              </p>
-            </div>
-            <div className="p-3 bg-[#F8F9FA] dark:bg-[#0A1018] rounded-lg border border-[#CBD5D8] dark:border-[#1E2D40] space-y-1.5">
-              <span className="text-[10px] font-mono font-bold text-[#376E6F] dark:text-cyan-400 uppercase">Stage 4: Prediction</span>
-              <p className="text-[11px] text-[#2F4454] dark:text-slate-300 font-medium">Multi-Horizon Heuristics</p>
-              <p className="text-[10px] text-[#5D757E] dark:text-slate-400 leading-normal">
-                4-factor risk scoring combined with rolling polynomial extrapolation (+5s, +10s, +15s).
-              </p>
-            </div>
-          </div>
-        </section>
+          </section>
 
-        {/* Section 3: Farneback Optical Flow & Entropy */}
-        <section className="bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl p-5 space-y-3 shadow-xs">
-          <h2 className="text-sm font-bold text-[#1C3334] dark:text-white flex items-center space-x-2">
-            <Compass className="w-4 h-4 text-[#376E6F] dark:text-cyan-400" />
-            <span>3. Motion Field & Directional Shannon Entropy Formulation</span>
-          </h2>
-          <div className="space-y-2.5 text-[#2F4454] dark:text-slate-300 leading-relaxed">
-            <p>
-              Dense optical flow is evaluated across consecutive image pairs by approximating the neighborhood of each pixel through quadratic polynomial expansion:
-            </p>
-            <div className="p-3 bg-[#F8F9FA] dark:bg-[#0A1018] rounded-lg border border-[#CBD5D8] dark:border-[#1E2D40] font-mono text-[11px] text-[#376E6F] dark:text-cyan-300 space-y-1">
-              <div>Flow Magnitude: M(x, y) = √(u(x, y)² + v(x, y)²)</div>
-              <div>Flow Direction: θ(x, y) = atan2(v(x, y), u(x, y)) ∈ [-π, π]</div>
+          {/* 7. API */}
+          <section id="api" className="scroll-mt-24 space-y-4">
+            <div className="border-b border-rule pb-2">
+              <h2 className="text-xl font-bold text-ink font-display">7. REST & WebSocket API Reference</h2>
+              <p className="text-xs text-muted font-mono">Core FastAPI endpoints and telemetry streaming</p>
             </div>
-            <p className="text-[#5D757E] dark:text-slate-400">
-              To quantify spatial flow turbulence (laminar pedestrian stream versus panicked dispersal), angular vectors θ(x, y) are partitioned into 8 angular sectors (N=8 bins: 45° sectors) to formulate the Normalized Directional Shannon Entropy:
-            </p>
-            <div className="p-3 bg-[#F8F9FA] dark:bg-[#0A1018] rounded-lg border border-[#CBD5D8] dark:border-[#1E2D40] font-mono text-[11px] text-amber-300 space-y-1">
-              <div>H = - ∑ [ p_i · log₂(p_i) ]   for i = 1 .. 8</div>
-              <div>H_norm = H / log₂(8) = H / 3.0 ∈ [0.0, 1.0]</div>
-            </div>
-            <p className="text-[#5D757E] dark:text-slate-400">
-              Low entropy (H_norm &lt; 0.35) corresponds to unidirectional, orderly crowd transit. Elevated entropy (H_norm &gt; 0.65) detects disordered turbulence or multi-directional dispersal preceding crowd compression incidents.
-            </p>
-          </div>
-        </section>
-
-        {/* Section 4: Perspective-Aware 2D Gaussian Density Splatting */}
-        <section className="bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl p-5 space-y-3 shadow-xs">
-          <h2 className="text-sm font-bold text-[#1C3334] dark:text-white flex items-center space-x-2">
-            <Cpu className="w-4 h-4 text-[#376E6F] dark:text-cyan-400" />
-            <span>4. Perspective-Aware 2D Gaussian Density Splatting</span>
-          </h2>
-          <div className="space-y-2.5 text-[#2F4454] dark:text-slate-300 leading-relaxed">
-            <p>
-              Discrete bounding box counts fail to capture continuous physical crowd pressure due to monocular perspective foreshortening. In CROWDGUARD, detected foot contact centroids project continuous 2D Gaussian kernels onto the ground plane:
-            </p>
-            <div className="p-3 bg-[#F8F9FA] dark:bg-[#0A1018] rounded-lg border border-[#CBD5D8] dark:border-[#1E2D40] font-mono text-[11px] text-[#376E6F] dark:text-cyan-300">
-              G(x, y) = exp( - [ (x - x_foot)² + (y - y_foot)² ] / [ 2 · σ(y)² ] ) · W_perspective(y)
-            </div>
-            <p className="text-[#5D757E] dark:text-slate-400">
-              The kernel bandwidth σ(y) and weighting factor W_perspective(y) adapt continuously with vertical coordinate y. Pedestrians located near the horizon occupy smaller pixel clusters yet represent equal physical real-world density, preventing systematic undercounting in distant quadrants.
-            </p>
-          </div>
-        </section>
-
-        {/* Section 5: Heuristic Risk Index & Forecasting */}
-        <section className="bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl p-5 space-y-3 shadow-xs">
-          <h2 className="text-sm font-bold text-[#1C3334] dark:text-white flex items-center space-x-2">
-            <TrendingUp className="w-4 h-4 text-[#376E6F] dark:text-cyan-400" />
-            <span>5. Heuristic Risk Formulation & Short-Term Projections</span>
-          </h2>
-          <div className="space-y-2.5 text-[#2F4454] dark:text-slate-300 leading-relaxed">
-            <p>
-              Instantaneous frame risk is derived from four explainable physical components normalized to [0.0, 1.0]:
-            </p>
-            <div className="p-3 bg-[#F8F9FA] dark:bg-[#0A1018] rounded-lg border border-[#CBD5D8] dark:border-[#1E2D40] font-mono text-[11px] text-rose-300">
-              Risk_Score(t) = 100 × [ 0.35 · D(t) + 0.20 · G(t) + 0.25 · M(t) + 0.20 · C(t) ]
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 text-[11px] font-mono">
-              <div className="p-2 bg-[#0A1018] rounded border border-[#1E2D40]">
-                <span className="text-[#376E6F] dark:text-cyan-400 font-bold block">D(t) — Density Pressure (35%)</span>
-                <span className="text-[#5D757E] dark:text-slate-400 text-[10px]">Peak Gaussian ground splat intensity</span>
+            <div className="space-y-3 font-mono text-xs">
+              <div className="p-3 bg-paper rounded-lg border border-rule">
+                <span className="text-ok font-bold">GET</span> <span className="text-ink">/api/health</span>
+                <p className="text-[11px] text-muted font-sans mt-0.5">Returns health status of PyTorch, OpenCV, and FastAPI.</p>
               </div>
-              <div className="p-2 bg-[#0A1018] rounded border border-[#1E2D40]">
-                <span className="text-amber-400 font-bold block">G(t) — Surge Growth (20%)</span>
-                <span className="text-[#5D757E] dark:text-slate-400 text-[10px]">Temporal rate of pedestrian influx</span>
+              <div className="p-3 bg-paper rounded-lg border border-rule">
+                <span className="text-cool font-bold">POST</span> <span className="text-ink">/api/camera/start</span>
+                <p className="text-[11px] text-muted font-sans mt-0.5">Initiates hardware webcam acquisition on index 0.</p>
               </div>
-              <div className="p-2 bg-[#0A1018] rounded border border-[#1E2D40]">
-                <span className="text-rose-400 font-bold block">M(t) — Motion Anomaly (25%)</span>
-                <span className="text-[#5D757E] dark:text-slate-400 text-[10px]">Shannon entropy and acceleration variance</span>
+              <div className="p-3 bg-paper rounded-lg border border-rule">
+                <span className="text-ok font-bold">GET</span> <span className="text-ink">/api/camera/stream</span>
+                <p className="text-[11px] text-muted font-sans mt-0.5">Multipart MJPEG live video feed.</p>
               </div>
-              <div className="p-2 bg-[#0A1018] rounded border border-[#1E2D40]">
-                <span className="text-purple-400 font-bold block">C(t) — Spatial Congestion (20%)</span>
-                <span className="text-[#5D757E] dark:text-slate-400 text-[10px]">Spatial 3×3 grid bottleneck concentration</span>
+              <div className="p-3 bg-paper rounded-lg border border-rule">
+                <span className="text-ok font-bold">GET</span> <span className="text-ink">/api/analysis/results</span>
+                <p className="text-[11px] text-muted font-sans mt-0.5">Full time-series array of frame telemetry and risk scores.</p>
               </div>
             </div>
-            <p className="text-[#5D757E] dark:text-slate-400 pt-1">
-              Short-term forecasts (+5s, +10s, +15s) compute temporal velocity and density differentials over a rolling 15-frame window. Forecast values provide early advisory warnings to station controllers before sustained stampede thresholds are breached.
-            </p>
-          </div>
-        </section>
+          </section>
 
-        {/* Section 6: Privacy & Ethical Safeguards */}
-        <section className="bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl p-5 space-y-3 shadow-xs">
-          <h2 className="text-sm font-bold text-[#1C3334] dark:text-white flex items-center space-x-2">
-            <Lock className="w-4 h-4 text-emerald-400" />
-            <span>6. Privacy-Preserving Surveillance & Ethical Governance</span>
-          </h2>
-          <div className="space-y-2 text-[#2F4454] dark:text-slate-300 leading-relaxed">
+          {/* 8. Configuration */}
+          <section id="configuration" className="scroll-mt-24 space-y-4">
+            <div className="border-b border-rule pb-2">
+              <h2 className="text-xl font-bold text-ink font-display">8. System Configuration & Tuning</h2>
+              <p className="text-xs text-muted font-mono">Environment variables and runtime calibration</p>
+            </div>
             <p>
-              CROWDGUARD enforces strict privacy-by-design standards:
+              Configuration is managed via `backend/app/core/config.py` and editable through the **Settings** console. Key environment variables include:
             </p>
-            <ul className="space-y-1.5 list-disc pl-5 text-[#5D757E] dark:text-slate-400">
-              <li>
-                <strong className="text-[#1C3334] dark:text-slate-200">Zero Biometric Identification:</strong> The vision pipeline does not extract facial features, identify individuals, or match identities against law enforcement databases.
-              </li>
-              <li>
-                <strong className="text-[#1C3334] dark:text-slate-200">Integrated Anonymization Modes:</strong> Optional bilateral Gaussian face blurring and full silhouette masking can be configured prior to ingestion.
-              </li>
-              <li>
-                <strong className="text-[#1C3334] dark:text-slate-200">Decoupled Telemetry:</strong> All stored analytics consist of anonymized centroid coordinates, velocity vectors, and aggregated spatial heatmaps.
-              </li>
-            </ul>
-          </div>
-        </section>
+            <pre className="p-4 bg-paper rounded-xl border border-rule font-mono text-xs overflow-x-auto text-ink">
+{`PROJECT_NAME="Digital Image Processing Crowd Risk System"
+VERSION="2.0.0"
+API_V1_STR="/api"
+CORS_ORIGINS=["http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:5174"]
+MAX_CAMERAS=16
+DEFAULT_CONF_THRESHOLD=0.25`}
+            </pre>
+          </section>
+
+          {/* 9. Troubleshooting */}
+          <section id="troubleshooting" className="scroll-mt-24 space-y-4">
+            <div className="border-b border-rule pb-2">
+              <h2 className="text-xl font-bold text-ink font-display">9. Troubleshooting & FAQ</h2>
+              <p className="text-xs text-muted font-mono">Common operational edge cases and recovery protocols</p>
+            </div>
+            <div className="space-y-3">
+              <div className="p-4 bg-paper rounded-xl border border-rule space-y-1">
+                <h4 className="font-semibold text-ink text-xs">Port 5173 Conflict (Martian / NASA app)</h4>
+                <p className="text-xs text-muted">
+                  If `localhost:5173` is occupied by another local service on Windows IPv6 (`::1`), CROWDGUARD runs automatically on port **5174** with CORS configured for both ports.
+                </p>
+              </div>
+              <div className="p-4 bg-paper rounded-xl border border-rule space-y-1">
+                <h4 className="font-semibold text-ink text-xs">Camera Feed Inactive or Black Screen</h4>
+                <p className="text-xs text-muted">
+                  Ensure no other application (Zoom, Teams, OBS) is holding exclusive locks on Camera Device Index #0. Click "Connect Camera" in Live Monitoring to re-initialize the VideoCapture pipe.
+                </p>
+              </div>
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   );

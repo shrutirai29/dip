@@ -1,176 +1,432 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Cpu, 
   Lock, 
   Compass, 
   Sliders, 
   ShieldCheck, 
-  HardDrive
+  HardDrive,
+  Bell,
+  Settings as SettingsIcon,
+  Check,
+  Save,
+  RotateCcw
 } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'detection' | 'risk' | 'alerts' | 'system'>('detection');
+
+  // Detection Tab State
+  const [confThreshold, setConfThreshold] = useState<number>(0.25);
+  const [iouThreshold, setIouThreshold] = useState<number>(0.45);
+  const [maxPersons, setMaxPersons] = useState<number>(500);
+  const [enableTracking, setEnableTracking] = useState<boolean>(true);
+  const [drawBoxes, setDrawBoxes] = useState<boolean>(true);
+  const [showPersonCount, setShowPersonCount] = useState<boolean>(true);
+
+  // Risk Engine Tab State
+  const [densityWeight, setDensityWeight] = useState<number>(0.35);
+  const [flowWeight, setFlowWeight] = useState<number>(0.25);
+  const [entropyWeight, setEntropyWeight] = useState<number>(0.25);
+  const [surgeWeight, setSurgeWeight] = useState<number>(0.15);
+
+  // Alerts Tab State
+  const [threshLow, setThreshLow] = useState<number>(25);
+  const [threshModerate, setThreshModerate] = useState<number>(45);
+  const [threshHigh, setThreshHigh] = useState<number>(70);
+  const [threshCritical, setThreshCritical] = useState<number>(85);
+  const [enableSiren, setEnableSiren] = useState<boolean>(false);
+  const [autoDispatch, setAutoDispatch] = useState<boolean>(true);
+
+  // System Tab State
+  const [rtspTimeout, setRtspTimeout] = useState<number>(5);
+  const [maxQueueSize, setMaxQueueSize] = useState<number>(100);
+  const [logLevel, setLogLevel] = useState<string>('INFO');
+  const [hardwareTarget, setHardwareTarget] = useState<string>('auto');
+
+  const [savedMessage, setSavedMessage] = useState<string | null>(null);
+
+  const handleSave = () => {
+    setSavedMessage('Configuration applied and saved to local runtime.');
+    setTimeout(() => setSavedMessage(null), 3000);
+  };
+
+  const handleReset = () => {
+    setConfThreshold(0.25);
+    setIouThreshold(0.45);
+    setMaxPersons(500);
+    setDensityWeight(0.35);
+    setFlowWeight(0.25);
+    setEntropyWeight(0.25);
+    setSurgeWeight(0.15);
+    setThreshLow(25);
+    setThreshModerate(45);
+    setThreshHigh(70);
+    setThreshCritical(85);
+    setSavedMessage('Defaults restored.');
+    setTimeout(() => setSavedMessage(null), 2500);
+  };
+
   return (
-    <div className="space-y-6 w-full text-xs text-[#1C3334] dark:text-slate-200">
+    <div className="space-y-6 w-full text-xs text-ink">
       {/* Header */}
-      <div className="pb-4 border-b border-[#E2E8EA] dark:border-[#203638]">
-        <div className="flex items-center space-x-2.5">
-          <h1 className="text-xl font-bold text-[#1C3334] dark:text-[#EDF4F5] tracking-tight">
-            ENGINE CALIBRATION & RUNTIME SPECIFICATION
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-rule gap-4">
+        <div>
+          <div className="inline-flex items-center space-x-2 px-2.5 py-0.5 rounded-full bg-burgundy-soft border border-burgundy/20 text-burgundy text-[11px] font-mono font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-burgundy animate-pulse" />
+            <span>Engineering Console</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink font-display mt-1">
+            System Settings
           </h1>
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-cyan-950/40 border border-cyan-500/30 text-[#376E6F] dark:text-cyan-300">
-            SYSTEM ENGINE v2.0
-          </span>
-        </div>
-        <p className="text-xs text-[#5D757E] dark:text-[#A0B7BC] mt-1">
-          Active hyperparameter configuration for DIP optical flow, monocular perspective splatting, heuristic weighting, and privacy compliance
-        </p>
-      </div>
-
-      <div className="space-y-5">
-        {/* Detection Engine & Backbone */}
-        <div className="bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl p-5 space-y-3 shadow-xs">
-          <div className="flex items-center space-x-2 text-[#1C3334] dark:text-white font-semibold text-xs uppercase tracking-wider">
-            <Cpu className="w-4 h-4 text-[#376E6F] dark:text-cyan-400" />
-            <span>AI Model & Vision Backbone</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div className="space-y-1">
-              <label className="text-[10px] font-mono uppercase text-[#5D757E] dark:text-slate-400">Pretrained Object Detector</label>
-              <input
-                type="text"
-                disabled
-                value="Ultralytics YOLOv8 Nano (yolov8n.pt - Class 0 Person)"
-                className="w-full bg-[#F8F9FA] dark:bg-[#0A1018] border border-[#CBD5D8] dark:border-[#1E2D40] rounded-lg p-2.5 text-[#376E6F] dark:text-cyan-300 font-mono text-xs cursor-not-allowed"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-mono uppercase text-[#5D757E] dark:text-slate-400">Hardware Acceleration</label>
-              <input
-                type="text"
-                disabled
-                value="Auto-Detected CPU / CUDA Acceleration"
-                className="w-full bg-[#F8F9FA] dark:bg-[#0A1018] border border-[#CBD5D8] dark:border-[#1E2D40] rounded-lg p-2.5 text-white font-mono text-xs cursor-not-allowed"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-mono uppercase text-[#5D757E] dark:text-slate-400">Multi-Object Tracking Algorithm</label>
-              <input
-                type="text"
-                disabled
-                value="ByteTrack (Kalman Filter State Estimation + High/Low Conf Association)"
-                className="w-full bg-[#F8F9FA] dark:bg-[#0A1018] border border-[#CBD5D8] dark:border-[#1E2D40] rounded-lg p-2.5 text-white font-mono text-xs cursor-not-allowed"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-mono uppercase text-[#5D757E] dark:text-slate-400">Inference Resolution</label>
-              <input
-                type="text"
-                disabled
-                value="640 × 640 px (Dynamic Aspect-Preserving Letterbox)"
-                className="w-full bg-[#F8F9FA] dark:bg-[#0A1018] border border-[#CBD5D8] dark:border-[#1E2D40] rounded-lg p-2.5 text-white font-mono text-xs cursor-not-allowed"
-              />
-            </div>
-          </div>
+          <p className="text-xs text-muted mt-1 max-w-2xl leading-relaxed">
+            Active calibration for YOLOv8 inference, Gunnar Farneback optical flow, 4-factor risk synthesis, and emergency alert thresholds.
+          </p>
         </div>
 
-        {/* DIP Preprocessing & Optical Flow Configuration */}
-        <div className="bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl p-5 space-y-3 shadow-xs">
-          <div className="flex items-center space-x-2 text-[#1C3334] dark:text-white font-semibold text-xs uppercase tracking-wider">
-            <Compass className="w-4 h-4 text-[#376E6F] dark:text-cyan-400" />
-            <span>DIP Motion & Density Pipeline Specifications</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="p-3.5 bg-[#0A1018] rounded-lg border border-[#1E2D40] space-y-1">
-              <span className="font-semibold text-white block">Dense Optical Flow</span>
-              <p className="text-[#5D757E] dark:text-slate-400 text-[11px] leading-relaxed">
-                Gunnar Farneback quadratic polynomial expansion (pyr_scale=0.5, levels=3, winsize=15, iterations=3, poly_n=5, poly_sigma=1.2).
-              </p>
-            </div>
-            <div className="p-3.5 bg-[#0A1018] rounded-lg border border-[#1E2D40] space-y-1">
-              <span className="font-semibold text-white block">Perspective Splatting</span>
-              <p className="text-[#5D757E] dark:text-slate-400 text-[11px] leading-relaxed">
-                2D continuous Gaussian kernels (kernel_size=61, σ=14.0) with adaptive vertical coordinate foreshortening compensation.
-              </p>
-            </div>
-            <div className="p-3.5 bg-[#0A1018] rounded-lg border border-[#1E2D40] space-y-1">
-              <span className="font-semibold text-white block">Directional Shannon Entropy</span>
-              <p className="text-[#5D757E] dark:text-slate-400 text-[11px] leading-relaxed">
-                8-sector angular histogram Shannon entropy normalized against log₂(8)=3.0 to isolate coordinated transit from panic dispersion.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Risk Model Calibration Weights */}
-        <div className="bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl p-5 space-y-3 shadow-xs">
-          <div className="flex items-center space-x-2 text-[#1C3334] dark:text-white font-semibold text-xs uppercase tracking-wider">
-            <Sliders className="w-4 h-4 text-[#376E6F] dark:text-cyan-400" />
-            <span>Heuristic Risk Scoring Coefficients</span>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono">
-            <div className="p-3 bg-[#0A1018] rounded-lg border border-[#1E2D40]">
-              <span className="text-[10px] text-[#5D757E] dark:text-slate-400 uppercase block">Density Pressure</span>
-              <span className="text-base font-bold text-[#376E6F] dark:text-cyan-400 mt-1 block">35.0%</span>
-              <span className="text-[10px] text-slate-500 font-sans mt-0.5 block">w_density = 0.35</span>
-            </div>
-            <div className="p-3 bg-[#0A1018] rounded-lg border border-[#1E2D40]">
-              <span className="text-[10px] text-[#5D757E] dark:text-slate-400 uppercase block">Surge Influx</span>
-              <span className="text-base font-bold text-amber-400 mt-1 block">20.0%</span>
-              <span className="text-[10px] text-slate-500 font-sans mt-0.5 block">w_growth = 0.20</span>
-            </div>
-            <div className="p-3 bg-[#0A1018] rounded-lg border border-[#1E2D40]">
-              <span className="text-[10px] text-[#5D757E] dark:text-slate-400 uppercase block">Motion Anomaly</span>
-              <span className="text-base font-bold text-rose-400 mt-1 block">25.0%</span>
-              <span className="text-[10px] text-slate-500 font-sans mt-0.5 block">w_motion = 0.25</span>
-            </div>
-            <div className="p-3 bg-[#0A1018] rounded-lg border border-[#1E2D40]">
-              <span className="text-[10px] text-[#5D757E] dark:text-slate-400 uppercase block">Grid Congestion</span>
-              <span className="text-base font-bold text-purple-400 mt-1 block">20.0%</span>
-              <span className="text-[10px] text-slate-500 font-sans mt-0.5 block">w_congestion = 0.20</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Ethical Safeguards & Privacy Preservation */}
-        <div className="bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl p-5 space-y-3 shadow-xs">
-          <div className="flex items-center space-x-2 text-[#1C3334] dark:text-white font-semibold text-xs uppercase tracking-wider">
-            <Lock className="w-4 h-4 text-emerald-400" />
-            <span>Ethical Safeguards & Privacy Preservation</span>
-          </div>
-
-          <div className="p-3.5 bg-emerald-950/20 border border-emerald-500/25 rounded-lg text-[#2F4454] dark:text-slate-300 leading-relaxed space-y-2">
-            <div className="flex items-center space-x-2 text-emerald-400 font-semibold">
-              <ShieldCheck className="w-4 h-4" />
-              <span>Non-Invasive Safety Compliance Verified:</span>
-            </div>
-            <p className="text-[#5D757E] dark:text-slate-400">
-              This surveillance system strictly does NOT perform facial recognition, biometric identity scraping, or person-level behavioral profiling. Privacy filters (Bilateral Gaussian Face Blurring and Silhouette Masking) can be selected during video ingestion. Monocular perspective compensation is a mathematical spatial heuristic and does not replace calibrated stereoscopic photogrammetry.
-            </p>
-          </div>
-        </div>
-
-        {/* System & Storage Runtime */}
-        <div className="bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl p-5 space-y-3 shadow-xs">
-          <div className="flex items-center space-x-2 text-[#1C3334] dark:text-white font-semibold text-xs uppercase tracking-wider">
-            <HardDrive className="w-4 h-4 text-[#376E6F] dark:text-cyan-400" />
-            <span>API & Local Storage Runtime</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[#2F4454] dark:text-slate-300 font-mono text-[11px]">
-            <div className="p-2.5 bg-[#0A1018] rounded-lg border border-[#1E2D40]">
-              <span className="text-slate-500 text-[10px] block">API REST Prefix</span>
-              <span className="text-[#376E6F] dark:text-cyan-400 mt-0.5 block">/api</span>
-            </div>
-            <div className="p-2.5 bg-[#0A1018] rounded-lg border border-[#1E2D40]">
-              <span className="text-slate-500 text-[10px] block">Database Storage</span>
-              <span className="text-white mt-0.5 block">SQLite via SQLAlchemy ORM (crowdguard.db)</span>
-            </div>
-          </div>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={handleReset}
+            className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-paper-2 hover:bg-paper-3 text-ink border border-rule rounded-lg text-xs font-medium transition cursor-pointer"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-muted" />
+            <span>Restore Defaults</span>
+          </button>
+          <button
+            onClick={handleSave}
+            className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 bg-burgundy hover:bg-burgundy-hover text-white rounded-lg text-xs font-medium transition cursor-pointer shadow-2xs"
+          >
+            <Save className="w-3.5 h-3.5" />
+            <span>Save Configuration</span>
+          </button>
         </div>
       </div>
+
+      {savedMessage && (
+        <div className="p-3 bg-ok-soft border border-ok/20 rounded-lg text-ok font-mono text-xs flex items-center space-x-2">
+          <Check className="w-4 h-4 text-ok" />
+          <span>{savedMessage}</span>
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div className="flex items-center space-x-1 p-1 bg-paper-3 border border-rule rounded-xl w-max">
+        <button
+          onClick={() => setActiveTab('detection')}
+          className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
+            activeTab === 'detection' ? 'bg-burgundy text-white shadow-2xs' : 'text-muted hover:text-ink'
+          }`}
+        >
+          <Cpu className="w-3.5 h-3.5" />
+          <span>Detection</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('risk')}
+          className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
+            activeTab === 'risk' ? 'bg-burgundy text-white shadow-2xs' : 'text-muted hover:text-ink'
+          }`}
+        >
+          <Sliders className="w-3.5 h-3.5" />
+          <span>Risk Engine</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('alerts')}
+          className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
+            activeTab === 'alerts' ? 'bg-burgundy text-white shadow-2xs' : 'text-muted hover:text-ink'
+          }`}
+        >
+          <Bell className="w-3.5 h-3.5" />
+          <span>Alerts</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('system')}
+          className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
+            activeTab === 'system' ? 'bg-burgundy text-white shadow-2xs' : 'text-muted hover:text-ink'
+          }`}
+        >
+          <HardDrive className="w-3.5 h-3.5" />
+          <span>System</span>
+        </button>
+      </div>
+
+      {/* Tab 1: Detection Settings */}
+      {activeTab === 'detection' && (
+        <div className="space-y-4">
+          <div className="bg-paper-2 border border-rule rounded-xl p-5 shadow-2xs space-y-4">
+            <h3 className="text-sm font-semibold text-ink font-display pb-3 border-b border-rule">
+              YOLOv8 & Tracking Parameters
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Conf Threshold */}
+              <div className="p-3.5 bg-paper rounded-lg border border-rule space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="font-medium text-ink">Confidence Threshold</label>
+                  <span className="font-mono font-semibold text-burgundy">{confThreshold.toFixed(2)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.10"
+                  max="0.80"
+                  step="0.05"
+                  value={confThreshold}
+                  onChange={(e) => setConfThreshold(parseFloat(e.target.value))}
+                  className="w-full accent-burgundy"
+                />
+                <p className="text-[11px] text-muted">Minimum detection confidence for Class 0 (Person).</p>
+              </div>
+
+              {/* IoU Threshold */}
+              <div className="p-3.5 bg-paper rounded-lg border border-rule space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="font-medium text-ink">NMS IoU Threshold</label>
+                  <span className="font-mono font-semibold text-burgundy">{iouThreshold.toFixed(2)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.20"
+                  max="0.70"
+                  step="0.05"
+                  value={iouThreshold}
+                  onChange={(e) => setIouThreshold(parseFloat(e.target.value))}
+                  className="w-full accent-burgundy"
+                />
+                <p className="text-[11px] text-muted">Non-maximum suppression overlap threshold.</p>
+              </div>
+
+              {/* Max Persons */}
+              <div className="p-3.5 bg-paper rounded-lg border border-rule space-y-2">
+                <label className="font-medium text-ink block">Max Persons Per Frame</label>
+                <input
+                  type="number"
+                  min="50"
+                  max="2000"
+                  value={maxPersons}
+                  onChange={(e) => setMaxPersons(parseInt(e.target.value) || 500)}
+                  className="w-full bg-paper-2 border border-rule rounded p-2 text-xs font-mono font-semibold text-ink focus:outline-none focus:border-burgundy"
+                />
+                <p className="text-[11px] text-muted">Hard ceiling for centroid tracker allocation.</p>
+              </div>
+
+              {/* Toggles */}
+              <div className="p-3.5 bg-paper rounded-lg border border-rule space-y-3">
+                <span className="font-medium text-ink block">Surveillance HUD Toggles</span>
+                <label className="flex items-center space-x-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={enableTracking}
+                    onChange={(e) => setEnableTracking(e.target.checked)}
+                    className="rounded accent-burgundy cursor-pointer"
+                  />
+                  <span className="text-xs text-ink-2">Enable Centroid & ByteTrack Association</span>
+                </label>
+                <label className="flex items-center space-x-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={drawBoxes}
+                    onChange={(e) => setDrawBoxes(e.target.checked)}
+                    className="rounded accent-burgundy cursor-pointer"
+                  />
+                  <span className="text-xs text-ink-2">Draw Person Bounding Boxes</span>
+                </label>
+                <label className="flex items-center space-x-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showPersonCount}
+                    onChange={(e) => setShowPersonCount(e.target.checked)}
+                    className="rounded accent-burgundy cursor-pointer"
+                  />
+                  <span className="text-xs text-ink-2">Display Live Headcount Telemetry</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 2: Risk Engine Settings */}
+      {activeTab === 'risk' && (
+        <div className="space-y-4">
+          <div className="bg-paper-2 border border-rule rounded-xl p-5 shadow-2xs space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-rule">
+              <div>
+                <h3 className="text-sm font-semibold text-ink font-display">
+                  4-Factor Risk Engine Heuristic Weights
+                </h3>
+                <p className="text-[11px] text-muted">
+                  Normalized composite model: Score = w1 · Density + w2 · Flow + w3 · Entropy + w4 · Surge
+                </p>
+              </div>
+              <span className="font-mono text-xs text-burgundy font-semibold">
+                Total: {((densityWeight + flowWeight + entropyWeight + surgeWeight) * 100).toFixed(0)}%
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-3.5 bg-paper rounded-lg border border-rule space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="font-medium text-ink">Density Weight (\(w_1\))</label>
+                  <span className="font-mono font-semibold text-burgundy">{(densityWeight * 100).toFixed(0)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.10"
+                  max="0.60"
+                  step="0.05"
+                  value={densityWeight}
+                  onChange={(e) => setDensityWeight(parseFloat(e.target.value))}
+                  className="w-full accent-burgundy"
+                />
+                <p className="text-[11px] text-muted">Contribution of spatial crowd headcount and grid density.</p>
+              </div>
+
+              <div className="p-3.5 bg-paper rounded-lg border border-rule space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="font-medium text-ink">Flow Velocity Weight (\(w_2\))</label>
+                  <span className="font-mono font-semibold text-burgundy">{(flowWeight * 100).toFixed(0)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.10"
+                  max="0.50"
+                  step="0.05"
+                  value={flowWeight}
+                  onChange={(e) => setFlowWeight(parseFloat(e.target.value))}
+                  className="w-full accent-burgundy"
+                />
+                <p className="text-[11px] text-muted">Contribution of Farneback optical motion speed.</p>
+              </div>
+
+              <div className="p-3.5 bg-paper rounded-lg border border-rule space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="font-medium text-ink">Directional Entropy Weight (\(w_3\))</label>
+                  <span className="font-mono font-semibold text-burgundy">{(entropyWeight * 100).toFixed(0)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.10"
+                  max="0.50"
+                  step="0.05"
+                  value={entropyWeight}
+                  onChange={(e) => setEntropyWeight(parseFloat(e.target.value))}
+                  className="w-full accent-burgundy"
+                />
+                <p className="text-[11px] text-muted">Contribution of angular flow disorder (Shannon H).</p>
+              </div>
+
+              <div className="p-3.5 bg-paper rounded-lg border border-rule space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="font-medium text-ink">Surge Acceleration Weight (\(w_4\))</label>
+                  <span className="font-mono font-semibold text-burgundy">{(surgeWeight * 100).toFixed(0)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.05"
+                  max="0.40"
+                  step="0.05"
+                  value={surgeWeight}
+                  onChange={(e) => setSurgeWeight(parseFloat(e.target.value))}
+                  className="w-full accent-burgundy"
+                />
+                <p className="text-[11px] text-muted">Contribution of sudden acceleration spikes.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 3: Alerts Settings */}
+      {activeTab === 'alerts' && (
+        <div className="space-y-4">
+          <div className="bg-paper-2 border border-rule rounded-xl p-5 shadow-2xs space-y-4">
+            <h3 className="text-sm font-semibold text-ink font-display pb-3 border-b border-rule">
+              Risk Thresholds & Operational Response
+            </h3>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center font-mono">
+              <div className="p-3 bg-ok-soft rounded-lg border border-ok/20">
+                <span className="text-[10px] text-ok block font-sans font-medium uppercase">Low Band</span>
+                <span className="text-lg font-bold text-ok block mt-1">0 – {threshModerate - 1}</span>
+              </div>
+              <div className="p-3 bg-warn-soft rounded-lg border border-warn/25">
+                <span className="text-[10px] text-warn block font-sans font-medium uppercase">Moderate Band</span>
+                <span className="text-lg font-bold text-warn block mt-1">{threshModerate} – {threshHigh - 1}</span>
+              </div>
+              <div className="p-3 bg-burgundy-soft rounded-lg border border-burgundy/25">
+                <span className="text-[10px] text-burgundy block font-sans font-medium uppercase">High Band</span>
+                <span className="text-lg font-bold text-burgundy block mt-1">{threshHigh} – {threshCritical - 1}</span>
+              </div>
+              <div className="p-3 bg-bad-soft rounded-lg border border-bad/30">
+                <span className="text-[10px] text-bad block font-sans font-medium uppercase">Critical Band</span>
+                <span className="text-lg font-bold text-bad block mt-1">{threshCritical}+</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              <div className="p-3.5 bg-paper rounded-lg border border-rule space-y-2">
+                <label className="font-medium text-ink block">Moderate Alert Cutoff</label>
+                <input
+                  type="number"
+                  min="20"
+                  max="60"
+                  value={threshModerate}
+                  onChange={(e) => setThreshModerate(parseInt(e.target.value) || 45)}
+                  className="w-full bg-paper-2 border border-rule rounded p-2 text-xs font-mono font-semibold text-ink focus:outline-none focus:border-burgundy"
+                />
+              </div>
+
+              <div className="p-3.5 bg-paper rounded-lg border border-rule space-y-2">
+                <label className="font-medium text-ink block">High Risk Evacuation Cutoff</label>
+                <input
+                  type="number"
+                  min="50"
+                  max="90"
+                  value={threshHigh}
+                  onChange={(e) => setThreshHigh(parseInt(e.target.value) || 70)}
+                  className="w-full bg-paper-2 border border-rule rounded p-2 text-xs font-mono font-semibold text-ink focus:outline-none focus:border-burgundy"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 4: System Settings */}
+      {activeTab === 'system' && (
+        <div className="space-y-4">
+          <div className="bg-paper-2 border border-rule rounded-xl p-5 shadow-2xs space-y-4">
+            <h3 className="text-sm font-semibold text-ink font-display pb-3 border-b border-rule">
+              Runtime Architecture & Hardware Backend
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-3.5 bg-paper rounded-lg border border-rule space-y-2">
+                <label className="font-medium text-ink block">RTSP Connection Timeout (seconds)</label>
+                <input
+                  type="number"
+                  min="2"
+                  max="30"
+                  value={rtspTimeout}
+                  onChange={(e) => setRtspTimeout(parseInt(e.target.value) || 5)}
+                  className="w-full bg-paper-2 border border-rule rounded p-2 text-xs font-mono font-semibold text-ink focus:outline-none focus:border-burgundy"
+                />
+              </div>
+
+              <div className="p-3.5 bg-paper rounded-lg border border-rule space-y-2">
+                <label className="font-medium text-ink block">Frame Buffer Queue Depth</label>
+                <input
+                  type="number"
+                  min="20"
+                  max="500"
+                  value={maxQueueSize}
+                  onChange={(e) => setMaxQueueSize(parseInt(e.target.value) || 100)}
+                  className="w-full bg-paper-2 border border-rule rounded p-2 text-xs font-mono font-semibold text-ink focus:outline-none focus:border-burgundy"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

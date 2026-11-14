@@ -1,67 +1,141 @@
+/* Hallmark · theme: console · genre: modern-minimal · built: redesign: full · surface: oklch · font: Host Grotesk */
+/* Hallmark · pre-emit critique: P5 H5 E5 S4 R5 V4 · weakest: S, replaced generic futuristic HUD with restrained precision engineering console */
+
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-slate-blue: #2F4454;
-  --color-deep-burgundy: #2E151B;
-  --color-dusty-rose: #DA7B93;
-  --color-muted-teal: #376E6F;
-  --color-deep-teal: #1C3334;
+  --color-paper: var(--color-paper);
+  --color-paper-2: var(--color-paper-2);
+  --color-paper-3: var(--color-paper-3);
+  --color-ink: var(--color-ink);
+  --color-ink-2: var(--color-ink-2);
+  --color-muted: var(--color-muted);
+  --color-rule: var(--color-rule);
+  --color-rule-2: var(--color-rule-2);
+  --color-accent: var(--color-accent);
+  --color-accent-ink: var(--color-accent-ink);
+  --color-accent-soft: var(--color-accent-soft);
+  --color-burgundy: var(--color-burgundy);
+  --color-burgundy-hover: var(--color-burgundy-hover);
+  --color-burgundy-soft: var(--color-burgundy-soft);
+  --color-burgundy-ink: var(--color-burgundy-ink);
+  --color-cool: var(--color-cool);
+  --color-cool-soft: var(--color-cool-soft);
+  --color-ok: var(--color-ok);
+  --color-ok-soft: var(--color-ok-soft);
+  --color-bad: var(--color-bad);
+  --color-bad-soft: var(--color-bad-soft);
+  --color-warn: var(--color-warn);
+  --color-warn-soft: var(--color-warn-soft);
 
-  --color-brand-slate: #2F4454;
-  --color-brand-burgundy: #2E151B;
-  --color-brand-rose: #DA7B93;
-  --color-brand-mutedteal: #376E6F;
-  --color-brand-deepteal: #1C3334;
+  --font-display: "Host Grotesk", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-display);
+  --font-mono: "Atkinson Hyperlegible Mono", "JetBrains Mono", ui-monospace, monospace;
 }
 
-@layer base {
-  :root {
-    /* Warm Ivory Light Theme (Default per Art Direction) */
-    --cg-bg-base: #F8F6F3;
-    --cg-bg-surface: #FFFFFF;
-    --cg-bg-panel: #F1ECE6;
-    --cg-bg-card: #FFFFFF;
-    --cg-bg-card-hover: #F6F2EC;
-    --cg-border-subtle: #E5DFD7;
-    --cg-border-accent: #CBD5D8;
-    --cg-text-primary: #1C3334;
-    --cg-text-secondary: #2F4454;
-    --cg-text-muted: #5D757E;
-    
-    --cg-brand-slate: #2F4454;
-    --cg-brand-burgundy: #2E151B;
-    --cg-brand-rose: #DA7B93;
-    --cg-brand-muted-teal: #376E6F;
-    --cg-brand-deep-teal: #1C3334;
+:root {
+  /* Warm Light Command-Center Palette */
+  --color-paper: #F8F6F2;          /* Base warm ivory background */
+  --color-paper-2: #FFFFFF;        /* Crisp card / surface background */
+  --color-paper-3: #F1ECE4;        /* Soft ivory panel / secondary surface */
+  --color-ink: #18181B;            /* Near-black charcoal */
+  --color-ink-2: #2E2C2A;          /* Mid charcoal */
+  --color-muted: #6B6764;          /* Secondary text warm gray */
+  --color-rule: #E7E1DC;           /* Subtle warm gray border */
+  --color-rule-2: #D6CEBF;         /* Secondary border */
+  
+  /* Primary Deep Burgundy / Wine */
+  --color-accent: #7F1D2D;
+  --color-accent-ink: #FFFFFF;
+  --color-accent-soft: #F9ECEF;
+  --color-burgundy: #7F1D2D;
+  --color-burgundy-hover: #671422;
+  --color-burgundy-soft: #F9ECEF;
+  --color-burgundy-ink: #FFFFFF;
 
-    --cg-shadow-sm: 0 1px 2px 0 rgba(28, 51, 52, 0.04);
-    --cg-shadow-md: 0 4px 6px -1px rgba(28, 51, 52, 0.07), 0 2px 4px -2px rgba(28, 51, 52, 0.05);
-    --cg-shadow-lg: 0 10px 15px -3px rgba(28, 51, 52, 0.08), 0 4px 6px -4px rgba(28, 51, 52, 0.04);
-  }
+  /* Functional Supporting Signals */
+  --color-cool: #2563EB;           /* Blue for analytical, optical flow */
+  --color-cool-soft: #EFF6FF;
+  --color-ok: #15803D;             /* Green for healthy, live, low risk */
+  --color-ok-soft: #F0FDF4;
+  --color-warn: #B45309;           /* Amber for warning, moderate risk */
+  --color-warn-soft: #FFFBEB;
+  --color-bad: #991B1B;            /* Deep red for high/critical risk */
+  --color-bad-soft: #FEF2F2;
 
-  .dark {
-    /* Deep Teal Charcoal Dark Theme */
-    --cg-bg-base: #0B1415;
-    --cg-bg-surface: #112022;
-    --cg-bg-panel: #16292B;
-    --cg-bg-card: #152729;
-    --cg-bg-card-hover: #1B3235;
-    --cg-border-subtle: #233C3F;
-    --cg-border-accent: #315357;
-    --cg-text-primary: #EEF4F5;
-    --cg-text-secondary: #A0B7BC;
-    --cg-text-muted: #6B858B;
-    
-    --cg-brand-slate: #527189;
-    --cg-brand-burgundy: #381920;
-    --cg-brand-rose: #DA7B93;
-    --cg-brand-muted-teal: #4A8E8F;
-    --cg-brand-deep-teal: #244243;
+  /* Legacy Bridge Tokens */
+  --cg-bg-base: var(--color-paper);
+  --cg-bg-surface: var(--color-paper-2);
+  --cg-bg-panel: var(--color-paper-3);
+  --cg-bg-card: var(--color-paper-2);
+  --cg-bg-card-hover: var(--color-paper-3);
+  --cg-border-subtle: var(--color-rule);
+  --cg-border-accent: var(--color-rule-2);
+  --cg-text-primary: var(--color-ink);
+  --cg-text-secondary: var(--color-ink-2);
+  --cg-text-muted: var(--color-muted);
+}
 
-    --cg-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
-    --cg-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
-    --cg-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+.dark {
+  /* Graphite Command-Center Dark Mode */
+  --color-paper: #111114;
+  --color-paper-2: #18181C;
+  --color-paper-3: #222228;
+  --color-ink: #F4F4F5;
+  --color-ink-2: #D4D4D8;
+  --color-muted: #A1A1AA;
+  --color-rule: #2B2B32;
+  --color-rule-2: #3E3E48;
+
+  --color-accent: #9B2C3E;
+  --color-accent-ink: #FFFFFF;
+  --color-accent-soft: #2C1319;
+  --color-burgundy: #9B2C3E;
+  --color-burgundy-hover: #B8354A;
+  --color-burgundy-soft: #2C1319;
+  --color-burgundy-ink: #FFFFFF;
+
+  --color-cool: #3B82F6;
+  --color-cool-soft: #14223A;
+  --color-ok: #22C55E;
+  --color-ok-soft: #12281E;
+  --color-warn: #F59E0B;
+  --color-warn-soft: #291D11;
+  --color-bad: #EF4444;
+  --color-bad-soft: #2E1517;
+
+  /* Legacy Bridge Tokens */
+  --cg-bg-base: var(--color-paper);
+  --cg-bg-surface: var(--color-paper-2);
+  --cg-bg-panel: var(--color-paper-3);
+  --cg-bg-card: var(--color-paper-2);
+  --cg-bg-card-hover: var(--color-paper-3);
+  --cg-border-subtle: var(--color-rule);
+  --cg-border-accent: var(--color-rule-2);
+  --cg-text-primary: var(--color-ink);
+  --cg-text-secondary: var(--color-ink-2);
+  --cg-text-muted: var(--color-muted);
+}
+
+html, body {
+  overflow-x: clip;
+  font-family: var(--font-body);
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

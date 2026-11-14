@@ -243,33 +243,28 @@ export const VideoAnalysis: React.FC = () => {
       {/* -------------------------------------------------------------------------
           HEADER & SOURCE MODE SWITCHER
           ------------------------------------------------------------------------- */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-[#E2E8EA] dark:border-[#203638] gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-rule gap-4">
         <div>
-          <div className="flex items-center space-x-2.5">
-            <h2 className="text-xl font-bold tracking-tight text-[#1C3334] dark:text-[#EDF4F5]">
-              SURVEILLANCE INGESTION STUDIO
-            </h2>
-            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/10 text-[#376E6F] dark:text-cyan-300 border border-cyan-500/25">
-              {sourceMode === 'video' ? 'ASYNC BATCH' : sourceMode === 'webcam' ? 'LIVE WEBCAM FOUNDATION' : 'SECURE RTSP CCTV'}
-            </span>
+          <div className="inline-flex items-center space-x-2 px-2.5 py-0.5 rounded-full bg-burgundy-soft border border-burgundy/20 text-burgundy text-[11px] font-mono font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-burgundy animate-pulse" />
+            <span>Forensic Vision Workstation</span>
           </div>
-          <p className="text-xs text-[#5D757E] dark:text-[#A0B7BC] mt-1 max-w-2xl leading-relaxed">
-            {sourceMode === 'video'
-              ? 'Upload surveillance footage, select preset academic crowd scenarios, calibrate monocular perspective weights, and execute the computer vision pipeline with real-time progress tracking.'
-              : sourceMode === 'webcam'
-              ? 'Acquire live video from a local webcam device with monotonic frame pacing, bounded latest-frame drop accounting, and incremental DIP telemetry.'
-              : 'Ingest live network CCTV cameras over RTSP/RTSPS with SSRF protection, credential isolation, stalled stream detection, and resilient exponential reconnects.'}
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink font-display mt-1">
+            Video Analysis Studio
+          </h1>
+          <p className="text-xs text-muted mt-1 max-w-2xl leading-relaxed">
+            Ingestion · Processing · Motion Forensics · Crowd Risk Assessment. Execute YOLOv8 detection and Farneback optical flow with real-time progress tracking.
           </p>
         </div>
 
         {/* Source Mode Toggle */}
-        <div className="flex items-center p-1 bg-[#F1F4F5] dark:bg-[#0B1415] border border-[#CBD5D8] dark:border-[#233C3F] rounded-xl shadow-2xs self-start md:self-auto shrink-0">
+        <div className="flex items-center p-1 bg-paper-3 dark:bg-paper border border-rule dark:border-rule rounded-xl shadow-2xs self-start md:self-auto shrink-0">
           <button
             onClick={() => setSourceMode('video')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
               sourceMode === 'video'
-                ? 'bg-[#2F4454] dark:bg-[#376E6F] text-white shadow-xs'
-                : 'text-[#5D757E] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-white'
+                ? 'bg-burgundy text-white shadow-2xs font-medium'
+                : 'text-muted hover:text-ink'
             }`}
           >
             <FileVideo className="w-3.5 h-3.5" />
@@ -279,8 +274,8 @@ export const VideoAnalysis: React.FC = () => {
             onClick={() => setSourceMode('webcam')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
               sourceMode === 'webcam'
-                ? 'bg-[#2F4454] dark:bg-[#376E6F] text-white shadow-xs'
-                : 'text-[#5D757E] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-white'
+                ? 'bg-burgundy text-white shadow-2xs font-medium'
+                : 'text-muted hover:text-ink'
             }`}
           >
             <Camera className="w-3.5 h-3.5" />
@@ -290,8 +285,8 @@ export const VideoAnalysis: React.FC = () => {
             onClick={() => setSourceMode('rtsp')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
               sourceMode === 'rtsp'
-                ? 'bg-[#2F4454] dark:bg-[#376E6F] text-white shadow-xs'
-                : 'text-[#5D757E] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-white'
+                ? 'bg-burgundy text-white shadow-2xs font-medium'
+                : 'text-muted hover:text-ink'
             }`}
           >
             <Radio className="w-3.5 h-3.5" />
@@ -311,20 +306,20 @@ export const VideoAnalysis: React.FC = () => {
             ========================================================================= */}
         <div className="space-y-5">
           {/* Upload Panel */}
-          <div className="rounded-xl border border-[#E2E8EA] dark:border-[#203638] bg-white dark:bg-[#122123] shadow-xs p-5 space-y-3">
+          <div className="rounded-xl border border-rule dark:border-rule bg-white dark:bg-paper-2 shadow-xs p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-[#1C3334] dark:text-white uppercase tracking-wider">
+              <span className="text-xs font-semibold text-ink uppercase tracking-wider">
                 Upload Surveillance Video
               </span>
-              <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] font-mono">Max 150MB</span>
+              <span className="text-[10px] text-muted font-mono">Max 150MB</span>
             </div>
 
-            <label className="border-2 border-dashed border-[#CBD5D8] dark:border-[#1E2D40] hover:border-cyan-500/60 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-colors bg-[#F8F9FA] dark:bg-[#0E1622]/50 hover:bg-[#EEF2F4] dark:hover:bg-[#121C2B]/60 text-center">
-              <UploadCloud className="w-10 h-10 text-[#376E6F] dark:text-cyan-400 mb-2" />
-              <span className="text-xs font-medium text-[#1C3334] dark:text-slate-200">
+            <label className="border-2 border-dashed border-rule dark:border-[#1E2D40] hover:border-burgundy/60 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-colors bg-paper-3 dark:bg-paper-3/50 hover:bg-[#EEF2F4] dark:hover:bg-[#121C2B]/60 text-center">
+              <UploadCloud className="w-10 h-10 text-burgundy dark:text-burgundy mb-2" />
+              <span className="text-xs font-medium text-ink">
                 Click to browse or drop video file
               </span>
-              <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] mt-1 font-mono">
+              <span className="text-[10px] text-muted mt-1 font-mono">
                 Supports MP4, AVI, MOV, MKV
               </span>
               <input
@@ -337,8 +332,8 @@ export const VideoAnalysis: React.FC = () => {
             </label>
 
             {uploading && (
-              <div className="p-3 rounded-lg bg-cyan-950/30 border border-cyan-500/30 flex items-center space-x-2 text-xs text-[#376E6F] dark:text-cyan-300">
-                <RefreshCw className="w-4 h-4 animate-spin text-[#376E6F] dark:text-cyan-400 shrink-0" />
+              <div className="p-3 rounded-lg bg-cyan-950/30 border border-burgundy/30 flex items-center space-x-2 text-xs text-burgundy dark:text-burgundy">
+                <RefreshCw className="w-4 h-4 animate-spin text-burgundy dark:text-burgundy shrink-0" />
                 <span>Uploading and extracting video properties...</span>
               </div>
             )}
@@ -359,16 +354,16 @@ export const VideoAnalysis: React.FC = () => {
           </div>
 
           {/* Preset Academic Scenarios */}
-          <div className="rounded-xl border border-[#E2E8EA] dark:border-[#203638] bg-white dark:bg-[#122123] shadow-xs p-5 space-y-3">
+          <div className="rounded-xl border border-rule dark:border-rule bg-white dark:bg-paper-2 shadow-xs p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-[#1C3334] dark:text-white uppercase tracking-wider">
+              <span className="text-xs font-semibold text-ink uppercase tracking-wider">
                 Preset Academic Scenarios
               </span>
-              <span className="text-[10px] font-mono text-[#376E6F] dark:text-cyan-300 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/25">
+              <span className="text-[10px] font-mono text-burgundy dark:text-burgundy bg-burgundy-soft px-1.5 py-0.5 rounded border border-burgundy/25">
                 Deterministic
               </span>
             </div>
-            <p className="text-[11px] text-[#5D757E] dark:text-[#A0B7BC] leading-relaxed">
+            <p className="text-[11px] text-muted leading-relaxed">
               Synthesized CCTV scenarios designed for reproducible testing of bottleneck clustering, opposing counterflow, and sudden dispersion:
             </p>
 
@@ -389,7 +384,7 @@ export const VideoAnalysis: React.FC = () => {
                     disabled={isLoadingThis}
                     className={`w-full text-left p-3 rounded-lg border text-xs transition-colors flex items-center justify-between cursor-pointer ${
                       isSelected
-                        ? 'border-cyan-500/40 bg-cyan-500/10 text-cyan-200'
+                        ? 'border-burgundy/40 bg-burgundy-soft text-cyan-200'
                         : 'border-[#192638] bg-[#0E1622] hover:bg-[#121C2B] text-slate-300 hover:text-white'
                     }`}
                   >
@@ -397,16 +392,16 @@ export const VideoAnalysis: React.FC = () => {
                       <div className="font-medium truncate font-mono text-[11px]">
                         {s.filename}
                       </div>
-                      <div className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC]">
+                      <div className="text-[10px] text-muted">
                         Size: {(s.size_bytes / (1024 * 1024)).toFixed(1)} MB
                       </div>
                     </div>
 
                     <div className="shrink-0">
                       {isLoadingThis ? (
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#376E6F] dark:text-cyan-400" />
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-burgundy dark:text-burgundy" />
                       ) : (
-                        <ChevronRight className="w-3.5 h-3.5 text-[#5D757E] dark:text-[#A0B7BC]" />
+                        <ChevronRight className="w-3.5 h-3.5 text-muted" />
                       )}
                     </div>
                   </button>
@@ -416,12 +411,12 @@ export const VideoAnalysis: React.FC = () => {
           </div>
 
           {/* Video Catalog Browser */}
-          <div className="rounded-xl border border-[#E2E8EA] dark:border-[#203638] bg-white dark:bg-[#122123] shadow-xs p-5 space-y-3">
+          <div className="rounded-xl border border-rule dark:border-rule bg-white dark:bg-paper-2 shadow-xs p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-[#1C3334] dark:text-white uppercase tracking-wider">
+              <span className="text-xs font-semibold text-ink uppercase tracking-wider">
                 Catalog Video Library
               </span>
-              <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] font-mono">
+              <span className="text-[10px] text-muted font-mono">
                 {videos.length} clips
               </span>
             </div>
@@ -431,7 +426,7 @@ export const VideoAnalysis: React.FC = () => {
             ) : videosError ? (
               <ErrorState message={videosError} onRetry={loadVideos} />
             ) : videos.length === 0 ? (
-              <p className="text-xs text-[#5D757E] dark:text-[#A0B7BC] py-4 text-center">
+              <p className="text-xs text-muted py-4 text-center">
                 No videos in catalog. Upload a file above or click a preset scenario.
               </p>
             ) : (
@@ -444,7 +439,7 @@ export const VideoAnalysis: React.FC = () => {
                       onClick={() => setSelectedVideo(v)}
                       className={`w-full text-left p-2.5 rounded-lg border text-xs transition-colors cursor-pointer flex items-center justify-between ${
                         isSelected
-                          ? 'border-cyan-500/40 bg-cyan-500/10 text-cyan-200'
+                          ? 'border-burgundy/40 bg-burgundy-soft text-cyan-200'
                           : 'border-[#192638] bg-[#0E1622] hover:bg-[#121C2B] text-slate-300 hover:text-white'
                       }`}
                     >
@@ -452,11 +447,11 @@ export const VideoAnalysis: React.FC = () => {
                         <div className="font-medium truncate font-mono text-[11px]">
                           {v.original_filename || v.filename}
                         </div>
-                        <div className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] font-mono">
+                        <div className="text-[10px] text-muted font-mono">
                           {v.duration_seconds.toFixed(1)}s • {v.fps.toFixed(0)} FPS • {v.frame_count} frames
                         </div>
                       </div>
-                      <span className="text-[10px] font-mono text-[#5D757E] dark:text-[#A0B7BC] shrink-0">
+                      <span className="text-[10px] font-mono text-muted shrink-0">
                         {(v.file_size_bytes / (1024 * 1024)).toFixed(1)}MB
                       </span>
                     </button>
@@ -472,70 +467,70 @@ export const VideoAnalysis: React.FC = () => {
             ========================================================================= */}
         <div className="lg:col-span-2 space-y-5">
           {/* Selected Video Overview */}
-          <div className="rounded-xl border border-[#E2E8EA] dark:border-[#203638] bg-white dark:bg-[#122123] shadow-xs p-5">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E2E8EA] dark:border-[#203638] mb-4">
+          <div className="rounded-xl border border-rule dark:border-rule bg-white dark:bg-paper-2 shadow-xs p-5">
+            <div className="flex items-center justify-between pb-3 border-b border-rule dark:border-rule mb-4">
               <div className="flex items-center space-x-2">
-                <FileVideo className="w-4 h-4 text-[#376E6F] dark:text-cyan-400" />
-                <h3 className="text-xs font-semibold text-[#1C3334] dark:text-white uppercase tracking-wider">
+                <FileVideo className="w-4 h-4 text-burgundy dark:text-burgundy" />
+                <h3 className="text-xs font-semibold text-ink uppercase tracking-wider">
                   Target Surveillance Footage
                 </h3>
               </div>
               {selectedVideo && (
-                <span className="text-[11px] font-mono text-[#376E6F] dark:text-cyan-300">
+                <span className="text-[11px] font-mono text-burgundy dark:text-burgundy">
                   ID: {selectedVideo.id}
                 </span>
               )}
             </div>
 
             {selectedVideo ? (
-              <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-[#E2E8EA] dark:divide-[#203638] bg-[#F8F9FA] dark:bg-[#0E1622] rounded-lg border border-[#CBD5D8] dark:border-[#192638] text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-[#E2E8EA] dark:divide-[#203638] bg-paper-3 dark:bg-paper-3 rounded-lg border border-rule dark:border-[#192638] text-xs">
                 <div className="p-3">
-                  <span className="text-[9px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block mb-0.5">Duration</span>
-                  <span className="font-mono font-bold text-[#1C3334] dark:text-white text-sm tabular-nums">
+                  <span className="text-[9px] uppercase tracking-wider text-muted block mb-0.5">Duration</span>
+                  <span className="font-mono font-bold text-ink text-sm tabular-nums">
                     {selectedVideo.duration_seconds.toFixed(1)}s
                   </span>
                 </div>
                 <div className="p-3">
-                  <span className="text-[9px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block mb-0.5">Framerate</span>
-                  <span className="font-mono font-bold text-[#1C3334] dark:text-white text-sm tabular-nums">
+                  <span className="text-[9px] uppercase tracking-wider text-muted block mb-0.5">Framerate</span>
+                  <span className="font-mono font-bold text-ink text-sm tabular-nums">
                     {selectedVideo.fps.toFixed(1)} FPS
                   </span>
                 </div>
                 <div className="p-3">
-                  <span className="text-[9px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block mb-0.5">Resolution</span>
-                  <span className="font-mono font-bold text-[#1C3334] dark:text-white text-sm tabular-nums">
+                  <span className="text-[9px] uppercase tracking-wider text-muted block mb-0.5">Resolution</span>
+                  <span className="font-mono font-bold text-ink text-sm tabular-nums">
                     {selectedVideo.width} × {selectedVideo.height}
                   </span>
                 </div>
                 <div className="p-3">
-                  <span className="text-[9px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block mb-0.5">Total Frames</span>
-                  <span className="font-mono font-bold text-[#1C3334] dark:text-white text-sm tabular-nums">
+                  <span className="text-[9px] uppercase tracking-wider text-muted block mb-0.5">Total Frames</span>
+                  <span className="font-mono font-bold text-ink text-sm tabular-nums">
                     #{selectedVideo.frame_count}
                   </span>
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-[#5D757E] dark:text-[#A0B7BC] py-3">
+              <p className="text-xs text-muted py-3">
                 No video selected. Select or upload a clip from the library on the left.
               </p>
             )}
           </div>
 
           {/* Hyperparameters & Vision Configuration */}
-          <div className="rounded-xl border border-[#E2E8EA] dark:border-[#203638] bg-white dark:bg-[#122123] shadow-xs p-5 space-y-4">
-            <div className="flex items-center space-x-2 pb-3 border-b border-[#E2E8EA] dark:border-[#203638]">
-              <Sliders className="w-4 h-4 text-[#376E6F] dark:text-cyan-400" />
-              <h3 className="text-xs font-semibold text-[#1C3334] dark:text-white uppercase tracking-wider">
+          <div className="rounded-xl border border-rule dark:border-rule bg-white dark:bg-paper-2 shadow-xs p-5 space-y-4">
+            <div className="flex items-center space-x-2 pb-3 border-b border-rule dark:border-rule">
+              <Sliders className="w-4 h-4 text-burgundy dark:text-burgundy" />
+              <h3 className="text-xs font-semibold text-ink uppercase tracking-wider">
                 Vision Engine Parameters & DIP Calibration
               </h3>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               {/* Detection Confidence */}
-              <div className="p-3.5 bg-[#F8F9FA] dark:bg-[#0E1622] rounded-lg border border-[#CBD5D8] dark:border-[#192638] space-y-2">
+              <div className="p-3.5 bg-paper-3 dark:bg-paper-3 rounded-lg border border-rule dark:border-[#192638] space-y-2">
                 <div className="flex justify-between items-center">
-                  <label className="font-medium text-[#1C3334] dark:text-slate-200">YOLO Person Confidence Threshold</label>
-                  <span className="font-mono font-bold text-[#376E6F] dark:text-cyan-300">{confThreshold.toFixed(2)}</span>
+                  <label className="font-medium text-ink">YOLO Person Confidence Threshold</label>
+                  <span className="font-mono font-bold text-burgundy dark:text-burgundy">{confThreshold.toFixed(2)}</span>
                 </div>
                 <input
                   type="range"
@@ -544,18 +539,18 @@ export const VideoAnalysis: React.FC = () => {
                   step="0.05"
                   value={confThreshold}
                   onChange={(e) => setConfThreshold(parseFloat(e.target.value))}
-                  className="w-full accent-[#376E6F]"
+                  className="w-full accent-burgundy"
                 />
-                <p className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC]">
+                <p className="text-[10px] text-muted">
                   Minimum confidence score to accept Class 0 person bounding box (default: 0.25).
                 </p>
               </div>
 
               {/* Frame Stride */}
-              <div className="p-3.5 bg-[#F8F9FA] dark:bg-[#0E1622] rounded-lg border border-[#CBD5D8] dark:border-[#192638] space-y-2">
+              <div className="p-3.5 bg-paper-3 dark:bg-paper-3 rounded-lg border border-rule dark:border-[#192638] space-y-2">
                 <div className="flex justify-between items-center">
-                  <label className="font-medium text-[#1C3334] dark:text-slate-200">Temporal Frame Sampling Stride</label>
-                  <span className="font-mono font-bold text-[#376E6F] dark:text-cyan-300">{frameStride}</span>
+                  <label className="font-medium text-ink">Temporal Frame Sampling Stride</label>
+                  <span className="font-mono font-bold text-burgundy dark:text-burgundy">{frameStride}</span>
                 </div>
                 <input
                   type="range"
@@ -564,18 +559,18 @@ export const VideoAnalysis: React.FC = () => {
                   step="1"
                   value={frameStride}
                   onChange={(e) => setFrameStride(parseInt(e.target.value))}
-                  className="w-full accent-[#376E6F]"
+                  className="w-full accent-burgundy"
                 />
-                <p className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC]">
+                <p className="text-[10px] text-muted">
                   Process every Nth frame. Stride 2 balances CPU Farneback flow with near real-time throughput.
                 </p>
               </div>
 
               {/* Monocular Perspective Weight */}
-              <div className="p-3.5 bg-[#F8F9FA] dark:bg-[#0E1622] rounded-lg border border-[#CBD5D8] dark:border-[#192638] space-y-2">
+              <div className="p-3.5 bg-paper-3 dark:bg-paper-3 rounded-lg border border-rule dark:border-[#192638] space-y-2">
                 <div className="flex justify-between items-center">
-                  <label className="font-medium text-[#1C3334] dark:text-slate-200">Monocular Perspective Weight</label>
-                  <span className="font-mono font-bold text-[#376E6F] dark:text-cyan-300">{perspectiveWeight.toFixed(1)}×</span>
+                  <label className="font-medium text-ink">Monocular Perspective Weight</label>
+                  <span className="font-mono font-bold text-burgundy dark:text-burgundy">{perspectiveWeight.toFixed(1)}×</span>
                 </div>
                 <input
                   type="range"
@@ -584,26 +579,26 @@ export const VideoAnalysis: React.FC = () => {
                   step="0.1"
                   value={perspectiveWeight}
                   onChange={(e) => setPerspectiveWeight(parseFloat(e.target.value))}
-                  className="w-full accent-[#376E6F]"
+                  className="w-full accent-burgundy"
                 />
-                <p className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC]">
+                <p className="text-[10px] text-muted">
                   Compensates for optical camera shrinkage of distant individuals near the top horizon.
                 </p>
               </div>
 
               {/* Privacy Masking Mode */}
-              <div className="p-3.5 bg-[#F8F9FA] dark:bg-[#0E1622] rounded-lg border border-[#CBD5D8] dark:border-[#192638] space-y-2">
-                <label className="font-medium text-[#1C3334] dark:text-slate-200 block">Privacy Anonymization Mode</label>
+              <div className="p-3.5 bg-paper-3 dark:bg-paper-3 rounded-lg border border-rule dark:border-[#192638] space-y-2">
+                <label className="font-medium text-ink block">Privacy Anonymization Mode</label>
                 <select
                   value={privacyMode}
                   onChange={(e) => setPrivacyMode(e.target.value)}
-                  className="w-full bg-white dark:bg-[#121C2B] border border-[#CBD5D8] dark:border-[#1E2D40] text-[#1C3334] dark:text-slate-200 rounded px-3 py-1.5 text-xs focus:border-cyan-500"
+                  className="w-full bg-white dark:bg-[#121C2B] border border-rule dark:border-[#1E2D40] text-ink rounded px-3 py-1.5 text-xs focus:border-burgundy"
                 >
                   <option value="none">None (Standard Surveillance Annotations)</option>
                   <option value="face_blur">Face Blur (Gaussian head region blurring)</option>
                   <option value="full_anonymize">Full Anonymize (Silhouette bounding overlay)</option>
                 </select>
-                <p className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC]">
+                <p className="text-[10px] text-muted">
                   Ethical surveillance compliance filter applied before frame encoding.
                 </p>
               </div>
@@ -614,33 +609,33 @@ export const VideoAnalysis: React.FC = () => {
               <span className="text-[11px] font-semibold text-slate-300 block mb-2">
                 Risk Heuristic Weight Distribution (Normalized Composite Formula):
               </span>
-              <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-[#E2E8EA] dark:divide-[#203638] bg-[#F8F9FA] dark:bg-[#0E1622] rounded border border-[#CBD5D8] dark:border-[#192638] text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-[#E2E8EA] dark:divide-[#203638] bg-paper-3 dark:bg-paper-3 rounded border border-rule dark:border-[#192638] text-xs">
                 <div className="p-2.5">
-                  <span className="text-[9px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block">Density (wd)</span>
-                  <span className="font-mono font-bold text-[#376E6F] dark:text-[#6EC4C6] tabular-nums">{(weightDensity * 100).toFixed(0)}%</span>
+                  <span className="text-[9px] uppercase tracking-wider text-muted block">Density (wd)</span>
+                  <span className="font-mono font-bold text-cool tabular-nums">{(weightDensity * 100).toFixed(0)}%</span>
                 </div>
                 <div className="p-2.5">
-                  <span className="text-[9px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block">Growth Influx (wg)</span>
+                  <span className="text-[9px] uppercase tracking-wider text-muted block">Growth Influx (wg)</span>
                   <span className="font-mono font-bold text-amber-700 dark:text-amber-300 tabular-nums">{(weightGrowth * 100).toFixed(0)}%</span>
                 </div>
                 <div className="p-2.5">
-                  <span className="text-[9px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block">Disorder/Flow (wm)</span>
-                  <span className="font-mono font-bold text-[#DA7B93] tabular-nums">{(weightMotion * 100).toFixed(0)}%</span>
+                  <span className="text-[9px] uppercase tracking-wider text-muted block">Disorder/Flow (wm)</span>
+                  <span className="font-mono font-bold text-accent tabular-nums">{(weightMotion * 100).toFixed(0)}%</span>
                 </div>
                 <div className="p-2.5">
-                  <span className="text-[9px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block">Congestion (wc)</span>
-                  <span className="font-mono font-bold text-[#2F4454] dark:text-[#A0B7BC] tabular-nums">{(weightCongestion * 100).toFixed(0)}%</span>
+                  <span className="text-[9px] uppercase tracking-wider text-muted block">Congestion (wc)</span>
+                  <span className="font-mono font-bold text-muted tabular-nums">{(weightCongestion * 100).toFixed(0)}%</span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Job Launch & Progress Terminal */}
-          <div className="rounded-xl border border-[#E2E8EA] dark:border-[#203638] bg-white dark:bg-[#122123] shadow-xs p-5 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E2E8EA] dark:border-[#203638]">
+          <div className="rounded-xl border border-rule dark:border-rule bg-white dark:bg-paper-2 shadow-xs p-5 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-rule dark:border-rule">
               <div className="flex items-center space-x-2">
-                <Play className="w-4 h-4 text-[#376E6F] dark:text-cyan-400" />
-                <h3 className="text-xs font-semibold text-[#1C3334] dark:text-white uppercase tracking-wider">
+                <Play className="w-4 h-4 text-burgundy dark:text-burgundy" />
+                <h3 className="text-xs font-semibold text-ink uppercase tracking-wider">
                   Analysis Job Execution
                 </h3>
               </div>
@@ -659,8 +654,8 @@ export const VideoAnalysis: React.FC = () => {
 
             {!activeAnalysis ? (
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-2">
-                <div className="space-y-0.5 text-xs text-[#5D757E] dark:text-[#A0B7BC]">
-                  <p className="text-[#1C3334] dark:text-slate-200 font-medium">Ready to launch inference</p>
+                <div className="space-y-0.5 text-xs text-muted">
+                  <p className="text-ink font-medium">Ready to launch inference</p>
                   <p className="text-[11px]">
                     The backend will spawn an asynchronous background thread processing frames sequentially.
                   </p>
@@ -669,7 +664,7 @@ export const VideoAnalysis: React.FC = () => {
                 <button
                   onClick={handleStartAnalysis}
                   disabled={!selectedVideo || jobActionLoading}
-                  className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-5 py-2.5 bg-[#2F4454] hover:bg-[#1C3334] text-white dark:bg-[#376E6F] dark:hover:bg-[#4A8E8F] disabled:opacity-50 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow-xs shrink-0"
+                  className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-5 py-2.5 bg-ink text-paper hover:opacity-90 text-white dark:bg-burgundy dark:hover:bg-[#4A8E8F] disabled:opacity-50 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow-xs shrink-0"
                 >
                   <Play className="w-4 h-4 fill-current" />
                   <span>Launch Computer Vision Pipeline</span>
@@ -680,16 +675,16 @@ export const VideoAnalysis: React.FC = () => {
                 {/* Progress bar */}
                 <div className="space-y-1.5">
                   <div className="flex justify-between items-center text-xs">
-                    <span className="font-medium text-[#1C3334] dark:text-slate-200">
+                    <span className="font-medium text-ink">
                       Processing: Frame {activeAnalysis.current_frame} of {activeAnalysis.total_frames || '—'}
                     </span>
-                    <span className="font-mono font-bold text-[#376E6F] dark:text-cyan-300">
+                    <span className="font-mono font-bold text-burgundy dark:text-burgundy">
                       {activeAnalysis.progress_percent.toFixed(1)}%
                     </span>
                   </div>
                   <div className="w-full bg-[#0E1622] rounded-full h-2 border border-[#192638] overflow-hidden">
                     <div
-                      className="bg-cyan-500 h-2 transition-all duration-300"
+                      className="bg-cyan-500 h-2 transition-colors duration-300"
                       style={{ width: `${Math.min(100, Math.max(0, activeAnalysis.progress_percent))}%` }}
                     />
                   </div>
@@ -697,27 +692,27 @@ export const VideoAnalysis: React.FC = () => {
 
                 {/* Processing metrics */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                  <div className="p-2.5 bg-[#F8F9FA] dark:bg-[#0E1622] rounded border border-[#CBD5D8] dark:border-[#192638]">
-                    <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] block">Processing Speed</span>
-                    <span className="font-mono font-bold text-[#1C3334] dark:text-white text-xs">
+                  <div className="p-2.5 bg-paper-3 dark:bg-paper-3 rounded border border-rule dark:border-[#192638]">
+                    <span className="text-[10px] text-muted block">Processing Speed</span>
+                    <span className="font-mono font-bold text-ink text-xs">
                       {activeAnalysis.processing_fps.toFixed(1)} FPS
                     </span>
                   </div>
-                  <div className="p-2.5 bg-[#F8F9FA] dark:bg-[#0E1622] rounded border border-[#CBD5D8] dark:border-[#192638]">
-                    <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] block">Peak Detected</span>
-                    <span className="font-mono font-bold text-[#1C3334] dark:text-white text-xs">
+                  <div className="p-2.5 bg-paper-3 dark:bg-paper-3 rounded border border-rule dark:border-[#192638]">
+                    <span className="text-[10px] text-muted block">Peak Detected</span>
+                    <span className="font-mono font-bold text-ink text-xs">
                       {activeAnalysis.peak_count} persons
                     </span>
                   </div>
-                  <div className="p-2.5 bg-[#F8F9FA] dark:bg-[#0E1622] rounded border border-[#CBD5D8] dark:border-[#192638]">
-                    <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] block">Max Risk Score</span>
+                  <div className="p-2.5 bg-paper-3 dark:bg-paper-3 rounded border border-rule dark:border-[#192638]">
+                    <span className="text-[10px] text-muted block">Max Risk Score</span>
                     <span className="font-mono font-bold text-rose-400 text-xs">
                       {activeAnalysis.max_risk_score.toFixed(1)}/100
                     </span>
                   </div>
-                  <div className="p-2.5 bg-[#F8F9FA] dark:bg-[#0E1622] rounded border border-[#CBD5D8] dark:border-[#192638]">
-                    <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] block">Active Pattern</span>
-                    <span className="font-mono font-bold text-[#376E6F] dark:text-cyan-300 text-xs uppercase truncate block">
+                  <div className="p-2.5 bg-paper-3 dark:bg-paper-3 rounded border border-rule dark:border-[#192638]">
+                    <span className="text-[10px] text-muted block">Active Pattern</span>
+                    <span className="font-mono font-bold text-burgundy dark:text-burgundy text-xs uppercase truncate block">
                       {activeAnalysis.dominant_pattern || 'ANALYZING...'}
                     </span>
                   </div>
@@ -740,7 +735,7 @@ export const VideoAnalysis: React.FC = () => {
                       <button
                         onClick={handleResume}
                         disabled={jobActionLoading}
-                        className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-500/40 text-xs font-medium text-cyan-200 cursor-pointer"
+                        className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded bg-cyan-600/30 hover:bg-cyan-600/50 border border-burgundy/40 text-xs font-medium text-cyan-200 cursor-pointer"
                       >
                         <Play className="w-3.5 h-3.5" />
                         <span>Resume</span>

@@ -5,11 +5,19 @@ import {
   Loader2, 
   TrendingUp, 
   TrendingDown, 
-  Minus 
+  Minus,
+  CheckCircle2,
+  X,
+  ShieldAlert,
+  Cpu,
+  Layers,
+  Radio,
+  Activity,
+  ArrowRight
 } from 'lucide-react';
 
 /* =========================================================================
-   1. KPI CARD & CONSOLE METRIC STRIP COMPONENTS
+   1. CONSOLE METRIC STRIP & ITEM COMPONENTS
    ========================================================================= */
 export interface MetricItemProps {
   label: string;
@@ -29,35 +37,59 @@ export const MetricItem: React.FC<MetricItemProps> = ({
   icon: Icon,
 }) => {
   const toneAccent: Record<string, string> = {
-    slate: 'text-[#2F4454] dark:text-[#A0B7BC]',
-    teal: 'text-[#376E6F] dark:text-[#6EB5B6]',
-    cyan: 'text-[#376E6F] dark:text-[#6EB5B6]',
-    rose: 'text-[#DA7B93]',
-    burgundy: 'text-[#2E151B] dark:text-[#F0B3C1]',
-    deepteal: 'text-[#1C3334] dark:text-[#EDF4F5]',
-    emerald: 'text-emerald-700 dark:text-emerald-300',
-    amber: 'text-amber-700 dark:text-amber-300',
-    neutral: 'text-[#1C3334] dark:text-[#EDF4F5]',
+    slate: 'text-ink-2',
+    teal: 'text-cool',
+    cyan: 'text-cool',
+    rose: 'text-bad',
+    burgundy: 'text-burgundy',
+    deepteal: 'text-ink',
+    emerald: 'text-ok',
+    amber: 'text-warn',
+    neutral: 'text-ink',
   };
 
+  const isPendingText =
+    typeof value === 'string' &&
+    (value.includes('...') ||
+      /^(measuring|computing|calculating|pending|loading|initializing|standby|calibrating|connecting)/i.test(value.trim()));
+
+  const isBlank =
+    value === undefined ||
+    value === null ||
+    value === '—' ||
+    value === '-' ||
+    value === 'N/A' ||
+    value === '';
+
   return (
-    <div className="flex-1 px-4 py-2.5 min-w-[130px]">
-      <div className="flex items-center space-x-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] mb-1">
-        {Icon && <Icon className="w-3 h-3 text-[#5D757E] dark:text-[#A0B7BC] shrink-0" />}
+    <div className="flex-1 min-w-[130px] px-3.5 py-3 overflow-hidden bg-paper-2 border-r border-rule last:border-r-0 flex flex-col justify-between">
+      <div className="flex items-center space-x-1.5 text-xs text-muted mb-1 truncate">
+        {Icon && <Icon className="w-3.5 h-3.5 text-muted shrink-0" />}
         <span className="truncate">{label}</span>
       </div>
-      <div className="flex items-baseline space-x-1.5">
-        <span className={`text-xl font-bold tracking-tight font-mono tabular-nums ${toneAccent[tone] || toneAccent.neutral}`}>
-          {value}
-        </span>
-        {unit && (
-          <span className="text-[10px] font-mono text-[#5D757E] dark:text-[#A0B7BC]">
-            {unit}
+      <div className="flex items-baseline space-x-1.5 min-w-0 overflow-hidden whitespace-nowrap h-7">
+        {isPendingText ? (
+          <span className="text-xs font-mono font-medium text-muted motion-safe:animate-pulse truncate inline-flex items-center space-x-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-burgundy/70 motion-safe:animate-ping shrink-0" />
+            <span className="truncate">{value}</span>
           </span>
+        ) : isBlank ? (
+          <span className="text-base font-mono text-muted/60">—</span>
+        ) : (
+          <>
+            <span className={`text-lg sm:text-xl font-semibold tracking-tight font-mono tabular-nums truncate ${toneAccent[tone] || toneAccent.neutral}`}>
+              {value}
+            </span>
+            {unit && (
+              <span className="text-xs font-mono text-muted shrink-0 whitespace-nowrap">
+                {unit}
+              </span>
+            )}
+          </>
         )}
       </div>
       {subtext && (
-        <p className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] truncate mt-0.5">
+        <p className="text-[11px] text-muted truncate mt-1">
           {subtext}
         </p>
       )}
@@ -69,11 +101,14 @@ export const MetricStrip: React.FC<{ children: React.ReactNode; className?: stri
   children,
   className = '',
 }) => (
-  <div className={`w-full flex flex-wrap items-center divide-y sm:divide-y-0 sm:divide-x divide-[#E2DBD1] dark:divide-[#1F3538] bg-[#FAF8F5] dark:bg-[#0E1A1B] border-y border-[#E2DBD1] dark:border-[#1F3538] py-1 select-none ${className}`}>
+  <div className={`w-full flex flex-wrap lg:flex-nowrap divide-y sm:divide-y-0 divide-rule bg-paper-2 border border-rule rounded-lg overflow-hidden select-none shadow-2xs ${className}`}>
     {children}
   </div>
 );
 
+/* =========================================================================
+   2. KPI CARD (Editorial Command Center)
+   ========================================================================= */
 interface KPICardProps {
   label: string;
   value: string | number;
@@ -83,6 +118,7 @@ interface KPICardProps {
   tone?: 'slate' | 'teal' | 'rose' | 'burgundy' | 'deepteal' | 'amber' | 'emerald' | 'cyan' | 'neutral';
   trend?: 'up' | 'down' | 'stable';
   trendValue?: string;
+  isRiskCard?: boolean;
 }
 
 export const KPICard: React.FC<KPICardProps> = ({
@@ -94,59 +130,52 @@ export const KPICard: React.FC<KPICardProps> = ({
   tone = 'neutral',
   trend,
   trendValue,
+  isRiskCard = false,
 }) => {
-  const toneClasses: Record<string, string> = {
-    slate: 'bg-white dark:bg-[#152729] border-[#2F4454]/20 dark:border-[#2F4454]/40 text-[#2F4454] dark:text-[#A0B7BC]',
-    teal: 'bg-white dark:bg-[#152729] border-[#376E6F]/25 dark:border-[#376E6F]/40 text-[#376E6F] dark:text-[#6EB5B6]',
-    cyan: 'bg-white dark:bg-[#152729] border-[#376E6F]/25 dark:border-[#376E6F]/40 text-[#376E6F] dark:text-[#6EB5B6]',
-    rose: 'bg-white dark:bg-[#152729] border-[#DA7B93]/30 dark:border-[#DA7B93]/40 text-[#B34D66] dark:text-[#F0A4B8]',
-    burgundy: 'bg-white dark:bg-[#152729] border-[#2E151B]/20 dark:border-[#DA7B93]/30 text-[#2E151B] dark:text-[#F5B8C7]',
-    deepteal: 'bg-white dark:bg-[#152729] border-[#1C3334]/25 dark:border-[#1C3334]/50 text-[#1C3334] dark:text-[#EDF4F5]',
-    emerald: 'bg-white dark:bg-[#152729] border-emerald-500/25 dark:border-emerald-500/40 text-emerald-700 dark:text-emerald-300',
-    amber: 'bg-white dark:bg-[#152729] border-amber-500/25 dark:border-amber-500/40 text-amber-700 dark:text-amber-300',
-    neutral: 'bg-white dark:bg-[#152729] border-[#E2E8EA] dark:border-[#233C3F] text-[#1C3334] dark:text-[#EDF4F5]',
-  };
-
   const iconTones: Record<string, string> = {
-    slate: 'text-[#2F4454] dark:text-[#A0B7BC] bg-[#2F4454]/10 dark:bg-[#2F4454]/25 border-[#2F4454]/20 dark:border-[#2F4454]/30',
-    teal: 'text-[#376E6F] dark:text-[#6EB5B6] bg-[#376E6F]/10 dark:bg-[#376E6F]/25 border-[#376E6F]/20 dark:border-[#376E6F]/30',
-    cyan: 'text-[#376E6F] dark:text-[#6EB5B6] bg-[#376E6F]/10 dark:bg-[#376E6F]/25 border-[#376E6F]/20 dark:border-[#376E6F]/30',
-    rose: 'text-[#DA7B93] bg-[#DA7B93]/15 border-[#DA7B93]/30',
-    burgundy: 'text-[#2E151B] dark:text-[#DA7B93] bg-[#2E151B]/10 dark:bg-[#2E151B]/30 border-[#2E151B]/20 dark:border-[#DA7B93]/30',
-    deepteal: 'text-[#1C3334] dark:text-[#6EB5B6] bg-[#1C3334]/10 dark:bg-[#1C3334]/30 border-[#1C3334]/20 dark:border-[#1C3334]/40',
-    emerald: 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-500/20 dark:border-emerald-500/30',
-    amber: 'text-amber-700 dark:text-amber-300 bg-amber-500/10 dark:bg-amber-500/20 border-amber-500/20 dark:border-amber-500/30',
-    neutral: 'text-[#5D757E] dark:text-[#A0B7BC] bg-[#F1F4F5] dark:bg-[#1E3235] border-[#E2E8EA] dark:border-[#2A464A]',
+    slate: 'text-muted bg-paper-3 border-rule',
+    teal: 'text-cool bg-cool-soft border-rule',
+    cyan: 'text-cool bg-cool-soft border-rule',
+    rose: 'text-bad bg-bad-soft border-rule',
+    burgundy: 'text-burgundy bg-burgundy-soft border-rule',
+    deepteal: 'text-ink bg-paper-3 border-rule',
+    emerald: 'text-ok bg-ok-soft border-rule',
+    amber: 'text-warn bg-warn-soft border-rule',
+    neutral: 'text-muted bg-paper-3 border-rule',
   };
 
   return (
-    <div className={`rounded-xl border p-4.5 transition-all duration-150 ${toneClasses[tone] || toneClasses.neutral} flex flex-col justify-between shadow-xs dark:shadow-sm`}>
-      <div className="flex items-center justify-between mb-2.5">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC]">
+    <div className={`rounded-lg border p-3.5 transition-colors duration-150 flex flex-col justify-between shadow-2xs ${
+      isRiskCard ? 'bg-burgundy-soft/40 border-burgundy/20' : 'bg-paper-2 border-rule'
+    }`}>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[11px] font-medium text-muted tracking-tight">
           {label}
         </span>
-        <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${iconTones[tone] || iconTones.neutral}`}>
-          <Icon className="w-4 h-4" />
+        <div className={`w-6 h-6 rounded-md border flex items-center justify-center shrink-0 ${iconTones[tone] || iconTones.neutral}`}>
+          <Icon className="w-3.5 h-3.5" />
         </div>
       </div>
 
       <div className="space-y-1">
         <div className="flex items-baseline space-x-1.5">
-          <span className="text-2xl font-bold tracking-tight text-[#1C3334] dark:text-[#EDF4F5] font-mono">
+          <span className={`text-xl sm:text-2xl font-semibold tracking-tight font-mono tabular-nums ${
+            isRiskCard ? 'text-burgundy' : 'text-ink'
+          }`}>
             {value}
           </span>
           {unit && (
-            <span className="text-xs text-[#5D757E] dark:text-[#A0B7BC] font-mono">
+            <span className="text-xs text-muted font-mono">
               {unit}
             </span>
           )}
         </div>
 
         {(subtext || trend) && (
-          <div className="flex items-center space-x-2 text-[11px] text-[#5D757E] dark:text-[#A0B7BC] pt-0.5">
+          <div className="flex items-center space-x-2 text-[11px] text-muted pt-0.5 truncate">
             {trend && (
-              <span className={`inline-flex items-center space-x-0.5 font-medium ${
-                trend === 'up' ? 'text-amber-600 dark:text-amber-400' : trend === 'down' ? 'text-emerald-600 dark:text-emerald-400' : 'text-[#5D757E] dark:text-[#A0B7BC]'
+              <span className={`inline-flex items-center space-x-0.5 font-medium shrink-0 ${
+                trend === 'up' ? 'text-warn' : trend === 'down' ? 'text-ok' : 'text-muted'
               }`}>
                 {trend === 'up' && <TrendingUp className="w-3 h-3" />}
                 {trend === 'down' && <TrendingDown className="w-3 h-3" />}
@@ -154,7 +183,7 @@ export const KPICard: React.FC<KPICardProps> = ({
                 {trendValue && <span>{trendValue}</span>}
               </span>
             )}
-            {subtext && <span>{subtext}</span>}
+            {subtext && <span className="truncate">{subtext}</span>}
           </div>
         )}
       </div>
@@ -163,7 +192,7 @@ export const KPICard: React.FC<KPICardProps> = ({
 };
 
 /* =========================================================================
-   2. RISK BADGE COMPONENT
+   3. RISK BADGE (Small Severity Pills)
    ========================================================================= */
 interface RiskBadgeProps {
   score?: number;
@@ -171,96 +200,53 @@ interface RiskBadgeProps {
   size?: 'sm' | 'md';
 }
 
-export const RiskBadge: React.FC<RiskBadgeProps> = ({ score, band, size = 'md' }) => {
+export const RiskBadge: React.FC<RiskBadgeProps> = ({ score, band, size = 'sm' }) => {
   let effectiveBand = band;
   if (!effectiveBand && typeof score === 'number') {
-    if (score >= 75) effectiveBand = 'Critical';
-    else if (score >= 50) effectiveBand = 'High';
-    else if (score >= 25) effectiveBand = 'Moderate';
+    if (score >= 70) effectiveBand = 'High';
+    else if (score >= 40) effectiveBand = 'Moderate';
     else effectiveBand = 'Low';
   }
 
   const bandStyles: Record<string, string> = {
-    Low: 'bg-[#EEF5F5] dark:bg-[#183133] text-[#376E6F] dark:text-[#6EC4C6] border-[#376E6F]/30 dark:border-[#376E6F]/40',
-    Moderate: 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-500/30',
-    High: 'bg-[#FDF3F5] dark:bg-[#2A161D] text-[#B34D66] dark:text-[#F0A4B8] border-[#DA7B93]/35 dark:border-[#DA7B93]/40',
-    Critical: 'bg-[#FAF0F2] dark:bg-[#38161E] text-[#2E151B] dark:text-rose-200 border-[#2E151B]/30 dark:border-rose-500/40 font-bold',
-  };
-
-  const dotStyles: Record<string, string> = {
-    Low: 'bg-[#376E6F] dark:bg-[#6EC4C6]',
-    Moderate: 'bg-amber-500',
-    High: 'bg-[#DA7B93]',
-    Critical: 'bg-[#2E151B] dark:bg-rose-400 animate-pulse',
+    Low: 'bg-ok-soft text-ok border-ok/20',
+    Moderate: 'bg-warn-soft text-warn border-warn/25',
+    High: 'bg-burgundy-soft text-burgundy border-burgundy/25 font-semibold',
+    Critical: 'bg-bad-soft text-bad border-bad/30 font-semibold',
   };
 
   const currentStyle = bandStyles[effectiveBand || 'Low'] || bandStyles.Low;
-  const currentDot = dotStyles[effectiveBand || 'Low'] || dotStyles.Low;
-  const padding = size === 'sm' ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs';
+  const padding = size === 'sm' ? 'px-2 py-0.5 text-[11px]' : 'px-2.5 py-1 text-xs';
 
   return (
-    <span className={`inline-flex items-center space-x-1.5 font-mono font-medium rounded-md border ${currentStyle} ${padding} shadow-2xs`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${currentDot}`} />
+    <span className={`inline-flex items-center space-x-1.5 rounded-full border font-mono ${currentStyle} ${padding}`}>
+      <span className="w-1.5 h-1.5 rounded-full bg-current" />
       <span>{effectiveBand}</span>
       {typeof score === 'number' && (
-        <span className="opacity-80">({score.toFixed(1)})</span>
+        <span className="opacity-90 font-mono">({score.toFixed(0)}%)</span>
       )}
     </span>
   );
 };
 
 /* =========================================================================
-   3. STATUS PILL COMPONENT
+   4. STATUS PILL
    ========================================================================= */
-interface StatusPillProps {
-  status: 'completed' | 'processing' | 'pending' | 'failed' | 'cancelled' | 'paused' | string;
-}
-
-export const StatusPill: React.FC<StatusPillProps> = ({ status }) => {
+export const StatusPill: React.FC<{ status: string }> = ({ status }) => {
   const normalized = status.toLowerCase();
-  const styles: Record<string, { bg: string; dot: string; text: string; label: string }> = {
-    completed: {
-      bg: 'bg-[#EEF5F5] dark:bg-[#183133] border-[#376E6F]/30 dark:border-[#376E6F]/40 text-[#376E6F] dark:text-[#6EC4C6]',
-      dot: 'bg-[#376E6F] dark:bg-[#6EC4C6]',
-      text: 'text-[#376E6F] dark:text-[#6EC4C6]',
-      label: 'Completed'
-    },
-    processing: {
-      bg: 'bg-[#FDF3F5] dark:bg-[#2A161D] border-[#DA7B93]/35 dark:border-[#DA7B93]/40 text-[#B34D66] dark:text-[#F0A4B8]',
-      dot: 'bg-[#DA7B93] animate-pulse',
-      text: 'text-[#B34D66] dark:text-[#F0A4B8]',
-      label: 'Processing'
-    },
-    pending: {
-      bg: 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300',
-      dot: 'bg-slate-400',
-      text: 'text-slate-700 dark:text-slate-300',
-      label: 'Pending'
-    },
-    paused: {
-      bg: 'bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-500/30 text-amber-800 dark:text-amber-300',
-      dot: 'bg-amber-500',
-      text: 'text-amber-800 dark:text-amber-300',
-      label: 'Paused'
-    },
-    failed: {
-      bg: 'bg-[#FAF0F2] dark:bg-rose-950/30 border-[#2E151B]/20 dark:border-rose-500/30 text-[#2E151B] dark:text-rose-300',
-      dot: 'bg-[#2E151B] dark:bg-rose-400',
-      text: 'text-[#2E151B] dark:text-rose-300',
-      label: 'Failed'
-    },
-    cancelled: {
-      bg: 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400',
-      dot: 'bg-slate-400',
-      text: 'text-slate-500 dark:text-slate-400',
-      label: 'Cancelled'
-    },
+  const styles: Record<string, { bg: string; dot: string; label: string }> = {
+    completed: { bg: 'bg-ok-soft text-ok border-ok/20', dot: 'bg-ok', label: 'Completed' },
+    processing: { bg: 'bg-warn-soft text-warn border-warn/25', dot: 'bg-warn animate-pulse', label: 'Processing' },
+    pending: { bg: 'bg-paper-3 text-muted border-rule', dot: 'bg-muted', label: 'Pending' },
+    paused: { bg: 'bg-warn-soft text-warn border-warn/20', dot: 'bg-warn', label: 'Paused' },
+    failed: { bg: 'bg-bad-soft text-bad border-bad/20', dot: 'bg-bad', label: 'Failed' },
+    cancelled: { bg: 'bg-paper-3 text-muted border-rule', dot: 'bg-muted', label: 'Cancelled' },
   };
 
   const item = styles[normalized] || styles.pending;
 
   return (
-    <span className={`inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-mono font-medium ${item.bg}`}>
+    <span className={`inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-full border text-[11px] font-mono ${item.bg}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${item.dot}`} />
       <span>{item.label}</span>
     </span>
@@ -268,35 +254,318 @@ export const StatusPill: React.FC<StatusPillProps> = ({ status }) => {
 };
 
 /* =========================================================================
-   4. EMPTY & ERROR STATE DISPLAY
+   5. RESTICKED RESTRAINED RISK GAUGE
    ========================================================================= */
-interface EmptyStateProps {
+interface RiskGaugeProps {
+  score?: number | null;
+  band?: string | null;
+  density?: number | null;
+  flowSpeed?: number | null;
+  entropy?: number | null;
+  surge?: string | number | null;
+}
+
+export const RiskGauge: React.FC<RiskGaugeProps> = ({
+  score = null,
+  band = null,
+  density = null,
+  flowSpeed = null,
+  entropy = null,
+  surge = null,
+}) => {
+  const hasValue = typeof score === 'number';
+  const clampedScore = hasValue ? Math.max(0, Math.min(100, score)) : 0;
+  const radius = 70;
+  const strokeWidth = 10;
+  const circumference = Math.PI * radius;
+  const strokeDashoffset = hasValue ? circumference - (clampedScore / 100) * circumference : circumference;
+
+  const getToneColor = (val: number) => {
+    if (val >= 70) return '#7F1D2D'; // Burgundy
+    if (val >= 40) return '#B45309'; // Amber
+    return '#15803D'; // Green
+  };
+
+  const activeColor = hasValue ? getToneColor(clampedScore) : '#E7E1DC';
+
+  return (
+    <div className="bg-paper-2 border border-rule rounded-xl p-5 shadow-2xs flex flex-col justify-between">
+      <div className="flex items-center justify-between pb-3 border-b border-rule">
+        <div>
+          <h3 className="text-sm font-semibold text-ink font-display">Risk Analysis</h3>
+          <p className="text-[11px] text-muted">Composite multi-factor crowd assessment</p>
+        </div>
+        {hasValue ? (
+          <RiskBadge score={clampedScore} band={band || (clampedScore >= 70 ? 'High' : clampedScore >= 40 ? 'Moderate' : 'Low')} />
+        ) : (
+          <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-paper-3 text-muted border border-rule">
+            Idle / Standby
+          </span>
+        )}
+      </div>
+
+      {/* Semi-circular gauge */}
+      <div className="flex flex-col items-center justify-center my-3">
+        <div className="relative w-44 h-24 flex items-end justify-center overflow-hidden">
+          <svg className="w-44 h-44 absolute -top-0" viewBox="0 0 160 160">
+            {/* Background Track */}
+            <circle
+              cx="80"
+              cy="80"
+              r={radius}
+              fill="none"
+              stroke="#E7E1DC"
+              strokeWidth={strokeWidth}
+              strokeDasharray={`${circumference} ${circumference}`}
+              strokeDashoffset={0}
+              transform="rotate(180 80 80)"
+              strokeLinecap="round"
+            />
+            {/* Value Arc */}
+            {hasValue && (
+              <circle
+                cx="80"
+                cy="80"
+                r={radius}
+                fill="none"
+                stroke={activeColor}
+                strokeWidth={strokeWidth}
+                strokeDasharray={`${circumference} ${circumference}`}
+                strokeDashoffset={strokeDashoffset}
+                transform="rotate(180 80 80)"
+                strokeLinecap="round"
+                className="transition-[stroke-dashoffset] duration-700 ease-out"
+              />
+            )}
+          </svg>
+
+          {/* Centered score text */}
+          <div className="text-center pb-1">
+            <span className="text-3xl font-bold font-mono tracking-tight text-ink tabular-nums">
+              {hasValue ? `${clampedScore.toFixed(0)}%` : '—'}
+            </span>
+            <div className="text-xs font-semibold text-muted tracking-wide uppercase font-mono">
+              {hasValue ? (band || (clampedScore >= 70 ? 'High Risk' : clampedScore >= 40 ? 'Moderate' : 'Low Risk')) : 'No Active Feed'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 4 Factor Telemetry Sub-ribbon */}
+      <div className="grid grid-cols-4 gap-2 pt-3 border-t border-rule font-mono text-center">
+        <div className="p-1.5 bg-paper-3/60 rounded border border-rule/60">
+          <div className="text-[10px] text-muted font-sans">Density</div>
+          <div className="text-xs font-semibold text-ink mt-0.5">{typeof density === 'number' ? density.toFixed(2) : '—'}</div>
+        </div>
+        <div className="p-1.5 bg-paper-3/60 rounded border border-rule/60">
+          <div className="text-[10px] text-muted font-sans">Avg. Flow</div>
+          <div className="text-xs font-semibold text-ink mt-0.5">{typeof flowSpeed === 'number' ? `${flowSpeed.toFixed(2)} m/s` : '—'}</div>
+        </div>
+        <div className="p-1.5 bg-paper-3/60 rounded border border-rule/60">
+          <div className="text-[10px] text-muted font-sans">Entropy</div>
+          <div className="text-xs font-semibold text-ink mt-0.5">{typeof entropy === 'number' ? entropy.toFixed(2) : '—'}</div>
+        </div>
+        <div className="p-1.5 bg-paper-3/60 rounded border border-rule/60">
+          <div className="text-[10px] text-muted font-sans">Surge</div>
+          <div className="text-xs font-semibold text-burgundy mt-0.5">{surge ? (typeof surge === 'number' ? `+${surge}%` : surge) : '—'}</div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* =========================================================================
+   6. 10-SECOND PREDICTIVE FORECAST CHART
+   ========================================================================= */
+interface ForecastChartProps {
+  currentRisk?: number | null;
+  projectedRisk?: number | null;
+}
+
+export const ForecastChart: React.FC<ForecastChartProps> = ({
+  currentRisk = null,
+  projectedRisk = null,
+}) => {
+  const hasData = typeof currentRisk === 'number' && typeof projectedRisk === 'number';
+
+  const points = hasData
+    ? [
+        { label: 'Now', risk: currentRisk },
+        { label: '+2s', risk: currentRisk + (projectedRisk - currentRisk) * 0.2 },
+        { label: '+4s', risk: currentRisk + (projectedRisk - currentRisk) * 0.4 },
+        { label: '+6s', risk: currentRisk + (projectedRisk - currentRisk) * 0.6 },
+        { label: '+8s', risk: currentRisk + (projectedRisk - currentRisk) * 0.8 },
+        { label: '+10s', risk: projectedRisk },
+      ]
+    : [];
+
+  return (
+    <div className="bg-paper-2 border border-rule rounded-xl p-5 shadow-2xs flex flex-col justify-between">
+      <div className="flex items-center justify-between pb-3 border-b border-rule">
+        <div>
+          <h3 className="text-sm font-semibold text-ink font-display">10-Second Forecast</h3>
+          <p className="text-[11px] text-muted">Linear trend projection (+10s predictive risk horizon)</p>
+        </div>
+        <div className="text-right">
+          <span className="text-[11px] text-muted font-sans">At +10s: </span>
+          <span className="text-xs font-bold font-mono text-burgundy tabular-nums">
+            {typeof projectedRisk === 'number' ? `${projectedRisk.toFixed(0)}%` : '—'}
+          </span>
+        </div>
+      </div>
+
+      <div className="pt-4 pb-2">
+        {hasData ? (
+          <>
+            <div className="relative h-24 w-full flex items-end">
+              <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-40">
+                <div className="border-b border-dashed border-rule w-full" />
+                <div className="border-b border-dashed border-rule w-full" />
+                <div className="border-b border-dashed border-rule w-full" />
+              </div>
+
+              <svg className="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 50">
+                <polyline
+                  fill="none"
+                  stroke="#7F1D2D"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  points={points.map((p, idx) => `${idx * 20},${Math.max(4, Math.min(46, 50 - (p.risk / 100) * 45))}`).join(' ')}
+                />
+                {points.map((p, idx) => (
+                  <circle
+                    key={p.label}
+                    cx={idx * 20}
+                    cy={Math.max(4, Math.min(46, 50 - (p.risk / 100) * 45))}
+                    r={idx === points.length - 1 ? 3.5 : 2}
+                    fill="#7F1D2D"
+                  />
+                ))}
+              </svg>
+            </div>
+
+            <div className="flex justify-between text-[11px] font-mono text-muted pt-2 border-t border-rule mt-1">
+              {points.map((p) => (
+                <div key={p.label} className="text-center">
+                  <span className={p.label === '+10s' ? 'text-burgundy font-semibold' : ''}>{p.label}</span>
+                  <div className="text-[10px] text-ink-2 font-medium">{p.risk.toFixed(0)}%</div>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="h-28 flex flex-col items-center justify-center text-center p-4 text-muted">
+            <span className="text-xs font-mono">No active forecast trajectory</span>
+            <span className="text-[11px] mt-1 text-muted/70">Connect a camera or analyze footage to compute real-time risk predictions</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/* =========================================================================
+   7. SYSTEM ARCHITECTURE PIPELINE (Connected Horizontal Modules)
+   ========================================================================= */
+export const ArchitecturePipeline: React.FC = () => {
+  const steps = [
+    {
+      num: '1',
+      title: 'Inference Engine',
+      desc: 'YOLOv8 + Centroid Tracking',
+      status: 'Active',
+      metric: '25.0 FPS',
+      icon: Cpu,
+    },
+    {
+      num: '2',
+      title: 'DIP Motion Analysis',
+      desc: 'Optical Flow + Directional Entropy',
+      status: 'Active',
+      metric: '14.2 ms',
+      icon: Activity,
+    },
+    {
+      num: '3',
+      title: '4-Factor Risk Engine',
+      desc: 'Density + Flow + Entropy + Surge',
+      status: 'Evaluating',
+      metric: '0-100 Score',
+      icon: ShieldAlert,
+    },
+    {
+      num: '4',
+      title: 'Multi-Camera Ingestion',
+      desc: 'NVR Sync + 3×3 Spatial Matrix',
+      status: 'Ready',
+      metric: '9 Quadrants',
+      icon: Radio,
+    },
+  ];
+
+  return (
+    <div className="bg-paper-2 border border-rule rounded-xl p-5 shadow-2xs">
+      <div className="flex items-center justify-between pb-3 border-b border-rule mb-4">
+        <div>
+          <h3 className="text-sm font-semibold text-ink font-display">System Architecture</h3>
+          <p className="text-[11px] text-muted">Real-time DIP computer vision and predictive intelligence pipeline</p>
+        </div>
+        <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-ok-soft text-ok border border-ok/20 font-medium">
+          Pipeline Synchronized
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        {steps.map((step, idx) => {
+          const Icon = step.icon;
+          return (
+            <div key={step.num} className="relative flex-1 p-3.5 bg-paper rounded-lg border border-rule flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="w-7 h-7 rounded-md bg-paper-3 border border-rule flex items-center justify-center text-burgundy">
+                    <Icon className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="text-[10px] font-mono text-muted">Step 0{step.num}</span>
+                </div>
+                <h4 className="text-xs font-semibold text-ink">{step.title}</h4>
+                <p className="text-[11px] text-muted mt-0.5 leading-snug">{step.desc}</p>
+              </div>
+
+              <div className="flex items-center justify-between pt-3 mt-3 border-t border-rule/60 text-[11px] font-mono">
+                <span className="text-muted">{step.status}</span>
+                <span className="font-medium text-ink-2">{step.metric}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+/* =========================================================================
+   8. EMPTY, LOADING, AND ERROR STATES
+   ========================================================================= */
+export const EmptyState: React.FC<{
   title: string;
   description: string;
   actionText?: string;
   onAction?: () => void;
   icon?: React.ComponentType<{ className?: string }>;
-}
-
-export const EmptyState: React.FC<EmptyStateProps> = ({
-  title,
-  description,
-  actionText,
-  onAction,
-  icon: Icon = Info,
-}) => (
-  <div className="rounded-xl border border-dashed border-[#CBD5D8] dark:border-[#233C3F] bg-white dark:bg-[#112022] p-8 text-center flex flex-col items-center justify-center space-y-3 shadow-xs">
-    <div className="w-12 h-12 rounded-xl bg-[#F1F4F5] dark:bg-[#16292B] border border-[#CBD5D8] dark:border-[#233C3F] flex items-center justify-center text-[#2F4454] dark:text-[#A0B7BC]">
-      <Icon className="w-6 h-6" />
+}> = ({ title, description, actionText, onAction, icon: Icon = Info }) => (
+  <div className="rounded-xl border border-dashed border-rule bg-paper-2 p-8 text-center flex flex-col items-center justify-center space-y-3">
+    <div className="w-10 h-10 rounded-lg bg-paper-3 border border-rule flex items-center justify-center text-muted">
+      <Icon className="w-5 h-5" />
     </div>
     <div className="max-w-md space-y-1">
-      <h3 className="text-sm font-semibold text-[#1C3334] dark:text-[#EEF4F5]">{title}</h3>
-      <p className="text-xs text-[#5D757E] dark:text-[#A0B7BC] leading-relaxed">{description}</p>
+      <h3 className="text-sm font-semibold text-ink font-display">{title}</h3>
+      <p className="text-xs text-muted leading-relaxed">{description}</p>
     </div>
     {actionText && onAction && (
       <button
         onClick={onAction}
-        className="mt-2 inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#2F4454] hover:bg-[#1C3334] text-white transition-colors cursor-pointer shadow-xs"
+        className="mt-2 inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-md text-xs font-medium bg-burgundy text-white hover:bg-burgundy-hover transition-colors cursor-pointer"
       >
         <span>{actionText}</span>
       </button>
@@ -304,35 +573,30 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   </div>
 );
 
-interface ErrorStateProps {
-  message: string;
-  onRetry?: () => void;
-}
-
-export const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
-  <div className="rounded-xl border border-[#2E151B]/20 dark:border-rose-500/30 bg-[#FAF0F2] dark:bg-rose-950/20 p-5 text-center flex flex-col items-center justify-center space-y-2 shadow-xs">
-    <AlertTriangle className="w-6 h-6 text-[#2E151B] dark:text-rose-400" />
-    <div className="text-xs font-medium text-[#2E151B] dark:text-rose-200">{message}</div>
+export const ErrorState: React.FC<{ message: string; onRetry?: () => void }> = ({
+  message,
+  onRetry,
+}) => (
+  <div className="rounded-xl border border-bad/30 bg-bad-soft p-5 text-center flex flex-col items-center justify-center space-y-2">
+    <AlertTriangle className="w-5 h-5 text-bad" />
+    <div className="text-xs font-medium text-bad">{message}</div>
     {onRetry && (
       <button
         onClick={onRetry}
-        className="mt-1 px-3 py-1 rounded bg-[#2E151B]/10 hover:bg-[#2E151B]/20 dark:bg-rose-900/40 dark:hover:bg-rose-900/60 border border-[#2E151B]/30 dark:border-rose-500/40 text-xs font-medium text-[#2E151B] dark:text-rose-200 transition-colors cursor-pointer"
+        className="mt-1 px-3 py-1 rounded-md bg-paper border border-rule text-xs font-medium text-ink hover:bg-paper-3 transition-colors cursor-pointer"
       >
-        Retry Operation
+        Retry operation
       </button>
     )}
   </div>
 );
 
-/* =========================================================================
-   5. LOADING SKELETON
-   ========================================================================= */
 export const LoadingBlock: React.FC<{ text?: string; height?: string }> = ({
   text = 'Accessing telemetry...',
   height = 'h-48',
 }) => (
-  <div className={`rounded-xl border border-[#E2E8EA] dark:border-[#233C3F] bg-white dark:bg-[#152729] ${height} flex flex-col items-center justify-center space-y-3 p-6 text-[#5D757E] dark:text-[#A0B7BC] shadow-xs`}>
-    <Loader2 className="w-6 h-6 text-[#376E6F] dark:text-[#6EB5B6] animate-spin" />
+  <div className={`rounded-xl border border-rule bg-paper-2 ${height} flex flex-col items-center justify-center space-y-3 p-6 text-muted`}>
+    <Loader2 className="w-5 h-5 text-burgundy animate-spin" />
     <span className="text-xs font-mono">{text}</span>
   </div>
 );

@@ -117,27 +117,26 @@ export const Incidents: React.FC = () => {
   return (
     <div className="space-y-6 w-full">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-4 border-b border-[#E2E8EA] dark:border-[#203638] gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-4 border-b border-rule gap-4">
         <div>
-          <div className="flex items-center space-x-2.5">
-            <h1 className="text-xl font-bold text-[#1C3334] dark:text-[#EDF4F5] tracking-tight">
-              INCIDENT WARNINGS & HAZARD AUDIT
-            </h1>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-rose-950/40 border border-rose-500/30 text-rose-300">
-              AUDIT LOG
-            </span>
+          <div className="inline-flex items-center space-x-2 px-2.5 py-0.5 rounded-full bg-burgundy-soft border border-burgundy/20 text-burgundy text-[11px] font-mono font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-burgundy animate-pulse" />
+            <span>Security Incident Management</span>
           </div>
-          <p className="text-xs text-[#5D757E] dark:text-[#A0B7BC] mt-1">
-            Sustained condition hazard log with automated operator recommendations, keyframe evidence, and audit verification
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink font-display mt-1">
+            Incidents & Alerts
+          </h1>
+          <p className="text-xs text-muted mt-1 max-w-2xl leading-relaxed">
+            Real-time hazard audit log with automated operator recommendations, keyframe evidence, and security dispatch sign-off.
           </p>
         </div>
 
         <button
           onClick={() => loadIncidents(true)}
           disabled={refreshing}
-          className="inline-flex items-center space-x-2 px-3 py-1.5 bg-white dark:bg-[#152729] hover:bg-[#F1F4F5] dark:hover:bg-[#1C3336] text-[#2F4454] dark:text-[#EDF4F5] border border-[#CBD5D8] dark:border-[#2C4B4E] shadow-2xs rounded-lg text-xs font-medium transition cursor-pointer self-start lg:self-auto"
+          className="inline-flex items-center space-x-2 px-3 py-1.5 bg-white dark:bg-paper-2 hover:bg-paper-3 dark:hover:bg-[#1C3336] text-ink border border-rule dark:border-rule shadow-2xs rounded-lg text-xs font-medium transition cursor-pointer self-start lg:self-auto"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-cyan-400' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-burgundy' : ''}`} />
           <span>Refresh Feed</span>
         </button>
       </div>
@@ -183,20 +182,39 @@ export const Incidents: React.FC = () => {
       </MetricStrip>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-center gap-3">
+      <div className="flex flex-col gap-3">
+        {/* Quick Severity Buttons */}
+        <div className="flex items-center space-x-2">
+          <span className="text-xs font-medium text-muted mr-1 font-sans">Filter by Severity:</span>
+          {['', 'HIGH', 'MODERATE', 'LOW'].map((sev) => (
+            <button
+              key={sev}
+              onClick={() => setSeverityFilter(sev)}
+              className={`px-3 py-1 rounded-md text-xs font-mono transition-colors ${
+                severityFilter === sev
+                  ? 'bg-burgundy text-white font-medium shadow-2xs'
+                  : 'bg-paper-2 text-ink border border-rule hover:bg-paper-3'
+              }`}
+            >
+              {sev === '' ? 'All' : sev.charAt(0) + sev.slice(1).toLowerCase()}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center gap-3">
         <div className="relative flex-1 w-full">
-          <Search className="w-4 h-4 absolute left-3 top-2.5 text-[#5D757E] dark:text-slate-400" />
+          <Search className="w-4 h-4 absolute left-3 top-2.5 text-muted" />
           <input
             type="text"
             placeholder="Search by ID, trigger reason, sector, or pattern..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white dark:bg-[#0E1622] border border-[#CBD5D8] dark:border-[#1E2D40] text-xs text-[#1C3334] dark:text-[#1C3334] dark:text-white rounded-lg pl-9 pr-4 py-2 focus:border-[#376E6F] focus:outline-none placeholder-[#5D757E] dark:placeholder-slate-500 shadow-2xs"
+            className="w-full bg-white dark:bg-paper-3 border border-rule dark:border-rule text-xs text-[#1C3334] dark:text-ink rounded-lg pl-9 pr-4 py-2 focus:border-burgundy focus:outline-none placeholder-[#5D757E] dark:placeholder-slate-500 shadow-2xs"
           />
           {searchTerm && (
             <button
               onClick={() => setSearchTerm('')}
-              className="absolute right-3 top-2.5 text-[#5D757E] dark:text-slate-400 hover:text-[#1C3334] dark:text-white"
+              className="absolute right-3 top-2.5 text-muted hover:text-ink"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -206,7 +224,7 @@ export const Incidents: React.FC = () => {
         <select
           value={severityFilter}
           onChange={(e) => setSeverityFilter(e.target.value)}
-          className="bg-white dark:bg-[#0E1622] border border-[#CBD5D8] dark:border-[#1E2D40] text-xs text-[#1C3334] dark:text-[#2F4454] dark:text-slate-300 rounded-lg px-3 py-2 w-full sm:w-auto focus:border-[#376E6F] focus:outline-none cursor-pointer shadow-2xs"
+          className="bg-white dark:bg-paper-3 border border-rule dark:border-rule text-xs text-[#1C3334] dark:text-[#2F4454] dark:text-slate-300 rounded-lg px-3 py-2 w-full sm:w-auto focus:border-burgundy focus:outline-none cursor-pointer shadow-2xs"
         >
           <option value="">All Severities</option>
           <option value="CRITICAL">Critical</option>
@@ -218,20 +236,21 @@ export const Incidents: React.FC = () => {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="bg-white dark:bg-[#0E1622] border border-[#CBD5D8] dark:border-[#1E2D40] text-xs text-[#1C3334] dark:text-[#2F4454] dark:text-slate-300 rounded-lg px-3 py-2 w-full sm:w-auto focus:border-[#376E6F] focus:outline-none cursor-pointer shadow-2xs"
+          className="bg-white dark:bg-paper-3 border border-rule dark:border-rule text-xs text-[#1C3334] dark:text-[#2F4454] dark:text-slate-300 rounded-lg px-3 py-2 w-full sm:w-auto focus:border-burgundy focus:outline-none cursor-pointer shadow-2xs"
         >
           <option value="">All Statuses</option>
           <option value="Open">Open</option>
           <option value="Acknowledged">Acknowledged</option>
           <option value="Resolved">Resolved</option>
         </select>
+        </div>
       </div>
 
       {/* Incidents Surveillance Table */}
-      <div className="bg-white dark:bg-[#0E1622] border border-[#E2E8EA] dark:border-[#1E2D40] rounded-xl overflow-hidden shadow-xs">
+      <div className="bg-white dark:bg-paper-3 border border-rule dark:border-rule rounded-xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-[#F8F9FA] dark:bg-[#0A1018] text-[#5D757E] dark:text-[#5D757E] dark:text-slate-400 font-semibold uppercase tracking-wider text-[11px] border-b border-[#E2E8EA] dark:border-[#1E2D40]">
+            <thead className="bg-paper-3 dark:bg-[#0A1018] text-[#5D757E] dark:text-muted font-semibold uppercase tracking-wider text-[11px] border-b border-rule dark:border-rule">
               <tr>
                 <th className="p-3.5">Severity</th>
                 <th className="p-3.5">Incident ID</th>
@@ -243,13 +262,13 @@ export const Incidents: React.FC = () => {
                 <th className="p-3.5 text-right">Audit Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E2E8EA] dark:divide-[#1E2D40] text-[#1C3334] dark:text-slate-200">
+            <tbody className="divide-y divide-[#E2E8EA] dark:divide-[#1E2D40] text-ink">
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="p-10 text-center text-slate-500">
                     <div className="max-w-md mx-auto space-y-2">
                       <Inbox className="w-8 h-8 text-slate-600 mx-auto" />
-                      <p className="text-xs text-[#5D757E] dark:text-slate-400">
+                      <p className="text-xs text-muted">
                         {searchTerm || severityFilter || statusFilter
                           ? 'No incidents match the active search or filter criteria.'
                           : 'No incidents are recorded in the current catalog.'}
@@ -263,20 +282,20 @@ export const Incidents: React.FC = () => {
                     <td className="p-3.5">
                       <RiskBadge band={inc.severity} size="sm" />
                     </td>
-                    <td className="p-3.5 font-mono text-[#376E6F] dark:text-cyan-400 font-semibold">
+                    <td className="p-3.5 font-mono text-burgundy dark:text-burgundy font-semibold">
                       {inc.id}
                     </td>
-                    <td className="p-3.5 text-[#5D757E] dark:text-slate-400 font-mono">
+                    <td className="p-3.5 text-muted font-mono">
                       t={inc.video_timestamp_sec?.toFixed(1) || '0.0'}s
                     </td>
-                    <td className="p-3.5 font-mono text-[#1C3334] dark:text-[#1C3334] dark:text-white font-medium">
+                    <td className="p-3.5 font-mono text-[#1C3334] dark:text-ink font-medium">
                       {inc.relevant_region || 'Sector B2'}
                     </td>
                     <td className="p-3.5 max-w-xs truncate text-[#2F4454] dark:text-slate-300">
                       {inc.trigger_reason}
                     </td>
                     <td className="p-3.5 font-mono font-medium">
-                      <span className="text-[#1C3334] dark:text-white">{inc.risk_score?.toFixed(1) ?? '—'}</span>
+                      <span className="text-ink">{inc.risk_score?.toFixed(1) ?? '—'}</span>
                       <span className="text-slate-500 mx-1.5">→</span>
                       <span className="text-rose-400">{inc.forecast_risk?.toFixed(1) ?? '—'}</span>
                     </td>
@@ -289,7 +308,7 @@ export const Incidents: React.FC = () => {
                           : 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300'
                       }`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${
-                          inc.status === 'Open' ? 'bg-rose-400 animate-pulse' :
+                          inc.status === 'Open' ? 'bg-rose-400 motion-safe:animate-pulse motion-reduce:animate-none' :
                           inc.status === 'Acknowledged' ? 'bg-amber-400' : 'bg-emerald-400'
                         }`} />
                         <span>{inc.status}</span>
@@ -302,9 +321,9 @@ export const Incidents: React.FC = () => {
                           setOperatorNotes(inc.operator_notes || '');
                           setActionSuccessMessage(null);
                         }}
-                        className="inline-flex items-center space-x-1.5 px-2.5 py-1 bg-[#141E2B] hover:bg-[#1E2D40] text-slate-200 hover:text-[#1C3334] dark:text-white rounded border border-[#1E2D40] transition cursor-pointer text-xs"
+                        className="inline-flex items-center space-x-1.5 px-2.5 py-1 bg-paper-2 hover:bg-paper-3 text-ink hover:text-ink rounded border border-rule transition cursor-pointer text-xs"
                       >
-                        <Eye className="w-3.5 h-3.5 text-cyan-400" />
+                        <Eye className="w-3.5 h-3.5 text-burgundy" />
                         <span>Inspect</span>
                       </button>
                     </td>
@@ -319,17 +338,17 @@ export const Incidents: React.FC = () => {
       {/* Evidentiary Inspection Modal */}
       {selectedIncident && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-[#0E1622] border border-[#1E2D40] rounded-xl max-w-2xl w-full p-6 space-y-4 shadow-2xl overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between pb-3 border-b border-[#1E2D40]">
+          <div className="bg-paper-2 border border-rule text-ink rounded-xl max-w-2xl w-full p-6 space-y-4 shadow-2xl overflow-y-auto max-h-[90vh]">
+            <div className="flex items-center justify-between pb-3 border-b border-rule">
               <div className="flex items-center space-x-2.5">
                 <RiskBadge band={selectedIncident.severity} size="md" />
-                <h3 className="text-sm font-semibold text-[#1C3334] dark:text-white font-mono">
+                <h3 className="text-sm font-semibold text-ink font-mono">
                   Hazard Audit: {selectedIncident.id}
                 </h3>
               </div>
               <button
                 onClick={() => setSelectedIncident(null)}
-                className="text-[#5D757E] dark:text-slate-400 hover:text-[#1C3334] dark:text-white p-1 rounded hover:bg-[#141E2B] transition cursor-pointer"
+                className="text-muted hover:text-ink p-1 rounded hover:bg-paper-3 transition cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -345,10 +364,10 @@ export const Incidents: React.FC = () => {
             <div className="space-y-4 text-xs">
               {/* Trigger Condition */}
               <div className="space-y-1">
-                <span className="text-[10px] uppercase font-mono tracking-wider text-[#5D757E] dark:text-slate-400 block">
+                <span className="text-[10px] uppercase font-mono tracking-wider text-muted block">
                   Identified Hazard Condition:
                 </span>
-                <p className="p-3 bg-[#0A1018] rounded-lg border border-[#1E2D40] text-slate-200 leading-relaxed font-mono">
+                <p className="p-3 bg-[#0A1018] rounded-lg border border-rule text-slate-200 leading-relaxed font-mono">
                   {selectedIncident.trigger_reason}
                 </p>
               </div>
@@ -356,7 +375,7 @@ export const Incidents: React.FC = () => {
               {/* Recommended Action */}
               {selectedIncident.recommended_action && (
                 <div className="p-3.5 bg-cyan-950/30 border border-cyan-500/30 rounded-lg space-y-1">
-                  <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block font-mono">
+                  <span className="text-[10px] font-bold text-burgundy uppercase tracking-wider block font-mono">
                     Protocol Recommendation:
                   </span>
                   <p className="text-slate-200 text-xs leading-relaxed">
@@ -367,27 +386,27 @@ export const Incidents: React.FC = () => {
 
               {/* Telemetry Stats Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 font-mono">
-                <div className="p-2.5 bg-[#0A1018] rounded-lg border border-[#1E2D40]">
-                  <span className="text-[10px] text-[#5D757E] dark:text-slate-400 block">Trigger Risk</span>
-                  <span className="text-sm font-bold text-[#1C3334] dark:text-white mt-1 block">
+                <div className="p-2.5 bg-[#0A1018] rounded-lg border border-rule">
+                  <span className="text-[10px] text-muted block">Trigger Risk</span>
+                  <span className="text-sm font-bold text-ink mt-1 block">
                     {selectedIncident.risk_score?.toFixed(1) ?? '—'}
                   </span>
                 </div>
-                <div className="p-2.5 bg-[#0A1018] rounded-lg border border-[#1E2D40]">
-                  <span className="text-[10px] text-[#5D757E] dark:text-slate-400 block">Forecast (+10s)</span>
+                <div className="p-2.5 bg-[#0A1018] rounded-lg border border-rule">
+                  <span className="text-[10px] text-muted block">Forecast (+10s)</span>
                   <span className="text-sm font-bold text-rose-400 mt-1 block">
                     {selectedIncident.forecast_risk?.toFixed(1) ?? '—'}
                   </span>
                 </div>
-                <div className="p-2.5 bg-[#0A1018] rounded-lg border border-[#1E2D40]">
-                  <span className="text-[10px] text-[#5D757E] dark:text-slate-400 block">Sector / Region</span>
-                  <span className="text-sm font-bold text-cyan-400 mt-1 block">
+                <div className="p-2.5 bg-[#0A1018] rounded-lg border border-rule">
+                  <span className="text-[10px] text-muted block">Sector / Region</span>
+                  <span className="text-sm font-bold text-burgundy mt-1 block">
                     {selectedIncident.relevant_region || 'Sector B2'}
                   </span>
                 </div>
-                <div className="p-2.5 bg-[#0A1018] rounded-lg border border-[#1E2D40]">
-                  <span className="text-[10px] text-[#5D757E] dark:text-slate-400 block">Video Timestamp</span>
-                  <span className="text-sm font-bold text-[#1C3334] dark:text-white mt-1 block">
+                <div className="p-2.5 bg-[#0A1018] rounded-lg border border-rule">
+                  <span className="text-[10px] text-muted block">Video Timestamp</span>
+                  <span className="text-sm font-bold text-ink mt-1 block">
                     t={selectedIncident.video_timestamp_sec?.toFixed(1) || '0.0'}s
                   </span>
                 </div>
@@ -396,10 +415,10 @@ export const Incidents: React.FC = () => {
               {/* Captured Evidence Keyframe */}
               {selectedIncident.evidence_frame_path && (
                 <div className="space-y-1">
-                  <span className="text-[10px] uppercase font-mono tracking-wider text-[#5D757E] dark:text-slate-400 block">
+                  <span className="text-[10px] uppercase font-mono tracking-wider text-muted block">
                     Captured Evidence Keyframe:
                   </span>
-                  <div className="aspect-video bg-black rounded-lg border border-[#1E2D40] overflow-hidden flex items-center justify-center">
+                  <div className="aspect-video bg-black rounded-lg border border-rule overflow-hidden flex items-center justify-center">
                     <img
                       src={selectedIncident.evidence_frame_path}
                       alt="Incident Evidence Frame"
@@ -411,20 +430,20 @@ export const Incidents: React.FC = () => {
 
               {/* Operator Notes */}
               <div className="space-y-1">
-                <label className="text-[10px] uppercase font-mono tracking-wider text-[#5D757E] dark:text-slate-400 block">
+                <label className="text-[10px] uppercase font-mono tracking-wider text-muted block">
                   Supervisor Verification & Operator Audit Notes:
                 </label>
                 <textarea
                   value={operatorNotes}
                   onChange={(e) => setOperatorNotes(e.target.value)}
                   placeholder="Record camera angle validation, physical safety team dispatch, or clearance notes..."
-                  className="w-full bg-[#0A1018] border border-[#1E2D40] rounded-lg p-3 text-xs text-[#1C3334] dark:text-white h-20 focus:border-cyan-500 focus:outline-none placeholder-slate-500"
+                  className="w-full bg-[#0A1018] border border-rule rounded-lg p-3 text-xs text-ink h-20 focus:border-cyan-500 focus:outline-none placeholder-slate-500"
                 />
               </div>
             </div>
 
             {/* Modal Actions */}
-            <div className="pt-3 border-t border-[#1E2D40] flex flex-wrap items-center justify-between gap-3">
+            <div className="pt-3 border-t border-rule flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => handleUpdateStatus(selectedIncident.id, 'Acknowledged')}
@@ -444,7 +463,7 @@ export const Incidents: React.FC = () => {
 
               <button
                 onClick={() => setSelectedIncident(null)}
-                className="px-3.5 py-1.5 bg-[#141E2B] hover:bg-[#1E2D40] text-[#2F4454] dark:text-slate-300 rounded-lg text-xs border border-[#1E2D40] transition cursor-pointer"
+                className="px-3.5 py-1.5 bg-[#141E2B] hover:bg-[#1E2D40] text-[#2F4454] dark:text-slate-300 rounded-lg text-xs border border-rule transition cursor-pointer"
               >
                 Close Inspector
               </button>

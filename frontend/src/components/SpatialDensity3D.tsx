@@ -518,37 +518,37 @@ export const SpatialDensity3D: React.FC<SpatialDensity3DProps> = ({
   const activeZoneInfo = selectedCell || hoveredCell || quadrants[4] || quadrants[0];
 
   return (
-    <div className={`relative bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl overflow-hidden shadow-xs flex flex-col justify-between ${className}`}>
+    <div className={`relative bg-paper-2 border border-rule rounded-lg overflow-hidden flex flex-col justify-between ${className}`}>
       {/* 1. Header Toolbar & Perspective Mode Selector */}
-      <div className="p-4 border-b border-[#E2E8EA] dark:border-[#203638] flex flex-wrap items-center justify-between gap-3 bg-[#F8F6F3]/60 dark:bg-[#0E1A1B]/60">
+      <div className="p-4 border-b border-rule flex flex-wrap items-center justify-between gap-3 bg-paper-3">
         <div className="flex items-center space-x-2.5">
           <div className="w-7 h-7 rounded-lg bg-[#376E6F]/10 dark:bg-[#376E6F]/25 border border-[#376E6F]/30 flex items-center justify-center text-[#376E6F] dark:text-[#6EB5B6] shrink-0">
             <Layers className="w-4 h-4" />
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#1C3334] dark:text-[#EDF4F5]">
-                3D Spatial Plaza Matrix
+              <h3 className="text-xs font-bold uppercase tracking-wider text-ink">
+                3D Spatial plaza matrix
               </h3>
               <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-[#376E6F]/10 text-[#376E6F] dark:text-[#6EB5B6] border border-[#376E6F]/30">
-                RELATIVE 3×3 SECTORS
+                3×3 sectors
               </span>
             </div>
-            <p className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] font-mono">
-              Perspective Monocular Elevation Mapping • Node: {cameraName}
+            <p className="text-[10px] text-muted font-mono">
+              Perspective monocular elevation mapping: {cameraName}
             </p>
           </div>
         </div>
 
         {/* Mode Selector and Perspective Toggle */}
         <div className="flex items-center space-x-1.5">
-          <div className="flex items-center p-0.5 rounded-lg bg-[#EDE8E1] dark:bg-[#0B1415] border border-[#CBD5D8] dark:border-[#233C3F] text-[10px] font-mono">
+          <div className="flex items-center p-0.5 rounded-lg bg-[#EDE8E1] dark:bg-[#0B1415] border border-rule text-[10px] font-mono">
             <button
               onClick={() => setActiveMode('density')}
               className={`px-2 py-1 rounded transition cursor-pointer ${
                 activeMode === 'density'
                   ? 'bg-white dark:bg-[#183133] text-[#376E6F] dark:text-[#6EC4C6] font-bold shadow-2xs'
-                  : 'text-[#5D757E] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-white'
+                  : 'text-muted hover:text-[#1C3334] dark:hover:text-white'
               }`}
               title="Show crowd population density height"
             >
@@ -559,7 +559,7 @@ export const SpatialDensity3D: React.FC<SpatialDensity3DProps> = ({
               className={`px-2 py-1 rounded transition cursor-pointer ${
                 activeMode === 'risk'
                   ? 'bg-white dark:bg-[#183133] text-[#DA7B93] font-bold shadow-2xs'
-                  : 'text-[#5D757E] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-white'
+                  : 'text-muted hover:text-[#1C3334] dark:hover:text-white'
               }`}
               title="Show composite hazard risk height"
             >
@@ -570,7 +570,7 @@ export const SpatialDensity3D: React.FC<SpatialDensity3DProps> = ({
               className={`px-2 py-1 rounded transition cursor-pointer ${
                 activeMode === 'velocity'
                   ? 'bg-white dark:bg-[#183133] text-[#2F4454] dark:text-[#88A8C0] font-bold shadow-2xs'
-                  : 'text-[#5D757E] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-white'
+                  : 'text-muted hover:text-[#1C3334] dark:hover:text-white'
               }`}
               title="Show Farneback optical flow velocity"
             >
@@ -591,7 +591,7 @@ export const SpatialDensity3D: React.FC<SpatialDensity3DProps> = ({
       </div>
 
       {/* 2. Primary 3D Viewport Area */}
-      <div className={`relative w-full ${heightClassName || 'h-80 sm:h-96 min-h-[300px]'} bg-gradient-to-b from-[#F8F6F3] to-[#ECE7DF] dark:from-[#0B1415] dark:to-[#112022] flex items-center justify-center overflow-hidden select-none`}>
+      <div className={`relative w-full ${heightClassName || 'h-80 sm:h-96 min-h-[300px]'} bg-paper-3 flex items-center justify-center overflow-hidden select-none`}>
         {/* Loading overlay */}
         {isLoading && (
           <div className="absolute inset-0 z-20 bg-white/70 dark:bg-black/70 backdrop-blur-xs flex items-center justify-center space-x-2 text-xs font-mono text-[#376E6F] dark:text-[#6EC4C6]">
@@ -634,7 +634,7 @@ export const SpatialDensity3D: React.FC<SpatialDensity3DProps> = ({
                 );
               })}
             </div>
-            <p className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] font-mono mt-3">
+            <p className="text-[10px] text-muted font-mono mt-3">
               Standard 2.5D fallback active (WebGL canvas unavailable)
             </p>
           </div>
@@ -648,12 +648,12 @@ export const SpatialDensity3D: React.FC<SpatialDensity3DProps> = ({
 
         {/* Orbit hint */}
         <div className="absolute bottom-3 right-3 pointer-events-none hidden sm:flex items-center space-x-1 px-2 py-0.5 rounded bg-black/30 text-white/80 backdrop-blur-xs text-[9px] font-mono">
-          <span>Click & Drag to Orbit • Scroll to Zoom</span>
+          <span>Drag to orbit / scroll to zoom</span>
         </div>
       </div>
 
       {/* 3. Detail Telemetry Ribbon for Inspected Quadrant */}
-      <div className="p-3 bg-[#F8F6F3] dark:bg-[#0E1A1B] border-t border-[#E2E8EA] dark:border-[#203638] flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+      <div className="p-3 bg-paper-3 border-t border-rule flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
         {/* Left: Selected Sector Identity */}
         <div className="flex items-center space-x-2.5">
           <div className={`w-3 h-3 rounded-full shrink-0 ${
@@ -662,40 +662,40 @@ export const SpatialDensity3D: React.FC<SpatialDensity3DProps> = ({
             activeZoneInfo.zone_risk >= 25 ? 'bg-[#2F4454]' : 'bg-[#376E6F]'
           }`} />
           <div>
-            <div className="flex items-center space-x-1.5 font-bold font-mono text-[#1C3334] dark:text-[#EDF4F5]">
+            <div className="flex items-center space-x-1.5 font-bold font-mono text-ink">
               <span>{activeZoneInfo.name}</span>
-              <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] font-normal">
+              <span className="text-[10px] text-muted font-normal">
                 {activeZoneInfo.name === 'Zone (1,1)' ? '• Center Core' : '• Perimeter Quadrant'}
               </span>
             </div>
-            <span className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] font-mono">
+            <span className="text-[10px] text-muted font-mono">
               Pattern: {activeZoneInfo.pattern || 'Uniform Laminar'}
             </span>
           </div>
         </div>
 
         {/* Right: Micro-Metrics Bar */}
-        <div className="grid grid-cols-4 divide-x divide-[#CBD5D8] dark:divide-[#233C3F] bg-white dark:bg-[#152729] rounded-lg border border-[#CBD5D8] dark:border-[#233C3F] px-2 py-1 text-center font-mono">
+        <div className="grid grid-cols-4 divide-x divide-[#CBD5D8] dark:divide-[#233C3F] bg-white dark:bg-[#152729] rounded-lg border border-rule px-2 py-1 text-center font-mono">
           <div className="px-2">
-            <span className="text-[8px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block font-sans">Crowd</span>
-            <span className="text-xs font-bold text-[#1C3334] dark:text-[#EDF4F5] tabular-nums">
+            <span className="text-[8px] uppercase tracking-wider text-muted block font-sans">Crowd</span>
+            <span className="text-xs font-bold text-ink tabular-nums">
               {activeZoneInfo.population} <span className="text-[9px] font-normal">p</span>
             </span>
           </div>
           <div className="px-2">
-            <span className="text-[8px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block font-sans">Density</span>
+            <span className="text-[8px] uppercase tracking-wider text-muted block font-sans">Density</span>
             <span className="text-xs font-bold text-[#376E6F] dark:text-[#6EC4C6] tabular-nums">
               {(activeZoneInfo.normalized_density * 100).toFixed(0)}%
             </span>
           </div>
           <div className="px-2">
-            <span className="text-[8px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block font-sans">Velocity</span>
+            <span className="text-[8px] uppercase tracking-wider text-muted block font-sans">Velocity</span>
             <span className="text-xs font-bold text-[#2F4454] dark:text-[#88A8C0] tabular-nums">
               {activeZoneInfo.avg_velocity.toFixed(1)} <span className="text-[8px] font-normal">px/s</span>
             </span>
           </div>
           <div className="px-2">
-            <span className="text-[8px] uppercase tracking-wider text-[#5D757E] dark:text-[#A0B7BC] block font-sans">Sector Risk</span>
+            <span className="text-[8px] uppercase tracking-wider text-muted block font-sans">Sector Risk</span>
             <span className={`text-xs font-bold tabular-nums ${
               activeZoneInfo.zone_risk >= 70 ? 'text-[#2E151B] dark:text-rose-400' :
               activeZoneInfo.zone_risk >= 45 ? 'text-[#DA7B93]' :
@@ -707,7 +707,7 @@ export const SpatialDensity3D: React.FC<SpatialDensity3DProps> = ({
         </div>
 
         {/* Legend */}
-        <div className="flex items-center space-x-2 text-[9px] font-mono text-[#5D757E] dark:text-[#A0B7BC]">
+        <div className="flex items-center space-x-2 text-[9px] font-mono text-muted">
           <span className="flex items-center space-x-1">
             <span className="w-2 h-2 rounded-xs bg-[#376E6F]" />
             <span>Low</span>

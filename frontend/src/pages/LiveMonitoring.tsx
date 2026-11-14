@@ -440,11 +440,11 @@ export const LiveMonitoring: React.FC = () => {
       {/* -------------------------------------------------------------------------
           1. HEADER WITH FEED SOURCE SWITCHER & TELEMETRY CONTROLS
           ------------------------------------------------------------------------- */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-4 border-b border-[#E2DBD1] dark:border-[#203638] gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-4 border-b border-rule dark:border-rule gap-4">
         <div>
           <div className="flex items-center space-x-2.5">
-            <span className="text-[10px] font-mono font-bold tracking-widest text-[#376E6F] dark:text-[#6EB5B6] uppercase">
-              CROWDGUARD // 03 • LIVE SURVEILLANCE & SPATIAL REPLAY
+            <span className="text-[10px] font-mono font-bold tracking-widest text-cool uppercase">
+              LIVE SURVEILLANCE & SPATIAL REPLAY
             </span>
             {activeSource === 'webcam' ? (
               isBackendOffline ? (
@@ -454,7 +454,7 @@ export const LiveMonitoring: React.FC = () => {
               ) : (
                 <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-medium border ${
                   cameraStatus?.state === 'CONNECTED' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-500/30' :
-                  cameraStatus?.state === 'CONNECTING' ? 'bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border-cyan-300 dark:border-cyan-500/30 animate-pulse' :
+                  cameraStatus?.state === 'CONNECTING' ? 'bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border-cyan-300 dark:border-cyan-500/30 motion-safe:animate-pulse motion-reduce:animate-none' :
                   cameraStatus?.state === 'DEGRADED' ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-500/30' :
                   cameraStatus?.state === 'DISCONNECTED' ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-500/30' :
                   'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700'
@@ -469,12 +469,12 @@ export const LiveMonitoring: React.FC = () => {
             {/* Freshness / Stale Warning in Live Mode */}
             {activeSource === 'webcam' && cameraStatus?.is_active && (
               isStale ? (
-                <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-mono bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40 animate-pulse">
+                <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-mono bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40 motion-safe:animate-pulse motion-reduce:animate-none">
                   <AlertTriangle className="w-3 h-3 text-amber-600 dark:text-amber-400" />
                   <span>STALE TELEMETRY ({telemetryAge?.toFixed(1)}s age)</span>
                 </span>
               ) : telemetryAge !== null ? (
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#376E6F]/10 text-[#376E6F] dark:text-[#6EB5B6] border border-[#376E6F]/30">
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-burgundy/10 text-cool border border-burgundy/30">
                   Freshness: {telemetryAge.toFixed(1)}s
                 </span>
               ) : null
@@ -482,32 +482,34 @@ export const LiveMonitoring: React.FC = () => {
 
             {activeSource === 'recorded' && incidents.length > 0 && (
               <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-mono font-medium bg-[#2E151B]/10 dark:bg-[#2E151B]/30 border-[#2E151B]/30 text-[#2E151B] dark:text-[#F0B3C1]">
-                <AlertTriangle className="w-3 h-3 text-[#DA7B93]" />
+                <AlertTriangle className="w-3 h-3 text-accent" />
                 <span>{incidents.length} Alert{incidents.length > 1 ? 's' : ''}</span>
               </span>
             )}
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight text-[#1C3334] dark:text-[#EDF4F5] mt-1">
-            {activeSource === 'webcam' ? 'Live Surveillance & Tracking' : 'Forensic Replay & Spatial Telemetry'}
+          <div className="inline-flex items-center space-x-2 px-2.5 py-0.5 rounded-full bg-burgundy-soft border border-burgundy/20 text-burgundy text-[11px] font-mono font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-burgundy animate-pulse" />
+            <span>Emergency Operations Console</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink font-display mt-1">
+            Live Monitoring
           </h1>
-          <p className="text-xs text-[#5D757E] dark:text-[#A0B7BC] mt-1">
-            {activeSource === 'webcam'
-              ? 'Real-time local hardware webcam video acquisition, YOLOv8 ByteTrack multi-object tracking, and continuous Farneback velocity telemetry'
-              : 'Synchronized video playback, Farneback velocity vector field, and localized 3×3 quadrant density analysis'}
+          <p className="text-xs text-muted mt-1 max-w-2xl leading-relaxed">
+            Real-time crowd analysis, spatial risk mapping and 10-second risk forecasting. Powered by YOLOv8 ByteTrack and Gunnar Farneback optical flow.
           </p>
         </div>
 
         {/* Action Controls & Feed Switcher */}
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Source Toggle */}
-          <div className="flex items-center space-x-1 p-1 bg-[#F1F4F5] dark:bg-[#0B1415] rounded-xl border border-[#CBD5D8] dark:border-[#233C3F] shadow-2xs">
+          <div className="flex items-center space-x-1 p-1 bg-paper-3 dark:bg-paper rounded-xl border border-rule dark:border-rule shadow-2xs">
             <button
               onClick={() => handleSourceChange('recorded')}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer flex items-center space-x-1.5 ${
                 activeSource === 'recorded'
-                  ? 'bg-[#2F4454] dark:bg-[#376E6F] text-white shadow-xs'
-                  : 'text-[#5D757E] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-white'
+                  ? 'bg-burgundy text-white font-medium shadow-2xs'
+                  : 'text-muted hover:text-ink'
               }`}
             >
               <VideoIcon className="w-3.5 h-3.5" />
@@ -517,8 +519,8 @@ export const LiveMonitoring: React.FC = () => {
               onClick={() => handleSourceChange('webcam')}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer flex items-center space-x-1.5 ${
                 activeSource === 'webcam'
-                  ? 'bg-[#2F4454] dark:bg-[#376E6F] text-white shadow-xs'
-                  : 'text-[#5D757E] dark:text-[#A0B7BC] hover:text-[#1C3334] dark:hover:text-white'
+                  ? 'bg-burgundy text-white font-medium shadow-2xs'
+                  : 'text-muted hover:text-ink'
               }`}
             >
               {cameraStatus?.source_type === 'rtsp' ? (
@@ -532,7 +534,7 @@ export const LiveMonitoring: React.FC = () => {
                   : 'Live Webcam Feed'}
               </span>
               {cameraStatus?.is_active && (
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" />
+                <span className="w-2 h-2 rounded-full bg-emerald-400 motion-safe:animate-pulse motion-reduce:animate-none ml-0.5" />
               )}
             </button>
           </div>
@@ -542,15 +544,15 @@ export const LiveMonitoring: React.FC = () => {
             <>
               {/* Analysis Switcher */}
               {analyses.length > 0 && (
-                <div className="flex items-center space-x-2 bg-white dark:bg-[#152729] border border-[#CBD5D8] dark:border-[#2C4B4E] rounded-lg px-2.5 py-1.5 shadow-2xs">
-                  <span className="text-[10px] uppercase font-mono tracking-wider text-[#5D757E] dark:text-[#A0B7BC]">Session:</span>
+                <div className="flex items-center space-x-2 bg-white dark:bg-paper-2 border border-rule dark:border-rule rounded-lg px-2.5 py-1.5 shadow-2xs">
+                  <span className="text-[10px] uppercase font-mono tracking-wider text-muted">Session:</span>
                   <select
                     value={selectedAnalysis?.id || ''}
                     onChange={(e) => handleSelectAnalysis(e.target.value)}
-                    className="bg-transparent text-xs font-mono text-[#376E6F] dark:text-[#6EB5B6] font-semibold focus:outline-none cursor-pointer"
+                    className="bg-transparent text-xs font-mono text-cool font-semibold focus:outline-none cursor-pointer"
                   >
                     {analyses.map((a) => (
-                      <option key={a.id} value={a.id} className="bg-white dark:bg-[#152729] text-[#1C3334] dark:text-[#EEF4F5]">
+                      <option key={a.id} value={a.id} className="bg-white dark:bg-paper-2 text-ink">
                         {a.id.slice(0, 16)}... ({a.status.toUpperCase()})
                       </option>
                     ))}
@@ -561,19 +563,19 @@ export const LiveMonitoring: React.FC = () => {
               <button
                 onClick={() => selectedAnalysis && loadSessionDetails(selectedAnalysis.id)}
                 disabled={loadingDetails}
-                className="p-2 bg-white dark:bg-[#152729] hover:bg-[#F1F4F5] dark:hover:bg-[#1C3336] text-[#2F4454] dark:text-[#EDF4F5] border border-[#CBD5D8] dark:border-[#2C4B4E] rounded-lg text-xs transition cursor-pointer shadow-2xs"
+                className="p-2 bg-white dark:bg-paper-2 hover:bg-paper-3 dark:hover:bg-[#1C3336] text-ink border border-rule dark:border-rule rounded-lg text-xs transition cursor-pointer shadow-2xs"
                 title="Refresh Telemetry"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${loadingDetails ? 'animate-spin text-[#376E6F]' : ''}`} />
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingDetails ? 'animate-spin text-burgundy' : ''}`} />
               </button>
 
               {selectedAnalysis && (
                 <a
                   href={analysisApi.getExportUrl(selectedAnalysis.id)}
                   download
-                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-[#376E6F]/10 hover:bg-[#376E6F]/20 text-[#376E6F] dark:text-[#6EB5B6] rounded-lg text-xs font-medium border border-[#376E6F]/30 dark:border-[#376E6F]/40 transition shadow-2xs"
+                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-burgundy/10 hover:bg-burgundy/20 text-cool rounded-lg text-xs font-medium border border-burgundy/30 dark:border-burgundy/40 transition shadow-2xs"
                 >
-                  <FileSpreadsheet className="w-3.5 h-3.5 text-[#376E6F] dark:text-[#6EB5B6]" />
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-cool" />
                   <span>Export CSV</span>
                 </a>
               )}
@@ -594,7 +596,7 @@ export const LiveMonitoring: React.FC = () => {
                 <button
                   onClick={handleStartWebcam}
                   disabled={cameraActionLoading}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-[#2F4454] hover:bg-[#1C3334] text-white dark:bg-[#376E6F] dark:hover:bg-[#4A8E8F] rounded-lg text-xs font-semibold transition cursor-pointer disabled:opacity-50 shadow-xs"
+                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-ink text-paper hover:opacity-90 text-white dark:bg-burgundy dark:hover:bg-burgundy-hover rounded-lg text-xs font-semibold transition cursor-pointer disabled:opacity-50 shadow-xs"
                 >
                   <Play className="w-3.5 h-3.5 fill-current" />
                   <span>{cameraActionLoading ? 'Starting...' : 'Connect Camera'}</span>
@@ -603,10 +605,10 @@ export const LiveMonitoring: React.FC = () => {
 
               <button
                 onClick={fetchLiveTelemetry}
-                className="p-2 bg-white dark:bg-[#152729] hover:bg-[#F1F4F5] dark:hover:bg-[#1C3336] text-[#2F4454] dark:text-[#EDF4F5] border border-[#CBD5D8] dark:border-[#2C4B4E] rounded-lg text-xs transition cursor-pointer shadow-2xs"
+                className="p-2 bg-white dark:bg-paper-2 hover:bg-paper-3 dark:hover:bg-[#1C3336] text-ink border border-rule dark:border-rule rounded-lg text-xs transition cursor-pointer shadow-2xs"
                 title="Poll Latest Telemetry"
               >
-                <RefreshCw className="w-3.5 h-3.5 text-[#376E6F]" />
+                <RefreshCw className="w-3.5 h-3.5 text-burgundy" />
               </button>
             </>
           )}
@@ -631,31 +633,31 @@ export const LiveMonitoring: React.FC = () => {
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left 2 Cols: Live Video Stream & HUD */}
-            <div className="lg:col-span-2 bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl p-5 space-y-4 shadow-xs">
+            <div className="lg:col-span-2 bg-white dark:bg-paper-2 border border-rule dark:border-rule rounded-xl p-5 space-y-4 shadow-xs">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <span className={`w-2.5 h-2.5 rounded-full ${
-                    cameraStatus?.is_active ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
+                    cameraStatus?.is_active ? 'bg-emerald-500 motion-safe:animate-pulse motion-reduce:animate-none' : 'bg-slate-400'
                   }`} />
-                  <h3 className="text-sm font-semibold text-[#1C3334] dark:text-white tracking-wide">
+                  <h3 className="text-sm font-semibold text-ink tracking-wide">
                     {cameraStatus?.source_type === 'rtsp'
                       ? `CCTV Feed: ${cameraStatus.camera_name || 'RTSP Stream'}`
                       : 'Live Hardware Surveillance Viewport'}
                   </h3>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#376E6F]/10 text-[#376E6F] dark:text-[#6EB5B6] border border-[#376E6F]/30">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-burgundy/10 text-cool border border-burgundy/30">
                     {cameraStatus?.source_type === 'rtsp' ? 'RTSP/H.264 → MJPEG' : 'LIVE MJPEG STREAM'}
                   </span>
                   {cameraStatus?.sanitized_url && (
-                    <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-mono bg-[#F1F4F5] dark:bg-slate-800 text-[#5D757E] dark:text-slate-300 border border-[#CBD5D8] dark:border-slate-700 truncate max-w-xs" title={cameraStatus.sanitized_url}>
+                    <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-mono bg-paper-3 dark:bg-slate-800 text-[#5D757E] dark:text-slate-300 border border-rule dark:border-slate-700 truncate max-w-xs" title={cameraStatus.sanitized_url}>
                       {cameraStatus.sanitized_url}
                     </span>
                   )}
                 </div>
 
-                <div className="flex items-center space-x-3 text-xs font-mono text-[#5D757E] dark:text-slate-400">
+                <div className="flex items-center space-x-3 text-xs font-mono text-muted">
                   {cameraStatus && (
                     <span>
-                      Cap: <strong className="text-[#1C3334] dark:text-slate-200">{cameraStatus.measured_fps.toFixed(1)}</strong> / Inf: <strong className="text-emerald-600 dark:text-emerald-400">{cameraStatus.processing_fps.toFixed(1)}</strong> FPS
+                      Cap: <strong className="text-ink">{cameraStatus.measured_fps.toFixed(1)}</strong> / Inf: <strong className="text-emerald-600 dark:text-emerald-400">{cameraStatus.processing_fps.toFixed(1)}</strong> FPS
                     </span>
                   )}
                   {liveTelemetry && (
@@ -666,7 +668,7 @@ export const LiveMonitoring: React.FC = () => {
                       <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
                         liveTelemetry.detected_pattern === 'BOTTLENECK' 
                           ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-500/30' 
-                          : 'bg-[#376E6F]/10 text-[#376E6F] dark:text-[#6EB5B6] border border-[#376E6F]/30'
+                          : 'bg-burgundy/10 text-cool border border-burgundy/30'
                       }`}>
                         {liveTelemetry.detected_pattern}
                       </span>
@@ -676,7 +678,7 @@ export const LiveMonitoring: React.FC = () => {
               </div>
 
               {/* Viewport Display Frame - Kept Dark for High Video Contrast */}
-              <div className="aspect-video bg-black rounded-lg overflow-hidden border border-[#CBD5D8] dark:border-[#203638] relative flex items-center justify-center shadow-inner">
+              <div className="aspect-video bg-black rounded-lg overflow-hidden border border-rule dark:border-rule relative flex items-center justify-center shadow-inner">
                 {cameraStatus?.is_active ? (
                   <img
                     key={streamKey}
@@ -686,7 +688,7 @@ export const LiveMonitoring: React.FC = () => {
                   />
                 ) : cameraStatus === null ? (
                   <div className="text-center p-8 space-y-3">
-                    <div className="w-8 h-8 rounded-full border-2 border-[#376E6F] border-t-transparent animate-spin mx-auto" />
+                    <div className="w-8 h-8 rounded-full border-2 border-burgundy border-t-transparent animate-spin mx-auto" />
                     <p className="text-xs text-slate-400 font-mono">Connecting to camera feed...</p>
                   </div>
                 ) : (
@@ -704,7 +706,7 @@ export const LiveMonitoring: React.FC = () => {
                       <button
                         onClick={handleStartWebcam}
                         disabled={cameraActionLoading}
-                        className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-[#2F4454] hover:bg-[#1C3334] text-white dark:bg-[#376E6F] dark:hover:bg-[#4A8E8F] rounded-lg text-xs font-semibold transition cursor-pointer disabled:opacity-50"
+                        className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-ink text-paper hover:opacity-90 text-white dark:bg-burgundy dark:hover:bg-burgundy-hover rounded-lg text-xs font-semibold transition cursor-pointer disabled:opacity-50"
                       >
                         <Play className="w-3.5 h-3.5 fill-current" />
                         <span>Start Camera #0</span>
@@ -724,7 +726,7 @@ export const LiveMonitoring: React.FC = () => {
               <MetricStrip>
                 <MetricItem
                   label="Observed Count"
-                  value={liveTelemetry?.person_count ?? (cameraStatus?.is_active ? 'Measuring...' : '—')}
+                  value={liveTelemetry?.person_count ?? (cameraStatus?.is_active ? 'Measuring' : '—')}
                   unit="persons"
                   icon={Users}
                   tone="teal"
@@ -735,7 +737,7 @@ export const LiveMonitoring: React.FC = () => {
                   value={
                     liveTelemetry && typeof liveTelemetry.smoothed_risk_score === 'number'
                       ? liveTelemetry.smoothed_risk_score.toFixed(1)
-                      : (cameraStatus?.is_active ? 'Computing...' : '—')
+                      : (cameraStatus?.is_active ? 'Computing' : '—')
                   }
                   unit="/ 100"
                   icon={Activity}
@@ -750,7 +752,7 @@ export const LiveMonitoring: React.FC = () => {
                   value={
                     liveTelemetry && typeof liveTelemetry.forecast_risk_10s === 'number'
                       ? liveTelemetry.forecast_risk_10s.toFixed(1)
-                      : (cameraStatus?.is_active ? 'Computing...' : '—')
+                      : (cameraStatus?.is_active ? 'Computing' : '—')
                   }
                   unit="/ 100"
                   icon={TrendingUp}
@@ -765,7 +767,7 @@ export const LiveMonitoring: React.FC = () => {
                   value={
                     liveTelemetry && typeof liveTelemetry.directional_entropy === 'number'
                       ? liveTelemetry.directional_entropy.toFixed(3)
-                      : (cameraStatus?.is_active ? 'Measuring...' : '—')
+                      : (cameraStatus?.is_active ? 'Measuring' : '—')
                   }
                   unit="Shannon H"
                   icon={Compass}
@@ -776,20 +778,20 @@ export const LiveMonitoring: React.FC = () => {
             </div>
 
             {/* Right Col: Interactive 3x3 Spatial Grid Matrix */}
-            <div className="bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl p-5 flex flex-col justify-between space-y-4 shadow-xs">
+            <div className="bg-white dark:bg-paper-2 border border-rule dark:border-rule rounded-xl p-5 flex flex-col justify-between space-y-4 shadow-xs">
               <div className="space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-[#E2E8EA] dark:border-[#203638]">
+                <div className="flex items-center justify-between pb-3 border-b border-rule dark:border-rule">
                   <div>
-                    <h3 className="text-sm font-semibold text-[#1C3334] dark:text-white tracking-wide">
+                    <h3 className="text-sm font-semibold text-ink tracking-wide">
                       Spatial Quadrant Intelligence
                     </h3>
-                    <p className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC]">Interactive localized quadrant telemetry</p>
+                    <p className="text-[10px] text-muted">Interactive localized quadrant telemetry</p>
                   </div>
-                  <div className="flex items-center space-x-1 p-0.5 rounded-lg bg-[#EDE8E1] dark:bg-[#0B1415] border border-[#CBD5D8] dark:border-[#233C3F] text-[10px] font-mono">
+                  <div className="flex items-center space-x-1 p-0.5 rounded-lg bg-paper-3 dark:bg-paper border border-rule dark:border-rule text-[10px] font-mono">
                     <button
                       onClick={() => setLiveSpatialMode('3d')}
                       className={`px-2 py-0.5 rounded transition cursor-pointer ${
-                        liveSpatialMode === '3d' ? 'bg-white dark:bg-[#183133] text-[#376E6F] dark:text-[#6EC4C6] font-bold shadow-2xs' : 'text-[#5D757E] dark:text-[#A0B7BC]'
+                        liveSpatialMode === '3d' ? 'bg-white dark:bg-paper-3 text-cool font-bold shadow-2xs' : 'text-muted'
                       }`}
                     >
                       3D Plaza
@@ -797,7 +799,7 @@ export const LiveMonitoring: React.FC = () => {
                     <button
                       onClick={() => setLiveSpatialMode('2d')}
                       className={`px-2 py-0.5 rounded transition cursor-pointer ${
-                        liveSpatialMode === '2d' ? 'bg-white dark:bg-[#183133] text-[#376E6F] dark:text-[#6EC4C6] font-bold shadow-2xs' : 'text-[#5D757E] dark:text-[#A0B7BC]'
+                        liveSpatialMode === '2d' ? 'bg-white dark:bg-paper-3 text-cool font-bold shadow-2xs' : 'text-muted'
                       }`}
                     >
                       2D Grid
@@ -828,28 +830,28 @@ export const LiveMonitoring: React.FC = () => {
                           onClick={() => setSelectedLiveZone(zone)}
                           className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer relative ${
                             isSelected
-                              ? 'border-[#376E6F] bg-[#376E6F]/15 ring-2 ring-[#376E6F]/40 shadow-xs'
+                              ? 'border-burgundy bg-burgundy/15 ring-2 ring-[#376E6F]/40 shadow-xs'
                               : isCritical
                               ? 'border-rose-300 dark:border-rose-500/40 bg-rose-50 dark:bg-rose-950/20 hover:border-rose-400'
                               : isHigh
                               ? 'border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-950/20 hover:border-amber-400'
                               : isMod
                               ? 'border-amber-200 dark:border-amber-500/20 bg-amber-50/50 dark:bg-[#121C2B] hover:border-amber-300'
-                              : 'border-[#E2E8EA] dark:border-[#1E2D40] bg-[#F8F9FA] dark:bg-[#0A1018] hover:border-[#CBD5D8] dark:hover:border-slate-600'
+                              : 'border-rule dark:border-[#1E2D40] bg-paper-3 dark:bg-[#0A1018] hover:border-rule dark:hover:border-slate-600'
                           }`}
                         >
                           <div className="flex justify-between items-center text-[10px]">
-                            <span className="font-bold text-[#1C3334] dark:text-white font-mono">{zone.name.replace('Zone ', '')}</span>
+                            <span className="font-bold text-ink font-mono">{zone.name.replace('Zone ', '')}</span>
                             <span className={`w-2 h-2 rounded-full ${
-                              isCritical ? 'bg-rose-500 animate-pulse' :
+                              isCritical ? 'bg-rose-500 motion-safe:animate-pulse motion-reduce:animate-none' :
                               isHigh ? 'bg-orange-500' :
                               isMod ? 'bg-amber-500' : 'bg-emerald-500'
                             }`} />
                           </div>
 
                           <div className="mt-1.5 flex items-baseline justify-between">
-                            <span className="text-base font-bold font-mono text-[#1C3334] dark:text-white">{zone.population}</span>
-                            <span className="text-[9px] font-mono text-[#5D757E] dark:text-slate-400">
+                            <span className="text-base font-bold font-mono text-ink">{zone.population}</span>
+                            <span className="text-[9px] font-mono text-muted">
                               r:{zone.zone_risk}
                             </span>
                           </div>
@@ -868,7 +870,7 @@ export const LiveMonitoring: React.FC = () => {
                       );
                     })
                   ) : (
-                    <div className="col-span-3 py-10 text-center text-xs text-[#5D757E] dark:text-slate-500 border border-dashed border-[#CBD5D8] dark:border-[#1E2D40] rounded-lg">
+                    <div className="col-span-3 py-10 text-center text-xs text-[#5D757E] dark:text-slate-500 border border-dashed border-rule dark:border-[#1E2D40] rounded-lg">
                       {cameraStatus?.is_active
                         ? 'Acquiring live spatial quadrant data...'
                         : 'Webcam feed inactive. Start camera to inspect spatial density.'}
@@ -879,57 +881,57 @@ export const LiveMonitoring: React.FC = () => {
 
                 {/* Selected Sector Telemetry Detail */}
                 {selectedLiveZone ? (
-                  <div className="p-3.5 bg-[#F8F9FA] dark:bg-[#0A1018] rounded-xl border border-[#E2E8EA] dark:border-[#1E2D40] space-y-2.5 text-xs">
-                    <div className="flex items-center justify-between pb-2 border-b border-[#E2E8EA] dark:border-[#1E2D40]">
-                      <span className="font-bold font-mono text-[#1C3334] dark:text-white text-xs">
+                  <div className="p-3.5 bg-paper-3 dark:bg-[#0A1018] rounded-xl border border-rule dark:border-[#1E2D40] space-y-2.5 text-xs">
+                    <div className="flex items-center justify-between pb-2 border-b border-rule dark:border-[#1E2D40]">
+                      <span className="font-bold font-mono text-ink text-xs">
                         Sector {selectedLiveZone.name}
                       </span>
                       <RiskBadge band={selectedLiveZone.density_level} size="sm" />
                     </div>
 
                     <div className="grid grid-cols-2 gap-2.5 text-[11px] font-mono">
-                      <div className="p-2 rounded bg-white dark:bg-[#0E1622] border border-[#CBD5D8] dark:border-[#1E2D40]">
-                        <span className="text-[10px] text-[#5D757E] dark:text-slate-400 block font-sans">Density Population</span>
-                        <span className="text-sm font-bold text-[#1C3334] dark:text-white mt-0.5 block">{selectedLiveZone.population} persons</span>
+                      <div className="p-2 rounded bg-white dark:bg-paper-3 border border-rule dark:border-[#1E2D40]">
+                        <span className="text-[10px] text-muted block font-sans">Density Population</span>
+                        <span className="text-sm font-bold text-ink mt-0.5 block">{selectedLiveZone.population} persons</span>
                       </div>
-                      <div className="p-2 rounded bg-white dark:bg-[#0E1622] border border-[#CBD5D8] dark:border-[#1E2D40]">
-                        <span className="text-[10px] text-[#5D757E] dark:text-slate-400 block font-sans">Normalized Density</span>
-                        <span className="text-sm font-bold text-[#376E6F] dark:text-cyan-400 mt-0.5 block">
+                      <div className="p-2 rounded bg-white dark:bg-paper-3 border border-rule dark:border-[#1E2D40]">
+                        <span className="text-[10px] text-muted block font-sans">Normalized Density</span>
+                        <span className="text-sm font-bold text-burgundy dark:text-cyan-400 mt-0.5 block">
                           {(selectedLiveZone.normalized_density * 100).toFixed(0)}%
                         </span>
                       </div>
-                      <div className="p-2 rounded bg-white dark:bg-[#0E1622] border border-[#CBD5D8] dark:border-[#1E2D40]">
-                        <span className="text-[10px] text-[#5D757E] dark:text-slate-400 block font-sans">Mean Flow Velocity</span>
-                        <span className="text-sm font-bold text-[#1C3334] dark:text-white mt-0.5 block">{selectedLiveZone.avg_velocity} px/s</span>
+                      <div className="p-2 rounded bg-white dark:bg-paper-3 border border-rule dark:border-[#1E2D40]">
+                        <span className="text-[10px] text-muted block font-sans">Mean Flow Velocity</span>
+                        <span className="text-sm font-bold text-ink mt-0.5 block">{selectedLiveZone.avg_velocity} px/s</span>
                       </div>
-                      <div className="p-2 rounded bg-white dark:bg-[#0E1622] border border-[#CBD5D8] dark:border-[#1E2D40]">
-                        <span className="text-[10px] text-[#5D757E] dark:text-slate-400 block font-sans">Inflow / Outflow</span>
-                        <span className="text-sm font-bold text-[#1C3334] dark:text-slate-200 mt-0.5 block">
+                      <div className="p-2 rounded bg-white dark:bg-paper-3 border border-rule dark:border-[#1E2D40]">
+                        <span className="text-[10px] text-muted block font-sans">Inflow / Outflow</span>
+                        <span className="text-sm font-bold text-ink mt-0.5 block">
                           <span className="text-emerald-600 dark:text-emerald-400">+{selectedLiveZone.inflow}</span> / <span className="text-rose-600 dark:text-rose-400">-{selectedLiveZone.outflow}</span>
                         </span>
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-[#E2E8EA] dark:border-[#1E2D40] flex items-center justify-between text-[11px]">
-                      <span className="text-[#5D757E] dark:text-slate-400">Sector Motion Pattern:</span>
+                    <div className="pt-2 border-t border-rule dark:border-[#1E2D40] flex items-center justify-between text-[11px]">
+                      <span className="text-muted">Sector Motion Pattern:</span>
                       <span className={`font-semibold font-mono px-2 py-0.5 rounded text-[10px] ${
                         selectedLiveZone.pattern === 'BOTTLENECK' 
                           ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-500/30' 
-                          : 'bg-[#376E6F]/10 text-[#376E6F] dark:text-[#6EB5B6] border border-[#376E6F]/30'
+                          : 'bg-burgundy/10 text-cool border border-burgundy/30'
                       }`}>
                         {selectedLiveZone.pattern || 'LAMINAR_FLOW'}
                       </span>
                     </div>
                   </div>
                 ) : (
-                  <div className="p-4 text-center text-xs text-[#5D757E] dark:text-slate-500 border border-dashed border-[#CBD5D8] dark:border-[#1E2D40] rounded-lg">
+                  <div className="p-4 text-center text-xs text-[#5D757E] dark:text-slate-500 border border-dashed border-rule dark:border-[#1E2D40] rounded-lg">
                     Select any quadrant sector above to inspect live velocity & inflow dynamics.
                   </div>
                 )}
               </div>
 
-              <div className="p-2.5 rounded-lg bg-[#F8F9FA] dark:bg-[#0A1018] border border-[#E2E8EA] dark:border-[#1E2D40] text-[10px] text-[#5D757E] dark:text-slate-400 flex items-center space-x-2">
-                <Info className="w-3.5 h-3.5 text-[#376E6F] shrink-0" />
+              <div className="p-2.5 rounded-lg bg-paper-3 dark:bg-[#0A1018] border border-rule dark:border-[#1E2D40] text-[10px] text-muted flex items-center space-x-2">
+                <Info className="w-3.5 h-3.5 text-burgundy shrink-0" />
                 <span>Live spatial telemetry is calculated continuously without saving raw footage to disk.</span>
               </div>
             </div>
@@ -938,15 +940,15 @@ export const LiveMonitoring: React.FC = () => {
           {/* Real-time Rolling Telemetry Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Live Risk Chart */}
-            <div className="bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl p-5 space-y-3 shadow-xs">
+            <div className="bg-white dark:bg-paper-2 border border-rule dark:border-rule rounded-xl p-5 space-y-3 shadow-xs">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-xs font-semibold text-[#1C3334] dark:text-white uppercase tracking-wider">
+                  <h3 className="text-xs font-semibold text-ink uppercase tracking-wider">
                     Live Risk Dynamics vs Short-Term Forecast (+10s)
                   </h3>
-                  <p className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] mt-0.5">Rolling window of recent live camera frames (max 60 points)</p>
+                  <p className="text-[10px] text-muted mt-0.5">Rolling window of recent live camera frames (max 60 points)</p>
                 </div>
-                <span className="text-[10px] font-mono text-[#376E6F] dark:text-[#6EB5B6] px-2 py-0.5 rounded bg-[#376E6F]/10 border border-[#376E6F]/30">
+                <span className="text-[10px] font-mono text-cool px-2 py-0.5 rounded bg-burgundy/10 border border-burgundy/30">
                   REAL-TIME FEED
                 </span>
               </div>
@@ -1008,15 +1010,15 @@ export const LiveMonitoring: React.FC = () => {
             </div>
 
             {/* Live Optical Flow & Directional Entropy Chart */}
-            <div className="bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl p-5 space-y-3 shadow-xs">
+            <div className="bg-white dark:bg-paper-2 border border-rule dark:border-rule rounded-xl p-5 space-y-3 shadow-xs">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-xs font-semibold text-[#1C3334] dark:text-white uppercase tracking-wider">
+                  <h3 className="text-xs font-semibold text-ink uppercase tracking-wider">
                     Live Optical Flow & Directional Shannon Entropy
                   </h3>
-                  <p className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC] mt-0.5">Motion magnitude vs angular vector disorder</p>
+                  <p className="text-[10px] text-muted mt-0.5">Motion magnitude vs angular vector disorder</p>
                 </div>
-                <span className="text-[10px] font-mono text-[#DA7B93] px-2 py-0.5 rounded bg-[#DA7B93]/10 border border-[#DA7B93]/30">
+                <span className="text-[10px] font-mono text-accent px-2 py-0.5 rounded bg-[#DA7B93]/10 border border-[#DA7B93]/30">
                   Turbulence Heuristic
                 </span>
               </div>
@@ -1094,25 +1096,25 @@ export const LiveMonitoring: React.FC = () => {
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left 2 Cols: Video Stream / Annotated Replay with Scrubbing */}
-            <div className="lg:col-span-2 bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl p-5 space-y-4 shadow-xs">
+            <div className="lg:col-span-2 bg-white dark:bg-paper-2 border border-rule dark:border-rule rounded-xl p-5 space-y-4 shadow-xs">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <span className={`w-2.5 h-2.5 rounded-full ${
                     selectedAnalysis?.status === 'processing' 
-                      ? 'bg-[#376E6F] animate-pulse' 
+                      ? 'bg-burgundy motion-safe:animate-pulse motion-reduce:animate-none' 
                       : selectedAnalysis?.status === 'completed'
                       ? 'bg-emerald-500'
                       : 'bg-amber-500'
                   }`} />
-                  <h3 className="text-sm font-semibold text-[#1C3334] dark:text-white tracking-wide">
+                  <h3 className="text-sm font-semibold text-ink tracking-wide">
                     Annotated Surveillance Feed
                   </h3>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#376E6F]/10 text-[#376E6F] dark:text-[#6EB5B6] border border-[#376E6F]/30">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-burgundy/10 text-cool border border-burgundy/30">
                     {selectedAnalysis?.status === 'processing' ? 'LIVE PIPELINE' : 'SYNCHRONIZED AUDIT'}
                   </span>
                 </div>
 
-                <div className="flex items-center space-x-3 text-xs font-mono text-[#5D757E] dark:text-slate-400">
+                <div className="flex items-center space-x-3 text-xs font-mono text-muted">
                   <span>t={currentFrame?.timestamp_sec?.toFixed(1) || '0.0'}s</span>
                   <span>Frame #{currentFrame?.frame_index || 0}</span>
                   {currentFrame?.detected_pattern && (
@@ -1142,7 +1144,7 @@ export const LiveMonitoring: React.FC = () => {
                     </div>
                     <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
                       <div 
-                        className="bg-cyan-400 h-1.5 rounded-full transition-all duration-300"
+                        className="bg-cyan-400 h-1.5 rounded-full transition-colors duration-300"
                         style={{ width: `${selectedAnalysis.progress_percent || 0}%` }}
                       />
                     </div>
@@ -1256,12 +1258,12 @@ export const LiveMonitoring: React.FC = () => {
 
               {/* Timeline Scrub Controls */}
               {results.length > 0 && (
-                <div className="p-3 bg-[#F8F9FA] dark:bg-[#0A1018] rounded-lg border border-[#E2E8EA] dark:border-[#1E2D40] space-y-2">
+                <div className="p-3 bg-paper-3 dark:bg-[#0A1018] rounded-lg border border-rule dark:border-[#1E2D40] space-y-2">
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={handleTogglePlayback}
-                        className="p-1.5 rounded bg-white dark:bg-[#141E2B] hover:bg-[#F1F4F5] dark:hover:bg-[#1E2D40] text-[#2F4454] dark:text-cyan-400 border border-[#CBD5D8] dark:border-[#1E2D40] transition cursor-pointer shadow-2xs"
+                        className="p-1.5 rounded bg-white dark:bg-[#141E2B] hover:bg-paper-3 dark:hover:bg-[#1E2D40] text-[#2F4454] dark:text-cyan-400 border border-rule dark:border-[#1E2D40] transition cursor-pointer shadow-2xs"
                         title={isPlaying ? 'Pause Scrubbing' : 'Play Scrubbing'}
                       >
                         {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
@@ -1269,7 +1271,7 @@ export const LiveMonitoring: React.FC = () => {
                       <button
                         onClick={() => handleStepFrame(-1)}
                         disabled={selectedFrameIndex === 0}
-                        className="p-1.5 rounded bg-white dark:bg-[#141E2B] hover:bg-[#F1F4F5] dark:hover:bg-[#1E2D40] text-[#5D757E] dark:text-slate-300 disabled:opacity-40 border border-[#CBD5D8] dark:border-[#1E2D40] transition cursor-pointer shadow-2xs"
+                        className="p-1.5 rounded bg-white dark:bg-[#141E2B] hover:bg-paper-3 dark:hover:bg-[#1E2D40] text-[#5D757E] dark:text-slate-300 disabled:opacity-40 border border-rule dark:border-[#1E2D40] transition cursor-pointer shadow-2xs"
                         title="Previous Frame"
                       >
                         <ChevronLeft className="w-3.5 h-3.5" />
@@ -1277,7 +1279,7 @@ export const LiveMonitoring: React.FC = () => {
                       <button
                         onClick={() => handleStepFrame(1)}
                         disabled={selectedFrameIndex >= results.length - 1}
-                        className="p-1.5 rounded bg-white dark:bg-[#141E2B] hover:bg-[#F1F4F5] dark:hover:bg-[#1E2D40] text-[#5D757E] dark:text-slate-300 disabled:opacity-40 border border-[#CBD5D8] dark:border-[#1E2D40] transition cursor-pointer shadow-2xs"
+                        className="p-1.5 rounded bg-white dark:bg-[#141E2B] hover:bg-paper-3 dark:hover:bg-[#1E2D40] text-[#5D757E] dark:text-slate-300 disabled:opacity-40 border border-rule dark:border-[#1E2D40] transition cursor-pointer shadow-2xs"
                         title="Next Frame"
                       >
                         <ChevronRight className="w-3.5 h-3.5" />
@@ -1287,7 +1289,7 @@ export const LiveMonitoring: React.FC = () => {
                       </span>
                     </div>
 
-                    <div className="text-[11px] font-mono text-[#376E6F] dark:text-cyan-400 font-semibold">
+                    <div className="text-[11px] font-mono text-burgundy dark:text-cyan-400 font-semibold">
                       t = {currentFrame?.timestamp_sec?.toFixed(1) || '0.0'}s / {videoDuration > 0 ? videoDuration.toFixed(1) : (results[results.length - 1]?.timestamp_sec?.toFixed(1) || '0.0')}s
                     </div>
                   </div>
@@ -1348,20 +1350,20 @@ export const LiveMonitoring: React.FC = () => {
             </div>
 
             {/* Right Col: Interactive 3x3 Spatial Grid Matrix */}
-            <div className="bg-white dark:bg-[#122123] border border-[#E2E8EA] dark:border-[#203638] rounded-xl p-5 flex flex-col justify-between space-y-4 shadow-xs">
+            <div className="bg-white dark:bg-paper-2 border border-rule dark:border-rule rounded-xl p-5 flex flex-col justify-between space-y-4 shadow-xs">
               <div className="space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-[#E2E8EA] dark:border-[#203638]">
+                <div className="flex items-center justify-between pb-3 border-b border-rule dark:border-rule">
                   <div>
-                    <h3 className="text-sm font-semibold text-[#1C3334] dark:text-white tracking-wide">
+                    <h3 className="text-sm font-semibold text-ink tracking-wide">
                       Spatial Quadrant Intelligence
                     </h3>
-                    <p className="text-[10px] text-[#5D757E] dark:text-[#A0B7BC]">Select any quadrant to inspect localized telemetry</p>
+                    <p className="text-[10px] text-muted">Select any quadrant to inspect localized telemetry</p>
                   </div>
-                  <div className="flex items-center space-x-1 p-0.5 rounded-lg bg-[#EDE8E1] dark:bg-[#0B1415] border border-[#CBD5D8] dark:border-[#233C3F] text-[10px] font-mono">
+                  <div className="flex items-center space-x-1 p-0.5 rounded-lg bg-paper-3 dark:bg-paper border border-rule dark:border-rule text-[10px] font-mono">
                     <button
                       onClick={() => setReplaySpatialMode('3d')}
                       className={`px-2 py-0.5 rounded transition cursor-pointer ${
-                        replaySpatialMode === '3d' ? 'bg-white dark:bg-[#183133] text-[#376E6F] dark:text-[#6EC4C6] font-bold shadow-2xs' : 'text-[#5D757E] dark:text-[#A0B7BC]'
+                        replaySpatialMode === '3d' ? 'bg-white dark:bg-paper-3 text-cool font-bold shadow-2xs' : 'text-muted'
                       }`}
                     >
                       3D Plaza
@@ -1369,7 +1371,7 @@ export const LiveMonitoring: React.FC = () => {
                     <button
                       onClick={() => setReplaySpatialMode('2d')}
                       className={`px-2 py-0.5 rounded transition cursor-pointer ${
-                        replaySpatialMode === '2d' ? 'bg-white dark:bg-[#183133] text-[#376E6F] dark:text-[#6EC4C6] font-bold shadow-2xs' : 'text-[#5D757E] dark:text-[#A0B7BC]'
+                        replaySpatialMode === '2d' ? 'bg-white dark:bg-paper-3 text-cool font-bold shadow-2xs' : 'text-muted'
                       }`}
                     >
                       2D Grid
@@ -1400,20 +1402,20 @@ export const LiveMonitoring: React.FC = () => {
                           onClick={() => setSelectedZone(zone)}
                           className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer relative ${
                             isSelected
-                              ? 'border-[#376E6F] bg-[#376E6F]/15 ring-2 ring-[#376E6F]/40 shadow-xs'
+                              ? 'border-burgundy bg-burgundy/15 ring-2 ring-[#376E6F]/40 shadow-xs'
                               : isCritical
                               ? 'border-rose-300 dark:border-rose-500/40 bg-rose-50 dark:bg-rose-950/20 hover:border-rose-400'
                               : isHigh
                               ? 'border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-950/20 hover:border-amber-400'
                               : isMod
                               ? 'border-amber-200 dark:border-amber-500/20 bg-amber-50/50 dark:bg-[#121C2B] hover:border-amber-300'
-                              : 'border-[#E2E8EA] dark:border-[#1E2D40] bg-[#F8F9FA] dark:bg-[#0A1018] hover:border-[#CBD5D8] dark:hover:border-slate-600'
+                              : 'border-rule dark:border-[#1E2D40] bg-paper-3 dark:bg-[#0A1018] hover:border-rule dark:hover:border-slate-600'
                           }`}
                         >
                           <div className="flex justify-between items-center text-[10px]">
                             <span className="font-bold text-white font-mono">{zone.name.replace('Zone ', '')}</span>
                             <span className={`w-2 h-2 rounded-full ${
-                              isCritical ? 'bg-rose-400 animate-pulse' :
+                              isCritical ? 'bg-rose-400 motion-safe:animate-pulse motion-reduce:animate-none' :
                               isHigh ? 'bg-orange-400' :
                               isMod ? 'bg-amber-400' : 'bg-emerald-400'
                             }`} />
@@ -1450,43 +1452,43 @@ export const LiveMonitoring: React.FC = () => {
 
                 {/* Selected Zone Deep Dive */}
                 {selectedZone ? (
-                  <div className="p-3.5 bg-[#F8F9FA] dark:bg-[#0A1018] rounded-xl border border-[#E2E8EA] dark:border-[#1E2D40] space-y-2.5 text-xs">
-                    <div className="flex items-center justify-between pb-2 border-b border-[#E2E8EA] dark:border-[#1E2D40]">
-                      <span className="font-bold font-mono text-[#1C3334] dark:text-white text-xs">
+                  <div className="p-3.5 bg-paper-3 dark:bg-[#0A1018] rounded-xl border border-rule dark:border-[#1E2D40] space-y-2.5 text-xs">
+                    <div className="flex items-center justify-between pb-2 border-b border-rule dark:border-[#1E2D40]">
+                      <span className="font-bold font-mono text-ink text-xs">
                         Sector {selectedZone.name}
                       </span>
                       <RiskBadge band={selectedZone.density_level} size="sm" />
                     </div>
 
                     <div className="grid grid-cols-2 gap-2.5 text-[11px] font-mono">
-                      <div className="p-2 rounded bg-white dark:bg-[#0E1622] border border-[#CBD5D8] dark:border-[#1E2D40]">
-                        <span className="text-[10px] text-[#5D757E] dark:text-slate-400 block font-sans">Density Population</span>
-                        <span className="text-sm font-bold text-[#1C3334] dark:text-white mt-0.5 block">{selectedZone.population} persons</span>
+                      <div className="p-2 rounded bg-white dark:bg-paper-3 border border-rule dark:border-[#1E2D40]">
+                        <span className="text-[10px] text-muted block font-sans">Density Population</span>
+                        <span className="text-sm font-bold text-ink mt-0.5 block">{selectedZone.population} persons</span>
                       </div>
-                      <div className="p-2 rounded bg-white dark:bg-[#0E1622] border border-[#CBD5D8] dark:border-[#1E2D40]">
-                        <span className="text-[10px] text-[#5D757E] dark:text-slate-400 block font-sans">Normalized Density</span>
-                        <span className="text-sm font-bold text-[#376E6F] dark:text-cyan-400 mt-0.5 block">
+                      <div className="p-2 rounded bg-white dark:bg-paper-3 border border-rule dark:border-[#1E2D40]">
+                        <span className="text-[10px] text-muted block font-sans">Normalized Density</span>
+                        <span className="text-sm font-bold text-burgundy dark:text-cyan-400 mt-0.5 block">
                           {(selectedZone.normalized_density * 100).toFixed(0)}%
                         </span>
                       </div>
-                      <div className="p-2 rounded bg-white dark:bg-[#0E1622] border border-[#CBD5D8] dark:border-[#1E2D40]">
-                        <span className="text-[10px] text-[#5D757E] dark:text-slate-400 block font-sans">Mean Flow Velocity</span>
-                        <span className="text-sm font-bold text-[#1C3334] dark:text-white mt-0.5 block">{selectedZone.avg_velocity} px/s</span>
+                      <div className="p-2 rounded bg-white dark:bg-paper-3 border border-rule dark:border-[#1E2D40]">
+                        <span className="text-[10px] text-muted block font-sans">Mean Flow Velocity</span>
+                        <span className="text-sm font-bold text-ink mt-0.5 block">{selectedZone.avg_velocity} px/s</span>
                       </div>
-                      <div className="p-2 rounded bg-white dark:bg-[#0E1622] border border-[#CBD5D8] dark:border-[#1E2D40]">
-                        <span className="text-[10px] text-[#5D757E] dark:text-slate-400 block font-sans">Inflow / Outflow</span>
-                        <span className="text-sm font-bold text-[#1C3334] dark:text-slate-200 mt-0.5 block">
+                      <div className="p-2 rounded bg-white dark:bg-paper-3 border border-rule dark:border-[#1E2D40]">
+                        <span className="text-[10px] text-muted block font-sans">Inflow / Outflow</span>
+                        <span className="text-sm font-bold text-ink mt-0.5 block">
                           <span className="text-emerald-600 dark:text-emerald-400">+{selectedZone.inflow}</span> / <span className="text-rose-600 dark:text-rose-400">-{selectedZone.outflow}</span>
                         </span>
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-[#E2E8EA] dark:border-[#1E2D40] flex items-center justify-between text-[11px]">
-                      <span className="text-[#5D757E] dark:text-slate-400">Sector Motion Pattern:</span>
+                    <div className="pt-2 border-t border-rule dark:border-[#1E2D40] flex items-center justify-between text-[11px]">
+                      <span className="text-muted">Sector Motion Pattern:</span>
                       <span className={`font-semibold font-mono px-2 py-0.5 rounded text-[10px] ${
                         selectedZone.pattern === 'BOTTLENECK' 
                           ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-500/30' 
-                          : 'bg-[#376E6F]/10 text-[#376E6F] dark:text-[#6EB5B6] border border-[#376E6F]/30'
+                          : 'bg-burgundy/10 text-cool border border-burgundy/30'
                       }`}>
                         {selectedZone.pattern || 'LAMINAR_FLOW'}
                       </span>
@@ -1499,8 +1501,8 @@ export const LiveMonitoring: React.FC = () => {
                 )}
               </div>
 
-              <div className="p-2.5 rounded-lg bg-[#F8F9FA] dark:bg-[#0A1018] border border-[#E2E8EA] dark:border-[#1E2D40] text-[10px] text-[#5D757E] dark:text-slate-400 flex items-center space-x-2">
-                <Info className="w-3.5 h-3.5 text-[#376E6F] shrink-0" />
+              <div className="p-2.5 rounded-lg bg-paper-3 dark:bg-[#0A1018] border border-rule dark:border-[#1E2D40] text-[10px] text-muted flex items-center space-x-2">
+                <Info className="w-3.5 h-3.5 text-burgundy shrink-0" />
                 <span>Click any timestamp on the charts below to scrub telemetry directly to that moment.</span>
               </div>
             </div>
