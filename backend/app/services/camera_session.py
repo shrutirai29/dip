@@ -805,6 +805,11 @@ class CameraSession:
                         self._latency_samples_raw_buffer_age.pop(0)
 
                 # Assemble Telemetry Object
+                sched_telem = fair_inference_scheduler.get_telemetry(self.camera_id)
+                current_weight = sched_telem.get("priority_weight", 1.0)
+                priority_reason = sched_telem.get("last_priority_reason", "none")
+                stale_threshold = self._staleness_threshold_sec
+
                 telemetry = {
                     "camera_id": self.camera_id,
                     "camera_name": self.config.name,
